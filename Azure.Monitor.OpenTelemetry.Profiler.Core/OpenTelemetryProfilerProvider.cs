@@ -8,7 +8,9 @@ internal class OpenTelemetryProfilerProvider : IServiceProfilerProvider
     private readonly ITraceControl _traceControl;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
-    public OpenTelemetryProfilerProvider(ITraceControl traceControl, ILogger<OpenTelemetryProfilerProvider> logger)
+    public OpenTelemetryProfilerProvider(
+        ITraceControl traceControl,
+        ILogger<OpenTelemetryProfilerProvider> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _traceControl = traceControl ?? throw new ArgumentNullException(nameof(traceControl));
@@ -34,8 +36,13 @@ internal class OpenTelemetryProfilerProvider : IServiceProfilerProvider
     private static string GetTempTraceFileName()
     {
         string tempPath = Path.GetTempPath();
+        string profilerFolder = Path.Combine(tempPath, "OTelTraces");
+        Directory.CreateDirectory(profilerFolder);
+
         string fileName = Guid.NewGuid().ToString("D");
-        string fullTraceFileName =Path.GetFullPath(Path.Combine(tempPath, fileName, ".nettrace"));
+        fileName = Path.ChangeExtension(fileName, ".nettrace");
+
+        string fullTraceFileName = Path.GetFullPath(Path.Combine(profilerFolder, fileName));
         return fullTraceFileName;
     }
 }

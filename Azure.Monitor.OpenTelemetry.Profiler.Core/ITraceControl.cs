@@ -1,6 +1,6 @@
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
-internal interface ITraceControl
+public interface ITraceControl
 {
         /// <summary>
         /// Disables the current profiler session.
@@ -19,5 +19,5 @@ internal interface ITraceControl
         /// <summary>
         /// Gets the session start time
         /// </summary>
-        DateTime SessionStartUTC { get; }
+        DateTime? SessionStartUTC { get; }
 }
