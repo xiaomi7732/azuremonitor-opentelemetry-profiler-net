@@ -23,7 +23,7 @@ internal sealed class DumbTraceControl : ITraceControl, IDisposable
 
     public async Task DisableAsync(CancellationToken cancellationToken = default)
     {
-        if(_session is not null)
+        if (_session is not null)
         {
             await _session.StopAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -93,6 +93,9 @@ internal sealed class DumbTraceControl : ITraceControl, IDisposable
 
                 // Microsoft-ApplicationInsights-DataRelay
                 // new EventPipeProvider(ApplicationInsightsDataRelayEventSource.EventSourceName, EventLevel.Verbose, keywords:0xffffffff, arguments: null),
+                
+                // Open Telemetry SDK Event Source
+                new EventPipeProvider("OpenTelemetry-Sdk",EventLevel.Verbose, keywords:0xfffffffff, arguments: null),
         ]);
     }
 }

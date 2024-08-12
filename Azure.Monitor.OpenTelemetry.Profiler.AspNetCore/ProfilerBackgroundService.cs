@@ -21,7 +21,7 @@ internal class ProfilerBackgroundService : BackgroundService
   {
     _logger.LogInformation("Start profiler service...");
     await _serviceProfilerProvider.StartServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
-    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken: stoppingToken).ConfigureAwait(false);
+    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken: stoppingToken).ConfigureAwait(false);
     
     await _serviceProfilerProvider.StopServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
     _logger.LogInformation("Done");
