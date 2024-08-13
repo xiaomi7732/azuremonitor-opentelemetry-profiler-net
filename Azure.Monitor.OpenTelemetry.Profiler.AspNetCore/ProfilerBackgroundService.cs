@@ -9,21 +9,21 @@ internal class ProfilerBackgroundService : BackgroundService
     private readonly IServiceProfilerProvider _serviceProfilerProvider;
     private readonly ILogger<ProfilerBackgroundService> _logger;
 
-  public ProfilerBackgroundService(
-    IServiceProfilerProvider serviceProfilerProvider,
-    ILogger<ProfilerBackgroundService> logger)
-  {
+    public ProfilerBackgroundService(
+      IServiceProfilerProvider serviceProfilerProvider,
+      ILogger<ProfilerBackgroundService> logger)
+    {
         _serviceProfilerProvider = serviceProfilerProvider ?? throw new ArgumentNullException(nameof(serviceProfilerProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-  }
+    }
 
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-  {
-    _logger.LogInformation("Start profiler service...");
-    await _serviceProfilerProvider.StartServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
-    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken: stoppingToken).ConfigureAwait(false);
-    
-    await _serviceProfilerProvider.StopServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
-    _logger.LogInformation("Done");
-  }
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Start profiler service...");
+        await _serviceProfilerProvider.StartServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken: stoppingToken).ConfigureAwait(false);
+
+        await _serviceProfilerProvider.StopServiceProfilerAsync(null, stoppingToken).ConfigureAwait(false);
+        _logger.LogInformation("Done");
+    }
 }

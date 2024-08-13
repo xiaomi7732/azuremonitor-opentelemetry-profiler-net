@@ -1,6 +1,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 
@@ -46,6 +47,7 @@ internal sealed class DumbTraceControl : ITraceControl, IDisposable
         _session = await _clientProvider.GetDiagnosticsClient(pid).StartEventPipeSessionAsync(CreateConfigurations(), cancellationToken).ConfigureAwait(false);
 
         _ = StartWriting(traceFilePath, _session.EventStream);
+
     }
 
     // Fire and forget
@@ -89,13 +91,22 @@ internal sealed class DumbTraceControl : ITraceControl, IDisposable
                 // Provider Name: System.Threading.Tasks.TplEventSource("2e5dba47-a3d2-4d16-8ee0-6671ffdcd7b5")
                 // This is the provider that generates ‘Task Parallel Library’ events.
                 // These events are needed to stitch together stacks from different threads (when async I/O happens).
-                new EventPipeProvider("System.Threading.Tasks.TplEventSource", EventLevel.Verbose, keywords: 0x1 | 0x2 | 0x4 | 0x40 | 0x80, arguments: null),
+                new EventPipeProvider("System.Threading.Tasks.TplEventSource", EventLevel.LogAlways, keywords: 0x1 | 0x2 | 0x4 | 0x40 | 0x80, arguments: null),
 
                 // Microsoft-ApplicationInsights-DataRelay
                 // new EventPipeProvider(ApplicationInsightsDataRelayEventSource.EventSourceName, EventLevel.Verbose, keywords:0xffffffff, arguments: null),
                 
                 // Open Telemetry SDK Event Source
                 new EventPipeProvider("OpenTelemetry-Sdk",EventLevel.Verbose, keywords:0xfffffffff, arguments: null),
+
+                // Open Telemetry ASPNETCORE
+                new EventPipeProvider("OpenTelemetry-AzureMonitor-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                new EventPipeProvider("OpenTelemetry-AzureMonitor-Exporter", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+
+                new EventPipeProvider("OpenTelemetry-Instrumentation-Http", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                new EventPipeProvider("OpenTelemetry-Instrumentation-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+
+                new EventPipeProvider(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName, EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
         ]);
     }
 }
