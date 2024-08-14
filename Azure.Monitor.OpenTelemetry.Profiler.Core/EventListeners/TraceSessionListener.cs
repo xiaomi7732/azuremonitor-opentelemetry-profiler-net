@@ -38,7 +38,7 @@ internal class TraceSessionListener : EventListener
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
-        _logger.LogInformation("OnEventWritten by {eventSource}", eventData.EventSource.Name);
+        _logger.LogTrace("OnEventWritten by {eventSource}", eventData.EventSource.Name);
         base.OnEventWritten(eventData);
 
         try
