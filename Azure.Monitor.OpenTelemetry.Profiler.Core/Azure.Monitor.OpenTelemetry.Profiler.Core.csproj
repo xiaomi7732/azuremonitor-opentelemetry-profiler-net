@@ -11,4 +11,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
+  </ItemGroup>
+
 </Project>
