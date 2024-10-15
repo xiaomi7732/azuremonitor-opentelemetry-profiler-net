@@ -4,13 +4,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
-internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, IDisposable
+internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, IProfilerSource, IDisposable
 {
     private readonly ITraceControl _traceControl;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
     private TraceSessionListener? _listener;
+
+    public string Source => nameof(OpenTelemetryProfilerProvider);
 
     public OpenTelemetryProfilerProvider(
         ITraceControl traceControl,
@@ -24,13 +26,13 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     public async Task<bool> StartServiceProfilerAsync(IProfilerSource source, CancellationToken cancellationToken = default)
     {
-        
+
         // TODO: use temp folder managaer instead.
         string traceFileFullPath = GetTempTraceFileName();
         // ~
         _logger.LogInformation("Starting profiling. Local trace file: {traceFileFullPath}", traceFileFullPath);
         await _traceControl.EnableAsync(traceFileFullPath, cancellationToken).ConfigureAwait(false);
-        
+
         await Task.Delay(TimeSpan.FromSeconds(2));
         _listener = new TraceSessionListener(_loggerFactory.CreateLogger<TraceSessionListener>());
 

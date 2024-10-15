@@ -10,7 +10,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
         services.TryAddSingleton<ITraceControl, DumbTraceControl>();
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
-
         return services;
     }
 }
