@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -71,7 +72,7 @@ public abstract class UserConfigurationBase
     /// Gets or sets the Service Profiler endpoint.
     /// Optional, default value is pointing to the well-known production profiler server endpoint.
     /// </summary>
-    public string Endpoint { get; set; } = null;
+    public string? Endpoint { get; set; } = null;
 
     /// <summary>
     /// Gets or sets the upload mode. Valid values are: Never, OnSuccess and Always.
@@ -150,7 +151,7 @@ public abstract class UserConfigurationBase
     /// Gets or sets the Custom EventPipeProviders. These are EventPipe providers in addition to the built-in event pipe providers.
     /// Go to https://aka.ms/ep-sp/custom-providers for more details.
     /// </summary>
-    public IEnumerable<EventPipeProviderItem> CustomEventPipeProviders { get; set; } = null;
+    public IEnumerable<EventPipeProviderItem> CustomEventPipeProviders { get; set; } = Enumerable.Empty<EventPipeProviderItem>();
 
     /// <summary>
     /// Gets or sets the trace scavenger service options.

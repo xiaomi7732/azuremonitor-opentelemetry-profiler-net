@@ -36,7 +36,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     {
         string noIKeyMessage = "No instrumentation key is set. Application Insights Profiler won't start.";
 
-        bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string serializedUserConfiguration);
+        bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration);
         if (isUserConfigSerialized)
         {
             _logger.LogDebug("User Settings:" + Environment.NewLine + "{details}", serializedUserConfiguration);

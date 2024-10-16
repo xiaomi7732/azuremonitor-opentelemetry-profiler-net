@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.Tracing;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -15,7 +16,7 @@ public class EventPipeProviderItem
     /// <summary>
     /// Gets or sets the provider name. For example: Microsoft-Windows-DotNETRuntime.
     /// </summary>
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the event level.
@@ -31,5 +32,5 @@ public class EventPipeProviderItem
     /// Gets or sets the arguments for the event pipe provider.
     /// </summary>
     /// <value></value>
-    public IDictionary<string, string> Arguments { get; set; } = null;
+    public IDictionary<string, string> Arguments { get; set; } = ImmutableDictionary<string,string>.Empty;
 }

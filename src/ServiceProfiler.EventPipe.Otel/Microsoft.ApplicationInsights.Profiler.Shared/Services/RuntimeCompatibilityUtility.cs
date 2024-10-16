@@ -40,7 +40,7 @@ internal class RuntimeCompatibilityUtility : ICompatibilityUtility
             }
 
             // Otherwise: Some .NET Core 2.x platform returns 4.6.x for its framework version descriptions and that's where specific version check is required.
-            Version minVersion = null;
+            Version? minVersion = null;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 _logger.LogDebug("Checking compatibility for Linux platform.");
@@ -55,7 +55,7 @@ internal class RuntimeCompatibilityUtility : ICompatibilityUtility
 
             _logger.LogDebug("Min: {0} Current: {1}", minVersion, runtimeVersion);
 
-            if (runtimeVersion >= minVersion)
+            if (minVersion is not null && runtimeVersion >= minVersion)
             {
                 return (true, $"Pass Runtime Compatibility test.");
             }
