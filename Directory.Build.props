@@ -1,5 +1,1 @@
-<Project>
-  <PropertyGroup>
-    <LangVersion>12.0</LangVersion>
-  </PropertyGroup>
-</Project>
+ServiceProfiler/Directory.Build.props
