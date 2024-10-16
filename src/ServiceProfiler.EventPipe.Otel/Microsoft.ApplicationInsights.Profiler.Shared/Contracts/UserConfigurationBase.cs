@@ -58,6 +58,16 @@ public abstract class UserConfigurationBase
     public float RandomProfilingOverhead { get; set; } = 0.01F;
 
     /// <summary>
+    /// Gets or sets the value to enable or disable the compatibility test before invoking the Service Profiler. Service Profiler will be disabled
+    /// when it fail the compatibility test unless this value is set to true.
+    /// Optional, default value is false.
+    /// </summary>
+    /// <remarks>The current compatibility testing depends on the framework description provided by the RuntimeInformation and it could be changed.
+    /// Refer https://github.com/dotnet/corefx/issues/9725 for details. This property could be used as an escape when the change happens.
+    /// </remarks>
+    public bool IsSkipCompatibilityTest { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the Service Profiler endpoint.
     /// Optional, default value is pointing to the well-known production profiler server endpoint.
     /// </summary>

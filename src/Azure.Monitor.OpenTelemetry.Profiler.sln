@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsigh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Contract.Agent", "ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj", "{E5EAA721-2356-49F9-A71A-2589E44CC339}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Orchestration", "Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj", "{F13DB297-B229-4BEB-ADC4-A3FCD98D96E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Contract.Agent.Profiler", "ServiceProfiler.Contract.Agent.Profiler\Microsoft.ServiceProfiler.Contract.Agent.Profiler.csproj", "{4FD234BF-5C58-4E72-A923-0A2A5536D09E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,13 @@ Global
 		{E5EAA721-2356-49F9-A71A-2589E44CC339}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5EAA721-2356-49F9-A71A-2589E44CC339}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5EAA721-2356-49F9-A71A-2589E44CC339}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F13DB297-B229-4BEB-ADC4-A3FCD98D96E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F13DB297-B229-4BEB-ADC4-A3FCD98D96E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F13DB297-B229-4BEB-ADC4-A3FCD98D96E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F13DB297-B229-4BEB-ADC4-A3FCD98D96E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

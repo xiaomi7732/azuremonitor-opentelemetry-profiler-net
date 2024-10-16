@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
+    <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
   </ItemGroup>
 
   <ItemGroup>
