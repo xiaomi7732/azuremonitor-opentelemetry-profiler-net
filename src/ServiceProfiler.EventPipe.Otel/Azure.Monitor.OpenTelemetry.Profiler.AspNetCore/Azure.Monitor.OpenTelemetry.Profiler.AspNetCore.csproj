@@ -2,10 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
-    <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 

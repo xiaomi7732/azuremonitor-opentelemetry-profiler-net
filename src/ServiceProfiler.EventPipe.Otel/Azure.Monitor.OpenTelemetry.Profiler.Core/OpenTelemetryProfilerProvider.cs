@@ -1,6 +1,8 @@
 
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.ServiceProfiler.Orchestration;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 

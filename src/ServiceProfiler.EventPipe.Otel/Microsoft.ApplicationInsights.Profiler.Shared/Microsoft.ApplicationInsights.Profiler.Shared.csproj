@@ -6,6 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
   </ItemGroup>
 
@@ -13,7 +14,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="System.Collections.Immutable" />
-    
   </ItemGroup>
 
   <PropertyGroup>

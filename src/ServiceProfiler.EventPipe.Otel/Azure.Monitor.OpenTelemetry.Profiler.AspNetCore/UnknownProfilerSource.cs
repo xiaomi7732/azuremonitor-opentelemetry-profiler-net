@@ -1,4 +1,4 @@
-using Azure.Monitor.OpenTelemetry.Profiler.Core;
+using Microsoft.ServiceProfiler.Orchestration;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.AspNetCore;
 

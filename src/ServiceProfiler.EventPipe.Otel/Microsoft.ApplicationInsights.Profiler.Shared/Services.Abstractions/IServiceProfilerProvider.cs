@@ -1,4 +1,8 @@
-﻿namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.ServiceProfiler.Orchestration;
+
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 public interface IServiceProfilerProvider
 {
