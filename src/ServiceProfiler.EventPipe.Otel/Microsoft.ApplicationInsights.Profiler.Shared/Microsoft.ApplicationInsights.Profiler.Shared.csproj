@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ServiceProfiler\src\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
