@@ -17,7 +17,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 ///<summary>
 /// Orchestrator for the EventPipe profiler. Starts all provided scheduling policies concurrently.
 ///</summary>
-internal class OrchestratorEventPipe : Orchestrator
+internal abstract class OrchestratorEventPipe : Orchestrator
 {
     private readonly IReadOnlyCollection<SchedulingPolicy> _policyCollection;
     private readonly IServiceProfilerProvider _profilerProvider;

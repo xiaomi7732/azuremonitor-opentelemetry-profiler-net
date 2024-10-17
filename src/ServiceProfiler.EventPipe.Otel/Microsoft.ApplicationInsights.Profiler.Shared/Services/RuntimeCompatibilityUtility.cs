@@ -29,8 +29,8 @@ internal class RuntimeCompatibilityUtility : ICompatibilityUtility
     /// </summary>
     public (bool compatible, string reason) IsCompatible()
     {
-        Version runtimeVersion = _versionProvider.RuntimeVersion;
-        if (runtimeVersion != null)
+        Version? runtimeVersion = _versionProvider.RuntimeVersion;
+        if (runtimeVersion is not null)
         {
             // Shortcut:
             // .NET Core 3.0.0 or .NET 5.0 and above passes the compatibility test immediately
