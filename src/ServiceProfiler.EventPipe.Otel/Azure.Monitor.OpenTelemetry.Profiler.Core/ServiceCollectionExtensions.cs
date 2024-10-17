@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
+using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
@@ -17,7 +18,15 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddServiceProfilerCore(this IServiceCollection services)
     {
         services.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
+
+        services.TryAddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
+        services.TryAddSingleton<IUserCacheManager, UserCacheManager>();
         services.TryAddSingleton<ITraceControl, DumbTraceControl>();
+
+        // Transient trace session listeners
+        services.TryAddTransient<TraceSessionListener>();
+        services.TryAddSingleton<TraceSessionListenerFactory>();
+
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         services.TryAddSingleton<IServiceProfilerContext, StubServiceProfilerContext>();
