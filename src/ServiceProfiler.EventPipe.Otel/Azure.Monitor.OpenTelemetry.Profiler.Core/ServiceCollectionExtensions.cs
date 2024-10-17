@@ -1,9 +1,13 @@
 using System.Runtime.InteropServices;
+using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
+using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
@@ -38,6 +42,27 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
         services.TryAddSingleton<ICompatibilityUtility, RuntimeCompatibilityUtility>();
         // ~
+
+        services.AddSingleton<ProfilerSettings>();
+        services.TryAddSingleton<IProfilerSettingsService>(p =>
+        {
+            ServiceProfilerOptions userConfiguration = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
+
+            if (userConfiguration.StandaloneMode)
+            {
+                return ActivatorUtilities.CreateInstance<LocalProfileSettingsService>(p);
+            }
+            // TODO: implement this later
+            // else
+            // {
+            //     return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
+            // }
+            throw new NotImplementedException("Settings other than local is not implemented.");
+        });
+
+        services.TryAddSingleton<IResourceUsageSource, StubResourceUsageSource>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
 
         return services;
     }

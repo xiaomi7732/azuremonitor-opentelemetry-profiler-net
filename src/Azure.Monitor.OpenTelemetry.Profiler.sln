@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.O
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Contract.Agent.Profiler", "ServiceProfiler.Contract.Agent.Profiler\Microsoft.ServiceProfiler.Contract.Agent.Profiler.csproj", "{4FD234BF-5C58-4E72-A923-0A2A5536D09E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.ProcessMonitor", "ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj", "{BD643E73-55DE-47CF-ACAA-DDD415F227F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.Logging", "ServiceProfiler.Logging\ServiceProfiler.Logging.csproj", "{8BDA3D99-B856-45E3-BA11-32347B6928A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +52,13 @@ Global
 		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4FD234BF-5C58-4E72-A923-0A2A5536D09E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD643E73-55DE-47CF-ACAA-DDD415F227F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD643E73-55DE-47CF-ACAA-DDD415F227F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD643E73-55DE-47CF-ACAA-DDD415F227F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD643E73-55DE-47CF-ACAA-DDD415F227F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
