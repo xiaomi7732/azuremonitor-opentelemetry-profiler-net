@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  
   <ItemGroup>
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.Core" />
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.AspNetCore" />
@@ -16,10 +22,5 @@
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
 </Project>

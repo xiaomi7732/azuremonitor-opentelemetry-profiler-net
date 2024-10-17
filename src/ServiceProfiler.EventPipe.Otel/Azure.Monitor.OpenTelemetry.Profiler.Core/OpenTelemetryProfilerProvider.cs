@@ -12,6 +12,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private const string TraceFileExtension = ".nettrace";
     private string? _currentTraceFilePath;
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
+    private bool IsSemaphoreTaken => _singleProfilingSemaphore.CurrentCount == 0;
 
     private readonly ITraceControl _traceControl;
     private readonly ILoggerFactory _loggerFactory;
@@ -59,38 +60,32 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         }
 
         // Successfully acquired semaphore here.
-            bool profilerStarted = false;
+        bool profilerStarted = false;
+
+        _logger.LogTrace("Got the semaphore. Try starting the Profiler.");
+
+        string localCacheFolder = _userCacheManager.TempTraceDirectory.FullName;
+        Directory.CreateDirectory(localCacheFolder);
+
+        _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), TraceFileExtension);
+        _logger.LogDebug("Trace File Path: {traceFilePath}", _currentTraceFilePath);
+
         try
         {
-            _logger.LogTrace("Got the semaphore. Try starting the Profiler.");
+            _logger.LogDebug("Call TraceControl.Enable().");
+            await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
 
-            string localCacheFolder = _userCacheManager.TempTraceDirectory.FullName;
-            Directory.CreateDirectory(localCacheFolder);
+            // Dispose any previous trace session listener
+            _listener?.Dispose();
+            _listener = _traceSessionListenerFactory.Create();
+            _logger.LogDebug("New traceSessionListener created.");
 
-            _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), TraceFileExtension);
-            _logger.LogDebug("Trace File Path: {traceFilePath}", _currentTraceFilePath);
-
-            try
-            {
-                _logger.LogDebug("Call TraceControl.Enable().");
-                await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
-                
-                // Dispose any previous trace session listener
-                _listener?.Dispose();
-                _listener = _traceSessionListenerFactory.Create();
-                _logger.LogDebug("New traceSessionListener created.");
-
-                profilerStarted = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to start eventpipe profiling.");
-                throw;
-            }
+            profilerStarted = true;
         }
-        finally
+        catch (Exception ex)
         {
-            _singleProfilingSemaphore.Release();
+            _logger.LogError(ex, "Failed to start eventpipe profiling.");
+            throw;
         }
 
         return profilerStarted;
@@ -98,27 +93,62 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     public async Task<bool> StopServiceProfilerAsync(IProfilerSource source, CancellationToken cancellationToken = default)
     {
-        await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
-        _listener?.Dispose();
-        return true;
-    }
+        _logger.LogTrace("Entering {StopServiceProfilerAsync}.", nameof(StopServiceProfilerAsync));
 
-    private static string GetTempTraceFileName()
-    {
-        string tempPath = Path.GetTempPath();
-        string profilerFolder = Path.Combine(tempPath, "OTelTraces");
-        Directory.CreateDirectory(profilerFolder);
+        bool profilerStopped = false;
 
-        string fileName = Guid.NewGuid().ToString("D");
-        fileName = Path.ChangeExtension(fileName, ".nettrace");
+        if (source is null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
 
-        string fullTraceFileName = Path.GetFullPath(Path.Combine(profilerFolder, fileName));
-        return fullTraceFileName;
+        if (!IsSemaphoreTaken)
+        {
+            _logger.LogDebug("Try to stop profiler while none is is running.");
+            return false;
+        }
+
+        DateTime? currentSessionId = _traceControl.SessionStartUTC;
+        if (currentSessionId is null)
+        {
+            throw new InvalidOperationException("Failed fetching session start time.");
+        }
+
+        try
+        {
+            await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            profilerStopped = true;
+
+            _listener?.Dispose();
+            ReleaseSemaphoreForProfiling();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fail to disable EventPipe profiling.");
+            throw;
+        }
+        finally
+        {
+            if (profilerStopped)
+            {
+                ReleaseSemaphoreForProfiling();
+            }
+        }
     }
 
     public void Dispose()
     {
         _singleProfilingSemaphore.Dispose();
         _listener?.Dispose();
+    }
+
+    private void ReleaseSemaphoreForProfiling()
+    {
+        if (IsSemaphoreTaken)
+        {
+            _singleProfilingSemaphore.Release();
+        };
     }
 }

@@ -1,5 +1,9 @@
-using System.Diagnostics.Tracing;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Diagnostics.Tracing;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
@@ -12,12 +16,21 @@ internal class TraceSessionListener : EventListener
     }
 
     public const string OpenTelemetrySDKEventSourceName = "OpenTelemetry-Sdk";
+    private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ILogger<TraceSessionListener> _logger;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
+    private bool _hasActivityReported = false;
+    private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new();
+    public SampleActivityContainer SampleActivities { get; private set; }
 
-    public TraceSessionListener(ILogger<TraceSessionListener> logger)
+
+    public TraceSessionListener(
+        IServiceProfilerContext serviceProfilerContext,
+        ILogger<TraceSessionListener> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
+
         _logger.LogInformation("Trace session listener ctor.");
         _ctorWaitHandle.Set();
         _logger.LogInformation("Trace session listener created.");
@@ -43,9 +56,7 @@ internal class TraceSessionListener : EventListener
 
         try
         {
-            if (
-                !string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) &&
-                !string.Equals(eventData.EventSource.Name, "OpenTelemetry-AzureMonitor-AspNetCore", StringComparison.Ordinal))
+            if (!string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal))
             {
                 return;
             }
@@ -66,7 +77,8 @@ internal class TraceSessionListener : EventListener
     /// <param name="eventData"></param>
     public void OnRichPayloadEventWritten(EventWrittenEventArgs eventData)
     {
-        _logger.LogTrace("{Action} - ActivityId: {activityId}, EventName: {eventName}, Keywords: {keyWords}, OpCode: {opCode}",
+        _logger.LogTrace("[{Source}] {Action} - ActivityId: {activityId}, EventName: {eventName}, Keywords: {keyWords}, OpCode: {opCode}",
+            eventData.EventSource.Name,
             nameof(OnRichPayloadEventWritten),
             eventData.ActivityId,
             eventData.EventName,
@@ -85,19 +97,22 @@ internal class TraceSessionListener : EventListener
             return;
         }
 
-        string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
-        string? rawId = eventData.GetPayload<string>("id");
-
-        if (eventData.EventId == 24) // Started
+        if (string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) && eventData.EventId == 24 || eventData.EventId == 25)
         {
-            _logger.LogInformation("Requet started: Activity Id: {activityId}", eventData.ActivityId);
-            AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(requestName);
-        }
+            string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
+            string spanId = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
+            string activityIdPath = eventData.ActivityId.GetActivityPath();
+            (string operationId, string requestId) = ExtractKeyIds(spanId);
 
-        if (eventData.EventId == 25) // Stopped
-        {
-            _logger.LogInformation("Requet stopped: Activity Id: {activityId}", eventData.ActivityId);
-            AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(requestName);
+            if (eventData.EventId == 24) // Started
+            {
+                HandleRequestStart(eventData, requestName, activityIdPath, requestId, operationId);
+            }
+
+            if (eventData.EventId == 25) // Stopped
+            {
+                HandleRequestStop(eventData, requestName);
+            }
         }
 
         // if (eventData.EventName.Equals(EventName.Request, StringComparison.Ordinal) && (eventData.Keywords.HasFlag(ApplicationInsightsDataRelayEventSource.Keywords.Operations)))
@@ -196,6 +211,108 @@ internal class TraceSessionListener : EventListener
         // }
     }
 
+    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId)
+    {
+        _logger.LogInformation("Requet stopped: Activity Id: {activityId}", eventData.ActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(requestName);
+
+        SampleActivity? activity;
+        if (_sampleActivityBuffer.TryRemove(requestId, out activity))
+        {
+            activity.OperationName = requestName;
+            activity.StopTimeUtc = eventData.TimeStamp;
+            activity.Duration = eventData.TimeStamp - activity.StartTimeUtc;
+            activity.RoleInstance = _serviceProfilerContext.MachineName;
+            activity.StopActivityIdPath = activityIdPath;
+
+            AppendSampleActivity(activity);
+        }
+        else
+        {
+            string message = "There is no matched start activity found for this request id: {requestId}. This could happen for the first few activities.";
+            if (!_hasActivityReported)
+            {
+                _logger.LogInformation(message, requestId);
+                _hasActivityReported = true;
+            }
+            else
+            {
+                _logger.LogDebug(message, requestId);
+            }
+        }
+    }
+
+    private void AppendSampleActivity(SampleActivity activity)
+    {
+        if (activity.IsValid(_logger))
+        {
+            // Send the AI CustomEvent
+            try
+            {
+                if (SampleActivities.AddSample(activity))
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))  // Perf: Avoid serialization when not debugging.
+                    {
+                        bool isActivitySerialized = _serializer.TrySerialize(activity, out string serializedActivity);
+                        if (isActivitySerialized)
+                        {
+                            _logger.LogDebug("Sample is added: {0}", serializedActivity);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Serialize failed for activity: {0}", activity?.OperationId);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogError("Fail to add activity into collection. Please making sure there's enough memory.");
+                }
+            }
+            catch (ObjectDisposedException ex)
+            {
+                // activity builder has been disposed.
+                _logger.LogError(ex, "Start activity cache has been disposed before the activity is recorded.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                // The underlying collection was modified outside of this BlockingCollection<T> instance.
+                _logger.LogError(ex, "Invalid operation on start activity cache. Fail to record the activity.");
+            }
+        }
+        else
+        {
+            _logger.LogInformation("Target request data is not valid upon receiving requests: {requestId}. This could happen for the first few activities.", activity.RequestId);
+        }
+    }
+
+    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId, string operationId)
+    {
+        _logger.LogInformation("Requet started: Activity Id: {activityId}", eventData.ActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(requestName);
+
+        // Record start time utc and start activity id.
+        SampleActivity result = _sampleActivityBuffer.AddOrUpdate(requestId, new SampleActivity()
+        {
+            StartActivityIdPath = activityIdPath,
+            StartTimeUtc = eventData.TimeStamp,
+            RequestId = requestId,
+            OperationId = operationId,
+        }, (key, value) =>
+        {
+            value.StartActivityIdPath = activityIdPath;
+            value.StartTimeUtc = eventData.TimeStamp;
+            value.RequestId = requestId;
+            value.OperationId = operationId;
+            return value;
+        });
+    }
+
+    private void HandleRequestStart(EventWrittenEventArgs eventArgs)
+    {
+
+    }
+
     private async Task HandleEventSourceCreated(EventSource eventSource)
     {
         // This has to be the very first statement to making sure the objects are constructured.
@@ -203,9 +320,6 @@ internal class TraceSessionListener : EventListener
 
         try
         {
-            // await Task.Delay(TimeSpan.FromSeconds(5));
-            // _logger.LogInformation("Waiting manual trigger for source: {name}", eventSource.Name);
-            // So that the rest of the code doesn't run before the end of the constructor
             _logger.LogInformation("Got manual trigger for source: {name}", eventSource.Name);
 
             await Task.Yield();
@@ -246,5 +360,16 @@ internal class TraceSessionListener : EventListener
             return;
         }
         _logger.LogInformation(message);
+    }
+
+    // span id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
+    private (string operationId, string requestId) ExtractKeyIds(string spanId)
+    {
+        string[] tokens = spanId.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length != 4)
+        {
+            throw new InvalidDataException(FormattableString.Invariant($"Span id shall have 4 sections separated by `-`. Actual: {spanId}"));
+        }
+        return (tokens[1], tokens[2]);
     }
 }
