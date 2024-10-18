@@ -1,4 +1,5 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -17,23 +18,28 @@ internal class TraceSessionListener : EventListener
 
     public const string OpenTelemetrySDKEventSourceName = "OpenTelemetry-Sdk";
     private readonly IServiceProfilerContext _serviceProfilerContext;
+    private readonly ISerializationProvider _serializer;
     private readonly ILogger<TraceSessionListener> _logger;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
     private bool _hasActivityReported = false;
     private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new();
-    public SampleActivityContainer SampleActivities { get; private set; }
-
+    
+    public SampleActivityContainer SampleActivities { get; }
 
     public TraceSessionListener(
         IServiceProfilerContext serviceProfilerContext,
+        SampleActivityContainer sampleActivityContainer,
+        ISerializationProvider serializer,
         ILogger<TraceSessionListener> logger)
     {
+        logger.LogTrace("Trace session listener ctor.");
+        
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
-
-        _logger.LogInformation("Trace session listener ctor.");
+        SampleActivities = sampleActivityContainer ?? throw new ArgumentNullException(nameof(sampleActivityContainer));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _ctorWaitHandle.Set();
-        _logger.LogInformation("Trace session listener created.");
+        logger.LogTrace("Trace session listener created.");
     }
 
     protected override void OnEventSourceCreated(EventSource eventSource)
@@ -107,11 +113,13 @@ internal class TraceSessionListener : EventListener
             if (eventData.EventId == 24) // Started
             {
                 HandleRequestStart(eventData, requestName, activityIdPath, requestId, operationId);
+                return;
             }
 
             if (eventData.EventId == 25) // Stopped
             {
-                HandleRequestStop(eventData, requestName);
+                HandleRequestStop(eventData, requestName, activityIdPath, requestId);
+                return;
             }
         }
 
@@ -253,7 +261,7 @@ internal class TraceSessionListener : EventListener
                 {
                     if (_logger.IsEnabled(LogLevel.Debug))  // Perf: Avoid serialization when not debugging.
                     {
-                        bool isActivitySerialized = _serializer.TrySerialize(activity, out string serializedActivity);
+                        bool isActivitySerialized = _serializer.TrySerialize(activity, out string? serializedActivity);
                         if (isActivitySerialized)
                         {
                             _logger.LogDebug("Sample is added: {0}", serializedActivity);

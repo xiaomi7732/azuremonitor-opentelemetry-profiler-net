@@ -1,5 +1,6 @@
 
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,8 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private readonly ILoggerFactory _loggerFactory;
     private readonly IUserCacheManager _userCacheManager;
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
+    private readonly IPostStopProcessor _postStopProcessor;
+    private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ServiceProfilerOptions _options;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
@@ -31,11 +34,15 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         IOptions<ServiceProfilerOptions> options,
         IUserCacheManager userCacheManager,
         TraceSessionListenerFactory traceSessionListenerFactory,
+        IPostStopProcessor postStopProcessor,
+        IServiceProfilerContext serviceProfilerContext,
         ILogger<OpenTelemetryProfilerProvider> logger)
     {
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _userCacheManager = userCacheManager ?? throw new ArgumentNullException(nameof(userCacheManager));
         _traceSessionListenerFactory = traceSessionListenerFactory ?? throw new ArgumentNullException(nameof(traceSessionListenerFactory));
+        _postStopProcessor = postStopProcessor ?? throw new ArgumentNullException(nameof(postStopProcessor));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _traceControl = traceControl ?? throw new ArgumentNullException(nameof(traceControl));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
@@ -114,13 +121,31 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             throw new InvalidOperationException("Failed fetching session start time.");
         }
 
+        if (string.IsNullOrEmpty(_currentTraceFilePath))
+        {
+            throw new InvalidOperationException("Current trace file path can't be null.");
+        }
+
         try
         {
+            // Notice: Stop trace session listener has to be happen before calling ITraceControl.Disable().
+            // Trace control disabling will take a while. We shall not gathering anything events when disable is happening.
+            _logger.LogDebug("Disabling {sessionListener}", nameof(_listener));
+
+            List<SampleActivity>? sampleActivities = _listener?.SampleActivities?.GetActivities()?.ToList();
+            _listener?.Dispose();
+
+            // Disable the EventPipe.
             await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
             profilerStopped = true;
-
-            _listener?.Dispose();
             ReleaseSemaphoreForProfiling();
+
+            await _postStopProcessor.PostStopProcessAsync(new PostStopOptions(
+                _currentTraceFilePath,
+                currentSessionId.Value,
+                stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
+                sampleActivities ?? Enumerable.Empty<SampleActivity>(),
+                source), cancellationToken).ConfigureAwait(false);
 
             return true;
         }

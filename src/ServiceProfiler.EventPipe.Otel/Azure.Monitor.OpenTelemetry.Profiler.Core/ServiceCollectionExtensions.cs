@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ITraceControl, DumbTraceControl>();
 
         // Transient trace session listeners
+        services.TryAddTransient<SampleActivityContainer>();
         services.TryAddTransient<TraceSessionListener>();
         services.TryAddSingleton<TraceSessionListenerFactory>();
 
