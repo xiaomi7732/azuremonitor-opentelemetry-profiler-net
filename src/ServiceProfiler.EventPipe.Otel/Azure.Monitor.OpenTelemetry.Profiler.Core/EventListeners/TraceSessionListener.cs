@@ -23,7 +23,7 @@ internal class TraceSessionListener : EventListener
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
     private bool _hasActivityReported = false;
     private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new();
-    
+
     public SampleActivityContainer SampleActivities { get; }
 
     public TraceSessionListener(
@@ -33,7 +33,7 @@ internal class TraceSessionListener : EventListener
         ILogger<TraceSessionListener> logger)
     {
         logger.LogTrace("Trace session listener ctor.");
-        
+
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         SampleActivities = sampleActivityContainer ?? throw new ArgumentNullException(nameof(sampleActivityContainer));
@@ -107,18 +107,21 @@ internal class TraceSessionListener : EventListener
         {
             string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
             string spanId = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
-            string activityIdPath = eventData.ActivityId.GetActivityPath();
+
+            Guid activityId = eventData.ActivityId;
+            string activityIdPath = activityId.GetActivityPath();
+            _logger.LogTrace("{activityId} => {activityIdPath}", activityId, activityIdPath);
             (string operationId, string requestId) = ExtractKeyIds(spanId);
 
             if (eventData.EventId == 24) // Started
             {
-                HandleRequestStart(eventData, requestName, activityIdPath, requestId, operationId);
+                HandleRequestStart(eventData, requestName, activityIdPath, requestId, operationId, spanId);
                 return;
             }
 
             if (eventData.EventId == 25) // Stopped
             {
-                HandleRequestStop(eventData, requestName, activityIdPath, requestId);
+                HandleRequestStop(eventData, requestName, activityIdPath, requestId, spanId);
                 return;
             }
         }
@@ -219,10 +222,10 @@ internal class TraceSessionListener : EventListener
         // }
     }
 
-    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId)
+    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId, string spanId)
     {
-        _logger.LogInformation("Requet stopped: Activity Id: {activityId}", eventData.ActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(requestName);
+        _logger.LogInformation("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(name: requestName, id: spanId);
 
         SampleActivity? activity;
         if (_sampleActivityBuffer.TryRemove(requestId, out activity))
@@ -294,10 +297,11 @@ internal class TraceSessionListener : EventListener
         }
     }
 
-    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId, string operationId)
+    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId, string operationId, string spanId)
     {
-        _logger.LogInformation("Requet started: Activity Id: {activityId}", eventData.ActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(requestName);
+        Guid currentActivityId = eventData.ActivityId;
+        _logger.LogInformation("Request started: Activity Id: {activityId}", currentActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(name: requestName, id: spanId);
 
         // Record start time utc and start activity id.
         SampleActivity result = _sampleActivityBuffer.AddOrUpdate(requestId, new SampleActivity()
@@ -314,11 +318,6 @@ internal class TraceSessionListener : EventListener
             value.OperationId = operationId;
             return value;
         });
-    }
-
-    private void HandleRequestStart(EventWrittenEventArgs eventArgs)
-    {
-
     }
 
     private async Task HandleEventSourceCreated(EventSource eventSource)

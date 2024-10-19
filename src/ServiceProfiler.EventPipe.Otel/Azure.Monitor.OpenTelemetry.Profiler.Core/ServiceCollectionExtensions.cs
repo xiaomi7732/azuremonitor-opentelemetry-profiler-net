@@ -29,6 +29,8 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<TraceSessionListener>();
         services.TryAddSingleton<TraceSessionListenerFactory>();
 
+        services.TryAddSingleton<IPostStopProcessor, PostStopProcessor>();
+
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         services.TryAddSingleton<IServiceProfilerContext, StubServiceProfilerContext>();

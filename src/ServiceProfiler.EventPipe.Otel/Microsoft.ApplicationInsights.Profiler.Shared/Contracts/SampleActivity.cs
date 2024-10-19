@@ -41,11 +41,11 @@ internal class SampleActivity
     public bool IsValid(ILogger logger)
     {
         // There must be start/stop activity id paths
-        if (!IsGoodActivityIdPath(StartActivityIdPath, logger)) { return false; }
+        // if (!IsGoodActivityIdPath(StartActivityIdPath, logger)) { return false; }
         if (!IsGoodActivityIdPath(StopActivityIdPath, logger)) { return false; }
         // Start/Stop activity id path should either be the same (.NET Core 2.x) or the start activity id starts with stop activity id path (.NET Core 3.0).
         // Notes: this is activity id path for events from Microsoft-ApplicationInsights-DataRelay.
-        if (!StartActivityIdPath!.StartsWith(StopActivityIdPath, StringComparison.Ordinal)) { return false; }
+        // if (!StartActivityIdPath!.StartsWith(StopActivityIdPath, StringComparison.Ordinal)) { return false; }
         if (StartTimeUtc >= StopTimeUtc) { return false; }
         if (Duration.TotalMilliseconds <= 0) { return false; }
         if (string.IsNullOrEmpty(RequestId)) { return false; }
