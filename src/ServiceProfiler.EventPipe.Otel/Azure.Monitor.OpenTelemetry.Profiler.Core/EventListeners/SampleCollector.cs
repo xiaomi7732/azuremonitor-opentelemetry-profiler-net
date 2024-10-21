@@ -1,5 +1,6 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -7,7 +8,7 @@ using System.Diagnostics.Tracing;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
-internal class TraceSessionListener : EventListener
+internal class SampleCollector : EventListener
 {
     static class EventName
     {
@@ -15,28 +16,31 @@ internal class TraceSessionListener : EventListener
         public const string ActivityStopped = nameof(ActivityStopped);
     }
 
-    public const string OpenTelemetrySDKEventSourceName = "OpenTelemetry-Sdk";
+    private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ISerializationProvider _serializer;
-    private readonly SampleCollector _sampleCollector;
-    private readonly ILogger<TraceSessionListener> _logger;
+    private readonly ILogger<SampleCollector> _logger;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
+    private bool _hasActivityReported = false;
+    private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new();
 
     public SampleActivityContainer SampleActivities { get; }
 
-    public TraceSessionListener(
+    private static readonly string _targetEventSourceName = AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName;
+
+    public SampleCollector(
+        IServiceProfilerContext serviceProfilerContext,
         SampleActivityContainer sampleActivityContainer,
         ISerializationProvider serializer,
-        SampleCollector sampleCollector,
-        ILogger<TraceSessionListener> logger)
+        ILogger<SampleCollector> logger)
     {
-        logger.LogTrace("Trace session listener ctor.");
+        logger.LogTrace("{name} ctor.", nameof(SampleCollector));
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         SampleActivities = sampleActivityContainer ?? throw new ArgumentNullException(nameof(sampleActivityContainer));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
-        _sampleCollector = sampleCollector ?? throw new ArgumentNullException(nameof(sampleCollector));
         _ctorWaitHandle.Set();
-        logger.LogTrace("Trace session listener created.");
+        logger.LogTrace("{name} created.", nameof(SampleCollector));
     }
 
     protected override void OnEventSourceCreated(EventSource eventSource)
@@ -59,7 +63,7 @@ internal class TraceSessionListener : EventListener
 
         try
         {
-            if (!string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal))
+            if (!string.Equals(eventData.EventSource.Name, _targetEventSourceName, StringComparison.Ordinal))
             {
                 return;
             }
@@ -100,46 +104,103 @@ internal class TraceSessionListener : EventListener
             return;
         }
 
-        if (string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) && eventData.EventId == 24 || eventData.EventId == 25)
+        if (string.Equals(eventData.EventSource.Name, _targetEventSourceName, StringComparison.Ordinal) && (
+            eventData.EventId == AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventId.RequestStart ||
+            eventData.EventId == AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventId.RequestStop))
         {
             string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
             string spanId = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
+            string requestId = eventData.GetPayload<string>("requestId") ?? throw new InvalidDataException("requestId is missing.");
+            string operationId = eventData.GetPayload<string>("operationId") ?? throw new InvalidDataException("operationId is missing.");
 
-            // Guid activityId = eventData.ActivityId;
-            // string activityIdPath = activityId.GetActivityPath();
-            // _logger.LogTrace("{activityId} => {activityIdPath}", activityId, activityIdPath);
-            (string operationId, string requestId) = ExtractKeyIds(spanId);
+            Guid activityId = eventData.ActivityId;
+            string activityIdPath = activityId.GetActivityPath();
+            _logger.LogDebug("{activityId} => {activityIdPath}, requestName: {requestName}, spanId: {spanId}, requestId: {requestId}, operationId: {operationId}",
+                activityId, activityIdPath, requestName, spanId, requestId, operationId);
 
-            if (eventData.EventId == 24) // Started
+            if (eventData.EventId == AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventId.RequestStart) // Started
             {
-                HandleRequestStart(eventData, requestName, requestId, operationId, spanId);
+                HandleRequestStart(eventData, activityIdPath, requestId, operationId);
                 return;
             }
 
-            if (eventData.EventId == 25) // Stopped
+            if (eventData.EventId == AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventId.RequestStop) // Stopped
             {
-                HandleRequestStop(eventData, requestName, requestId, operationId, spanId);
+                HandleRequestStop(eventData, requestName, activityIdPath, requestId);
                 return;
             }
+
+            _logger.LogWarning("Unhandled event id: {eventId}", eventData.EventId);
         }
     }
 
-    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
+    private async Task HandleEventSourceCreated(EventSource eventSource)
     {
-        Guid currentActivityId = eventData.ActivityId;
-        _logger.LogInformation("Request started: Activity Id: {activityId}", currentActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
-            name: requestName,
-            id: spanId,
-            requestId: requestId,
-            operationId: operationId);
+        // This has to be the very first statement to making sure the objects are constructured.
+        _ctorWaitHandle.Wait();
+
+        try
+        {
+            _logger.LogInformation("Got manual trigger for source: {name}", eventSource.Name);
+
+            await Task.Yield();
+            if (string.Equals(eventSource.Name, _targetEventSourceName, StringComparison.OrdinalIgnoreCase))
+            {
+                EventKeywords keywordsMask = (EventKeywords)0x0000F;
+                _logger.LogDebug("Enabling EventSource: {eventSourceName}", eventSource.Name);
+                EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error enalbling event source. {name}", eventSource.Name);
+        }
     }
 
-    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
+    private void HandleRequestStart(EventWrittenEventArgs eventData, string activityIdPath, string requestId, string operationId)
     {
-        _logger.LogInformation("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
-            name: requestName, id: spanId, requestId: requestId, operationId: operationId);
+        // Record start time utc and start activity id.
+        SampleActivity result = _sampleActivityBuffer.AddOrUpdate(requestId, new SampleActivity()
+        {
+            StartActivityIdPath = activityIdPath,
+            StartTimeUtc = eventData.TimeStamp,
+            RequestId = requestId,
+            OperationId = operationId,
+        }, (key, value) =>
+        {
+            value.StartActivityIdPath = activityIdPath;
+            value.StartTimeUtc = eventData.TimeStamp;
+            value.RequestId = requestId;
+            value.OperationId = operationId;
+            return value;
+        });
+    }
+
+    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string activityIdPath, string requestId)
+    {
+        if (_sampleActivityBuffer.TryRemove(requestId, out SampleActivity? activity))
+        {
+            activity.OperationName = requestName;
+            activity.StopTimeUtc = eventData.TimeStamp;
+            activity.Duration = eventData.TimeStamp - activity.StartTimeUtc;
+            activity.RoleInstance = _serviceProfilerContext.MachineName;
+            activity.StopActivityIdPath = activityIdPath;
+
+            AppendSampleActivity(activity);
+        }
+        else
+        {
+            string message = "There is no matched start activity found for this request id: {requestId}. This could happen for the first few activities.";
+            if (!_hasActivityReported)
+            {
+                _logger.LogInformation(message, requestId);
+                _hasActivityReported = true;
+            }
+            else
+            {
+                _logger.LogDebug(message, requestId);
+            }
+        }
     }
 
     private void AppendSampleActivity(SampleActivity activity)
@@ -186,35 +247,6 @@ internal class TraceSessionListener : EventListener
         }
     }
 
-    private async Task HandleEventSourceCreated(EventSource eventSource)
-    {
-        // This has to be the very first statement to making sure the objects are constructured.
-        _ctorWaitHandle.Wait();
-
-        try
-        {
-            _logger.LogInformation("Got manual trigger for source: {name}", eventSource.Name);
-
-            await Task.Yield();
-            if (string.Equals(eventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.OrdinalIgnoreCase))
-            {
-                EventKeywords keywordsMask = (EventKeywords)0x0000F;
-                _logger.LogDebug("Enabling EventSource: {eventSourceName}", eventSource.Name);
-                EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
-            }
-            else if (eventSource.Name == "System.Threading.Tasks.TplEventSource")
-            {
-                // Activity IDs aren't enabled by default.
-                // Enabling Keyword 0x80 on the TplEventSource turns them on
-                EnableEvents(eventSource, EventLevel.LogAlways, (EventKeywords)0x80);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error enalbling event source: {name}", eventSource.Name);
-        }
-    }
-
     public override void Dispose()
     {
         _ctorWaitHandle.Dispose();
@@ -229,16 +261,5 @@ internal class TraceSessionListener : EventListener
             return;
         }
         _logger.LogInformation(message);
-    }
-
-    // span id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
-    private static (string operationId, string requestId) ExtractKeyIds(string spanId)
-    {
-        string[] tokens = spanId.Split('-', StringSplitOptions.RemoveEmptyEntries);
-        if (tokens.Length != 4)
-        {
-            throw new InvalidDataException(FormattableString.Invariant($"Span id shall have 4 sections separated by `-`. Actual: {spanId}"));
-        }
-        return (tokens[1], tokens[2]);
     }
 }

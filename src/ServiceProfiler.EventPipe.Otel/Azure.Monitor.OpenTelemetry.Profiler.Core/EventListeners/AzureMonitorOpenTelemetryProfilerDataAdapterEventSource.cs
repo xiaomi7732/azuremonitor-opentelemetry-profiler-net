@@ -7,19 +7,25 @@ public class AzureMonitorOpenTelemetryProfilerDataAdapterEventSource : EventSour
 {
     public const string EventSourceName = "AzureMonitor-OpenTelemetry-Profiler-DataAdapter";
 
+    internal static class EventId
+    {
+        public const int RequestStart = 1;
+        public const int RequestStop = 2;
+    }
+
 #pragma warning disable CA2211 // Non-constant fields should not be visible
     public static AzureMonitorOpenTelemetryProfilerDataAdapterEventSource Log = new();
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
-    [Event(1)]
-    public void RequestStart(string name, string id)
+    [Event(EventId.RequestStart)]
+    public void RequestStart(string name, string id, string requestId, string operationId)
     {
-        WriteEvent(1, name, id);
+        WriteEvent(EventId.RequestStart, name, id, requestId, operationId);
     }
 
-    [Event(2)]
-    public void RequestStop(string name, string id)
+    [Event(EventId.RequestStop)]
+    public void RequestStop(string name, string id, string requestId, string operationId)
     {
-        WriteEvent(2, name, id);
+        WriteEvent(EventId.RequestStop, name, id, requestId, operationId);
     }
 }
