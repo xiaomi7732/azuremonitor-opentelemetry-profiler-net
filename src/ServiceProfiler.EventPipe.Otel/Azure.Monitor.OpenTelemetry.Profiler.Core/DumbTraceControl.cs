@@ -97,16 +97,16 @@ internal sealed class DumbTraceControl : ITraceControl, IDisposable
                 // new EventPipeProvider(ApplicationInsightsDataRelayEventSource.EventSourceName, EventLevel.Verbose, keywords:0xffffffff, arguments: null),
                 
                 // Open Telemetry SDK Event Source
-                new EventPipeProvider("OpenTelemetry-Sdk",EventLevel.Verbose, keywords:0xfffffffff, arguments: null),
+                new EventPipeProvider("OpenTelemetry-Sdk",EventLevel.Verbose, keywords:0xffffffffffff, arguments: null),
 
                 // Open Telemetry ASPNETCORE
-                new EventPipeProvider("OpenTelemetry-AzureMonitor-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
-                new EventPipeProvider("OpenTelemetry-AzureMonitor-Exporter", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                // new EventPipeProvider("OpenTelemetry-AzureMonitor-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                // new EventPipeProvider("OpenTelemetry-AzureMonitor-Exporter", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
 
-                new EventPipeProvider("OpenTelemetry-Instrumentation-Http", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
-                new EventPipeProvider("OpenTelemetry-Instrumentation-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                // new EventPipeProvider("OpenTelemetry-Instrumentation-Http", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                // new EventPipeProvider("OpenTelemetry-Instrumentation-AspNetCore", EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
 
-                new EventPipeProvider(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName, EventLevel.Verbose, keywords:0xfffffffff, arguments:null),
+                new EventPipeProvider(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName, EventLevel.Verbose, keywords:0xffffffffffff, arguments:null),
         ]);
     }
 }

@@ -9,10 +9,11 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 internal class TraceSessionListener : EventListener
 {
-    static class EventName
+    // OpenTelemetry-SDK event source event ids.
+    static class EventId
     {
-        public const string ActivityStarted = nameof(ActivityStarted);
-        public const string ActivityStopped = nameof(ActivityStopped);
+        public const int RequestStart = 24;
+        public const int RequestStop = 25;
     }
 
     public const string OpenTelemetrySDKEventSourceName = "OpenTelemetry-Sdk";
@@ -100,14 +101,12 @@ internal class TraceSessionListener : EventListener
             return;
         }
 
-        if (string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) && eventData.EventId == 24 || eventData.EventId == 25)
+        if (string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) &&
+            (eventData.EventId == EventId.RequestStart || eventData.EventId == EventId.RequestStop))
         {
             string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
             string spanId = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
 
-            // Guid activityId = eventData.ActivityId;
-            // string activityIdPath = activityId.GetActivityPath();
-            // _logger.LogTrace("{activityId} => {activityIdPath}", activityId, activityIdPath);
             (string operationId, string requestId) = ExtractKeyIds(spanId);
 
             if (eventData.EventId == 24) // Started
@@ -121,68 +120,6 @@ internal class TraceSessionListener : EventListener
                 HandleRequestStop(eventData, requestName, requestId, operationId, spanId);
                 return;
             }
-        }
-    }
-
-    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
-    {
-        Guid currentActivityId = eventData.ActivityId;
-        _logger.LogInformation("Request started: Activity Id: {activityId}", currentActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
-            name: requestName,
-            id: spanId,
-            requestId: requestId,
-            operationId: operationId);
-    }
-
-    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
-    {
-        _logger.LogInformation("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
-        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
-            name: requestName, id: spanId, requestId: requestId, operationId: operationId);
-    }
-
-    private void AppendSampleActivity(SampleActivity activity)
-    {
-        if (activity.IsValid(_logger))
-        {
-            // Send the AI CustomEvent
-            try
-            {
-                if (SampleActivities.AddSample(activity))
-                {
-                    if (_logger.IsEnabled(LogLevel.Debug))  // Perf: Avoid serialization when not debugging.
-                    {
-                        bool isActivitySerialized = _serializer.TrySerialize(activity, out string? serializedActivity);
-                        if (isActivitySerialized)
-                        {
-                            _logger.LogDebug("Sample is added: {0}", serializedActivity);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Serialize failed for activity: {0}", activity?.OperationId);
-                        }
-                    }
-                }
-                else
-                {
-                    _logger.LogError("Fail to add activity into collection. Please making sure there's enough memory.");
-                }
-            }
-            catch (ObjectDisposedException ex)
-            {
-                // activity builder has been disposed.
-                _logger.LogError(ex, "Start activity cache has been disposed before the activity is recorded.");
-            }
-            catch (InvalidOperationException ex)
-            {
-                // The underlying collection was modified outside of this BlockingCollection<T> instance.
-                _logger.LogError(ex, "Invalid operation on start activity cache. Fail to record the activity.");
-            }
-        }
-        else
-        {
-            _logger.LogInformation("Target request data is not valid upon receiving requests: {requestId}. This could happen for the first few activities.", activity.RequestId);
         }
     }
 
@@ -213,6 +150,24 @@ internal class TraceSessionListener : EventListener
         {
             _logger?.LogError(ex, "Error enalbling event source: {name}", eventSource.Name);
         }
+    }
+
+    private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
+    {
+        Guid currentActivityId = eventData.ActivityId;
+        _logger.LogInformation("Request started: Activity Id: {activityId}", currentActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
+            name: requestName,
+            id: spanId,
+            requestId: requestId,
+            operationId: operationId);
+    }
+
+    private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
+    {
+        _logger.LogInformation("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
+            name: requestName, id: spanId, requestId: requestId, operationId: operationId);
     }
 
     public override void Dispose()

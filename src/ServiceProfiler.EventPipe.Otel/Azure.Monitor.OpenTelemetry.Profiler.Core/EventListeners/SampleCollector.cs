@@ -10,12 +10,6 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 internal class SampleCollector : EventListener
 {
-    static class EventName
-    {
-        public const string ActivityStarted = nameof(ActivityStarted);
-        public const string ActivityStopped = nameof(ActivityStopped);
-    }
-
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ISerializationProvider _serializer;
     private readonly ILogger<SampleCollector> _logger;
@@ -84,7 +78,7 @@ internal class SampleCollector : EventListener
     /// <param name="eventData"></param>
     public void OnRichPayloadEventWritten(EventWrittenEventArgs eventData)
     {
-        _logger.LogTrace("[{Source}] {Action} - ActivityId: {activityId}, EventName: {eventName}, Keywords: {keyWords}, OpCode: {opCode}",
+        _logger.LogTrace("[{Source}] {Action} - ActivityId: {activityId}, EventName: {eventName}, Keywords: {keyWords:X}, OpCode: {opCode}",
             eventData.EventSource.Name,
             nameof(OnRichPayloadEventWritten),
             eventData.ActivityId,
@@ -146,7 +140,7 @@ internal class SampleCollector : EventListener
             await Task.Yield();
             if (string.Equals(eventSource.Name, _targetEventSourceName, StringComparison.OrdinalIgnoreCase))
             {
-                EventKeywords keywordsMask = (EventKeywords)0x0000F;
+                EventKeywords keywordsMask = (EventKeywords)0xfffffffff;
                 _logger.LogDebug("Enabling EventSource: {eventSourceName}", eventSource.Name);
                 EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
             }

@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
 
         // Transient trace session listeners
         services.TryAddTransient<SampleActivityContainer>();
+        services.TryAddTransient<SampleCollector>();
         services.TryAddTransient<TraceSessionListener>();
         services.TryAddSingleton<TraceSessionListenerFactory>();
 
