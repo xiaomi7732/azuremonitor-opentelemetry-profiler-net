@@ -1,8 +1,6 @@
-using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;

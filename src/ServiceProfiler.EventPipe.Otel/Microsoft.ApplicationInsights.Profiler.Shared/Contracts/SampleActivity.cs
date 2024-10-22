@@ -5,6 +5,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using Microsoft.ServiceProfiler.Contract;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
@@ -51,6 +52,33 @@ internal class SampleActivity
         if (string.IsNullOrEmpty(RequestId)) { return false; }
 
         return true;
+    }
+
+    /// <summary>
+    /// Converts an ActivitySample to <see cref="ArtifactLocationProperties"/>, makes it ready for transferring.
+    /// </summary>
+    /// <param name="sample">Activity sample.</param>
+    /// <param name="stampId">StampId from Frontend client.</param>
+    /// <param name="processId">Process ID.</param>
+    /// <param name="sessionId">Session start time with offset.</param>
+    /// <param name="dataCube">AppId.</param>
+    /// <returns></returns>
+    public ArtifactLocationProperties ToArtifactLocationProperties(
+        string stampId,
+        int processId,
+        DateTimeOffset sessionId,
+        Guid dataCube,
+        string machineName)
+    {
+        return new ArtifactLocationProperties(
+            stampID: stampId,
+            appId: dataCube,
+            machineName: machineName,
+            processID: processId,
+            activityID: StartActivityIdPath,
+            etlStartTime: sessionId,
+            activityStartTime: StartTimeUtc,
+            activityStopTime: StopTimeUtc);
     }
 
     private bool IsGoodActivityIdPath(string? activityId, ILogger logger)

@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Core" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\UploadContext.cs" Link="UploadContext.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,5 +20,4 @@
     <ProjectReference Include="..\..\ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj" />
   </ItemGroup>
-
 </Project>
