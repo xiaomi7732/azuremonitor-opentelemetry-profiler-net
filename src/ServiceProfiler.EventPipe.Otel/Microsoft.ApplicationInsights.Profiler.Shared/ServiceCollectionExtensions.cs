@@ -14,6 +14,9 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByUnzipping>();
         services.TryAddTransient<IUploaderPathProvider, UploaderPathProvider>();
 
+        services.AddTransient<OutOfProcCaller>();
+        services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
+
         return services;
     }
 }

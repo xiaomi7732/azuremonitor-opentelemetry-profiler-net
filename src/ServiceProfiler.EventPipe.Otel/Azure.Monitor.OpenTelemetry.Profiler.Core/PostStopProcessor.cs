@@ -15,6 +15,7 @@ internal class PostStopProcessor : IPostStopProcessor
 {
     private readonly ServiceProfilerOptions _serviceProfilerOptions;
     private readonly IUploaderPathProvider _uploaderPathProvider;
+    private readonly ITraceUploader _traceUploader;
     private readonly INamedPipeClientFactory _namedPipeClientFactory;
     private readonly IAuthTokenProvider _authTokenProvider;
     private readonly ISerializationProvider _serializer;
@@ -24,6 +25,7 @@ internal class PostStopProcessor : IPostStopProcessor
 
     public PostStopProcessor(
         IUploaderPathProvider uploaderPathProvider,
+        ITraceUploader traceUploader,
         IOptions<ServiceProfilerOptions> serviceProfilerOptions,
         INamedPipeClientFactory namedPipeClientFactory,
         IAuthTokenProvider authTokenProvider,
@@ -34,6 +36,7 @@ internal class PostStopProcessor : IPostStopProcessor
     {
         _serviceProfilerOptions = serviceProfilerOptions?.Value ?? throw new ArgumentNullException(nameof(serviceProfilerOptions));
         _uploaderPathProvider = uploaderPathProvider ?? throw new ArgumentNullException(nameof(uploaderPathProvider));
+        _traceUploader = traceUploader ?? throw new ArgumentNullException(nameof(traceUploader));
         _namedPipeClientFactory = namedPipeClientFactory ?? throw new ArgumentNullException(nameof(namedPipeClientFactory));
         _authTokenProvider = authTokenProvider ?? throw new ArgumentNullException(nameof(authTokenProvider));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
@@ -110,12 +113,12 @@ internal class PostStopProcessor : IPostStopProcessor
                     }
                 }, cancellationToken);
 
-                Task<UploadContext> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
+                Task<UploadContextModel> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
 
                 // Waiting for both task to finish.
                 await Task.WhenAll(namedPipeClientTask, uploadTask).ConfigureAwait(false);
 
-                UploadContext uploadContext = uploadTask.Result;
+                UploadContextModel? uploadContext = uploadTask.Result;
                 if (uploadContext != null)
                 {
                     // Trace is uploaded.
@@ -149,7 +152,7 @@ internal class PostStopProcessor : IPostStopProcessor
     /// Upload the trace file.
     /// </summary>
     /// <returns>Returns the upload context when upload succeeded. Returns null otherwise.</returns>
-    private async Task<UploadContext> UploadTraceAsync(
+    private async Task<UploadContextModel?> UploadTraceAsync(
         PostStopOptions options, int processId, string namedPipeName, CancellationToken cancellationToken)
     {
         bool areOptionsSerialized = _serializer.TrySerialize(options, out string? serializedOptions);
