@@ -20,6 +20,8 @@ internal class PostStopProcessor : IPostStopProcessor
     private readonly ISerializationProvider _serializer;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IMetadataWriter _metadataWriter;
+    private readonly ICustomEventsTracker _customEventsTracker;
+    private readonly IRoleNameSource _roleNameSource;
     private readonly ILogger _logger;
 
     public PostStopProcessor(
@@ -31,6 +33,8 @@ internal class PostStopProcessor : IPostStopProcessor
         ISerializationProvider serializer,
         IServiceProfilerContext serviceProfilerContext,
         IMetadataWriter metadataWriter,
+        ICustomEventsTracker customEventsTracker,
+        IRoleNameSource roleNameSource,
         ILogger<PostStopProcessor> logger)
     {
         _serviceProfilerOptions = serviceProfilerOptions?.Value ?? throw new ArgumentNullException(nameof(serviceProfilerOptions));
@@ -41,6 +45,8 @@ internal class PostStopProcessor : IPostStopProcessor
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _metadataWriter = metadataWriter ?? throw new ArgumentNullException(nameof(metadataWriter));
+        _customEventsTracker = customEventsTracker ?? throw new ArgumentNullException(nameof(customEventsTracker));
+        _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -54,7 +60,7 @@ internal class PostStopProcessor : IPostStopProcessor
 
         try
         {
-            int sampleCount = e.Samples?.Count() ?? 0;
+            int sampleCount = e.Samples.Count();
 
             _logger.LogDebug("There are {sampleNumber} samples before validation.", sampleCount);
             UploadMode uploadMode = _serviceProfilerOptions.UploadMode;
@@ -121,7 +127,7 @@ internal class PostStopProcessor : IPostStopProcessor
                 if (uploadContext != null)
                 {
                     // Trace is uploaded.
-                    int validSampleCount = e.Samples?.Count() ?? 0;
+                    int validSampleCount = e.Samples.Count();
                     _logger.LogDebug("Sending {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
 
                     _customEventsTracker.Send(e.Samples, uploadContext, processId, e.ProfilerSource, appId);
@@ -142,7 +148,7 @@ internal class PostStopProcessor : IPostStopProcessor
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error happens on stopping service profiler.");
-            _logger.LogTrace(ex.ToString());
+            _logger.LogTrace(ex, message: ex.ToString());
             throw;
         }
     }

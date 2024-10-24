@@ -20,10 +20,9 @@ internal class TraceSessionListener : EventListener
     private readonly ILogger<TraceSessionListener> _logger;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
 
-    public SampleActivityContainer SampleActivities { get; }
+    public SampleActivityContainer? SampleActivities => _sampleCollector?.SampleActivities;
 
     public TraceSessionListener(
-        SampleActivityContainer sampleActivityContainer,
         ISerializationProvider serializer,
         SampleCollector sampleCollector,
         ILogger<TraceSessionListener> logger)
@@ -31,7 +30,6 @@ internal class TraceSessionListener : EventListener
         logger.LogTrace("Trace session listener ctor.");
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        SampleActivities = sampleActivityContainer ?? throw new ArgumentNullException(nameof(sampleActivityContainer));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _sampleCollector = sampleCollector ?? throw new ArgumentNullException(nameof(sampleCollector));
         _ctorWaitHandle.Set();

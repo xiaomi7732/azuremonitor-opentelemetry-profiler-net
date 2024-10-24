@@ -6,6 +6,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,6 +36,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
         services.AddSingleton<ITraceUploader, TraceUploaderProxy>();
+
+        services.AddSingleton<ICustomEventsTracker, CustomEventsTracker>();
+
+        services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();
+
         services.TryAddSingleton<IPostStopProcessor, PostStopProcessor>();
 
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();

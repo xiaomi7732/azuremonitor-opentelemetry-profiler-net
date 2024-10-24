@@ -9,5 +9,5 @@ internal interface IUploadContextValidator
     /// </summary>
     /// <param name="uploadContext">Validation target.</param>
     /// <returns>Returns null when there is no error. Otherwise, returns the error message.</returns>
-    string Validate(UploadContextModel uploadContext);
+    string? Validate(UploadContextModel uploadContext);
 }

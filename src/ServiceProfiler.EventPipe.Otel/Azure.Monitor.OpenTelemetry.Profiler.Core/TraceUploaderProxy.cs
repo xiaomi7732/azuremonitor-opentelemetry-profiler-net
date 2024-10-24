@@ -4,7 +4,6 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly IFile _fileService;
     private readonly IOutOfProcCallerFactory _uploaderCallerFactory;
     private readonly IUploadContextValidator _uploadContextValidator;
-    private readonly IProfilerCoreAssemblyInfo _profilerVersion;
     private readonly ServiceProfilerOptions _userConfiguration;
     private readonly IUploaderPathProvider _uploaderPathProvider;
     private IProfilerFrontendClientFactory _profilerFrontendClientFactory;
@@ -33,8 +31,7 @@ internal class TraceUploaderProxy : ITraceUploader
         IServiceProfilerContext context,
         ILogger<TraceUploaderProxy> logger,
         IOptions<ServiceProfilerOptions> userConfiguration,
-        IUploadContextValidator uploadContextValidator,
-        IProfilerCoreAssemblyInfo profilerVersion)
+        IUploadContextValidator uploadContextValidator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _uploaderPathProvider = uploaderPathProvider ?? throw new ArgumentNullException(nameof(uploaderPathProvider));
@@ -44,15 +41,14 @@ internal class TraceUploaderProxy : ITraceUploader
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _userConfiguration = userConfiguration.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
         _uploadContextValidator = uploadContextValidator ?? throw new ArgumentNullException(nameof(uploadContextValidator));
-        _profilerVersion = profilerVersion ?? throw new ArgumentNullException(nameof(profilerVersion));
     }
 
     public async Task<UploadContextModel?> UploadAsync(
         DateTimeOffset sessionId,
         string traceFilePath,
         string metadataFilePath,
-        string sampleFilePath,
-        string namedPipeName,
+        string? sampleFilePath,
+        string? namedPipeName,
         string roleName,
         string triggerType,
         CancellationToken cancellationToken,
@@ -146,9 +142,7 @@ internal class TraceUploaderProxy : ITraceUploader
             return null;
         }
 
-        UploadContext context = uploadContextModel.CreateContext();
-
-        int exitCode = await CallUploadAsync(uploaderFullPath, context.ToString(), cancellationToken).ConfigureAwait(false);
+        int exitCode = await CallUploadAsync(uploaderFullPath, uploadContextModel.ToString(), cancellationToken).ConfigureAwait(false);
         if (exitCode != 0)
         {
             // Upload Failed

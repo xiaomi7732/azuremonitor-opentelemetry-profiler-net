@@ -1,13 +1,14 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 /// <summary>
 /// An implementation of JsonSerializationProvider based on System.Text.Json.
 /// </summary>
-internal class HighPerfJsonSerializationProvider : ISerializationProvider
+internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayloadSerializer, ISerializationOptionsProvider<JsonSerializerOptions>
 {
     private static readonly JsonSerializerOptions s_serializerOptions = BuildJsonSerializationOptions();
 

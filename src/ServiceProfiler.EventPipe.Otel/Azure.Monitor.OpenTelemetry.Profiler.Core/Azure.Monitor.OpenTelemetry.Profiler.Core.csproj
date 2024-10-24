@@ -8,11 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
+    <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\UploadContext.cs" Link="UploadContext.cs" />
   </ItemGroup>
 
   <ItemGroup>
