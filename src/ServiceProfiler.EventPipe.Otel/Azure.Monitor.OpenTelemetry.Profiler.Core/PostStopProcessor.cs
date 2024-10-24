@@ -7,7 +7,6 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract;
-using UploadContext = Microsoft.ApplicationInsights.Profiler.Core.Contracts.UploadContext;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
@@ -113,7 +112,7 @@ internal class PostStopProcessor : IPostStopProcessor
                     }
                 }, cancellationToken);
 
-                Task<UploadContextModel> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
+                Task<UploadContextModel?> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
 
                 // Waiting for both task to finish.
                 await Task.WhenAll(namedPipeClientTask, uploadTask).ConfigureAwait(false);

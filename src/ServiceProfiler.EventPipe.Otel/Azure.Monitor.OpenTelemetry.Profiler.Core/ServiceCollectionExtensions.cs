@@ -33,6 +33,8 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<TraceSessionListener>();
         services.TryAddSingleton<TraceSessionListenerFactory>();
 
+        services.AddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
+        services.AddSingleton<ITraceUploader, TraceUploaderProxy>();
         services.TryAddSingleton<IPostStopProcessor, PostStopProcessor>();
 
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
@@ -41,7 +43,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IOrchestrator, OrchestrationImp>();
         // TODO: saars: Append specific schedulers
         // ~
-
 
         services.TryAddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
         services.TryAddTransient<IDelaySource, DefaultDelaySource>();

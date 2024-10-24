@@ -2,15 +2,9 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -27,7 +21,7 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly IOutOfProcCallerFactory _uploaderCallerFactory;
     private readonly IUploadContextValidator _uploadContextValidator;
     private readonly IProfilerCoreAssemblyInfo _profilerVersion;
-    private readonly UserConfiguration _userConfiguration;
+    private readonly ServiceProfilerOptions _userConfiguration;
     private readonly IUploaderPathProvider _uploaderPathProvider;
     private IProfilerFrontendClientFactory _profilerFrontendClientFactory;
 
@@ -87,12 +81,13 @@ internal class TraceUploaderProxy : ITraceUploader
             return null;
         }
 
+        string stampIdFetchFailureMessage = "Could not get the stamp id. Aborting the upload process.";
+
         // TODO: Defer the fetch of StampId to the uploader will simplify this a lot. Let the uploader return the stamp id. It also address the issue that
         // 2 getting stamp ids might return different values.
 
         // Stamp Id should be fetched successfully.
-        string stampId = null;
-        string stampIdFetchFailureMessage = "Could not get the stamp id. Aborting the upload process.";
+        string? stampId;
         try
         {
             stampId = await _profilerFrontendClientFactory.CreateProfilerFrontendClient().GetStampIdAsync(_context.ServiceProfilerCancellationTokenSource.Token).ConfigureAwait(false);
@@ -125,7 +120,7 @@ internal class TraceUploaderProxy : ITraceUploader
         _logger.LogInformation("Uploader to be used: {uploaderPath}", uploaderFullPath);
 
         // Upload is ready to go.
-        UploadContext uploadContext = new UploadContext()
+        UploadContextModel uploadContextModel = new()
         {
             AIInstrumentationKey = _context.AppInsightsInstrumentationKey,
             HostUrl = _context.StampFrontendEndpointUrl,
@@ -144,14 +139,16 @@ internal class TraceUploaderProxy : ITraceUploader
         };
 
         // Validation Failed
-        string message = _uploadContextValidator.Validate(uploadContext);
+        string message = _uploadContextValidator.Validate(uploadContextModel);
         if (!string.IsNullOrEmpty(message))
         {
             _logger.LogError(message);
             return null;
         }
 
-        int exitCode = await CallUploadAsync(uploaderFullPath, uploadContext.ToString(), cancellationToken).ConfigureAwait(false);
+        UploadContext context = uploadContextModel.CreateContext();
+
+        int exitCode = await CallUploadAsync(uploaderFullPath, context.ToString(), cancellationToken).ConfigureAwait(false);
         if (exitCode != 0)
         {
             // Upload Failed
@@ -160,7 +157,7 @@ internal class TraceUploaderProxy : ITraceUploader
         }
 
         // Upload succeeded.
-        return uploadContext;
+        return uploadContextModel;
     }
 
     private Task<int> CallUploadAsync(string exePath, string args, CancellationToken cancellationToken)
