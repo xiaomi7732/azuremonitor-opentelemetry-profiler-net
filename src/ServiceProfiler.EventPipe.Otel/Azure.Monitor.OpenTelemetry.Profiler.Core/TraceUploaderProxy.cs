@@ -86,7 +86,7 @@ internal class TraceUploaderProxy : ITraceUploader
         string? stampId;
         try
         {
-            stampId = await _profilerFrontendClientFactory.CreateProfilerFrontendClient().GetStampIdAsync(_context.ServiceProfilerCancellationTokenSource.Token).ConfigureAwait(false);
+            stampId = await _profilerFrontendClientFactory.CreateProfilerFrontendClient().GetStampIdAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (InstrumentationKeyInvalidException)
         {
@@ -96,7 +96,7 @@ internal class TraceUploaderProxy : ITraceUploader
         catch (HttpRequestException requestException) when (requestException.Message.Contains("401 (Unauthorized)."))
         {
             stampId = null;
-            stampIdFetchFailureMessage = $"{stampIdFetchFailureMessage} Please make sure the instrumentation key is valid.";
+            stampIdFetchFailureMessage = $"{stampIdFetchFailureMessage} Please make sure the instrumentation key is authorized.";
         }
 
         if (string.IsNullOrEmpty(stampId))
@@ -135,7 +135,7 @@ internal class TraceUploaderProxy : ITraceUploader
         };
 
         // Validation Failed
-        string message = _uploadContextValidator.Validate(uploadContextModel);
+        string? message = _uploadContextValidator.Validate(uploadContextModel);
         if (!string.IsNullOrEmpty(message))
         {
             _logger.LogError(message);

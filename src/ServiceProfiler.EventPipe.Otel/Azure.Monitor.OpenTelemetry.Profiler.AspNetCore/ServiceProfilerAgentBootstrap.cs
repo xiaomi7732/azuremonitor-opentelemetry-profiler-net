@@ -37,10 +37,9 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     {
         string noIKeyMessage = "No instrumentation key is set. Application Insights Profiler won't start.";
 
-        bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration);
-        if (isUserConfigSerialized)
+        if (_serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration))
         {
-            _logger.LogDebug("User Settings:" + Environment.NewLine + "{details}", serializedUserConfiguration);
+            _logger.LogDebug("User Settings:{eol} {details}", Environment.NewLine, serializedUserConfiguration);
         }
 
         if (_userConfiguration.IsDisabled)
@@ -69,7 +68,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
                 return;
             }
 
-            _logger.LogInformation("Starting application insights profiler with instrumentation key: {iKey}", _serviceProfilerContext.AppInsightsInstrumentationKey);
+            _logger.LogInformation("Starting application insights profiler with connection string: {connectionString}", _serviceProfilerContext.ConnectionString);
             await _orchestrator.StartAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)

@@ -1,45 +1,105 @@
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+// using Microsoft.ServiceProfiler.Agent.Exceptions;
+using Microsoft.ServiceProfiler.Utilities;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
 internal class ServiceProfilerContext : IServiceProfilerContext
 {
     private readonly IEndpointProvider _endpointProvider;
+    private readonly IConnectionStringParserFactory _connectionStringParserFactory;
+    private readonly ILogger _logger;
+    private readonly ServiceProfilerOptions _options;
 
-    public ServiceProfilerContext(IEndpointProvider endpointProvider)
+    public ServiceProfilerContext(
+        IEndpointProvider endpointProvider,
+        IConnectionStringParserFactory connectionStringParserFactory,
+        IOptions<ServiceProfilerOptions> options,
+        ILogger<ServiceProfilerContext> logger)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
+        _connectionStringParserFactory = connectionStringParserFactory ?? throw new ArgumentNullException(nameof(connectionStringParserFactory));
+        ConnectionString = _options.ConnectionString;
+        _logger.LogDebug("Building {name}. Connection string: {connectionString}", nameof(ServiceProfilerContext), ConnectionString);
+
+        IConnectionStringParser connectionStringParser = _connectionStringParserFactory.Create(ConnectionString!);
+        if (connectionStringParser.TryGetValue(ConnectionStringParser.Keys.InstrumentationKey, out string? instrumentationKeyValue))
+        {
+            _logger.LogDebug("Instrumentation key value: {iKey}", instrumentationKeyValue);
+            AppInsightsInstrumentationKey = Guid.Parse(instrumentationKeyValue!);
+        }
+        else
+        {
+            _logger.LogError("Instrumentation key does not exist.");
+        }
+
+        // if (connectionStringParser.TryGetValue(ConnectionStringParser.Keys.ApplicationId, out string? appIdValue))
+        // {
+        //     _logger.LogDebug("App id in connnection string: {appId}", appIdValue);
+        //     Guid appId = Guid.Parse(appIdValue!);
+        //     AppInsightsAppId = appId;
+        //     AppIdFetched?.Invoke(this, new AppIdFetchedEventArgs(appId));
+        // }
 
         StampFrontendEndpointUrl = _endpointProvider.GetEndpoint();
     }
 
-    [Obsolete("Use GetAppInsightsAppIdAsync() instead.", error: true)]
-    public Guid AppInsightsAppId => throw new NotImplementedException();
+    // public Guid AppInsightsAppId { get; private set; }
 
-    public Guid AppInsightsInstrumentationKey => Guid.Parse("5d8258e7-abb2-4066-89a5-8c73071b74ff");
+    public Guid AppInsightsInstrumentationKey { get; }
 
     public bool HasAppInsightsInstrumentationKey => true;
 
-    public string MachineName => "StubMachine";
+    public string MachineName => EnvironmentUtilities.MachineName;
 
     public CancellationTokenSource ServiceProfilerCancellationTokenSource => new();
 
     public Uri StampFrontendEndpointUrl { get; }
 
-    public event EventHandler<AppIdFetchedEventArgs>? AppIdFetched;
+    public string? ConnectionString { get; }
 
-    public Task<Guid> GetAppInsightsAppIdAsync()
-    {
-        throw new NotImplementedException();
-    }
+    // public event EventHandler<AppIdFetchedEventArgs>? AppIdFetched;
 
-    public Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken)
-    {
-        return Task.FromResult(Guid.Parse("e54708db-77b6-457e-b577-103e84229f2c"));
-    }
+    // public Task<Guid> GetAppInsightsAppIdAsync()
+    // {
+    //     return GetAppInsightsAppIdAsync(cancellationToken: default);
+    // }
 
-    public void OnAppIdFetched(Guid appId)
-    {
-        AppIdFetched?.Invoke(this, new AppIdFetchedEventArgs(appId));
-    }
+    // public async Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken)
+    // {
+    //     if (AppInsightsAppId != default)
+    //     {
+    //         return AppInsightsAppId;
+    //     }
+
+    //     try
+    //     {
+    //         // Fetch & return.
+    //         cancellationToken.ThrowIfCancellationRequested();
+    //         AppInsightsProfile appInsightsProfile = await _appInsightsProfileFetcher.FetchProfileAsync(AppInsightsInstrumentationKey, retryCount: 5).ConfigureAwait(false);
+
+    //         cancellationToken.ThrowIfCancellationRequested();
+    //         Guid appId = appInsightsProfile.AppId;
+    //         AppInsightsAppId = appId;
+    //         OnAppIdFetched(appId);
+
+    //         return appId;
+    //     }
+    //     catch (InstrumentationKeyInvalidException ikie)
+    //     {
+    //         _logger.LogError(ikie, "Profiler Instrumentation Key is invalid.");
+    //         throw;
+    //     }
+    // }
+
+    // public void OnAppIdFetched(Guid appId)
+    // {
+    //     AppIdFetched?.Invoke(this, new AppIdFetchedEventArgs(appId));
+    // }
 }

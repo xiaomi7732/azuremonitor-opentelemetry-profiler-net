@@ -3,27 +3,26 @@
 // -----------------------------------------------------------------------------
 
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
-    internal interface IServiceProfilerContext
-    {
-        [Obsolete("Use GetAppInsightsAppIdAsync() instead.", error: true)]
-        Guid AppInsightsAppId { get; }
-        
-        Guid AppInsightsInstrumentationKey { get; }
-        bool HasAppInsightsInstrumentationKey { get; }
+internal interface IServiceProfilerContext
+{
+    // Guid AppInsightsAppId { get; }
 
-        string MachineName { get; }
-        CancellationTokenSource ServiceProfilerCancellationTokenSource { get; }
-        Uri StampFrontendEndpointUrl { get; }
+    string? ConnectionString { get; }
 
-        event EventHandler<AppIdFetchedEventArgs> AppIdFetched;
+    Guid AppInsightsInstrumentationKey { get; }
+    bool HasAppInsightsInstrumentationKey { get; }
 
-        Task<Guid> GetAppInsightsAppIdAsync();
-        Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken);
-        
-        void OnAppIdFetched(Guid appId);
-    }
+    string MachineName { get; }
+    // CancellationTokenSource ServiceProfilerCancellationTokenSource { get; }
+    Uri StampFrontendEndpointUrl { get; }
+
+    // event EventHandler<AppIdFetchedEventArgs> AppIdFetched;
+
+    // Task<Guid> GetAppInsightsAppIdAsync();
+    // Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken);
+
+    // void OnAppIdFetched(Guid appId);
+}

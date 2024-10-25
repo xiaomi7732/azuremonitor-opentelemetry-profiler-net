@@ -1,3 +1,4 @@
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
@@ -18,13 +19,20 @@ public static class OpenTelemetryBuilderExtesnions
         builder.Services.AddLogging();
         builder.Services.AddOptions();
 
-        builder.Services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration>((opt, configuration) =>
+        builder.Services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorOptions>>((opt, configuration, azureMonitorOptions) =>
         {
             configuration.GetSection("ServiceProfiler").Bind(opt);
             configureServiceProfiler?.Invoke(opt);
+
+            string? azureMnoitorConnectionStirng = azureMonitorOptions?.Value?.ConnectionString;
+            if (string.IsNullOrEmpty(opt.ConnectionString))
+            {
+                opt.ConnectionString = azureMnoitorConnectionStirng;
+            }
         });
 
-        builder.Services.AddSingleton<IOptions<UserConfigurationBase>>(p =>{
+        builder.Services.AddSingleton<IOptions<UserConfigurationBase>>(p =>
+        {
             ServiceProfilerOptions profilerOptions = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
             return Options.Create(profilerOptions);
         });

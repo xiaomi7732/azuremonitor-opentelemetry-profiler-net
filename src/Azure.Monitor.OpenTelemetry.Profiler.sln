@@ -25,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Agent.Ingestion", "Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj", "{93969473-24D2-47EB-B854-AD23B15BCF8A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.Utilities", "ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj", "{853030AB-2604-43FE-968F-A9CFD4A19C67}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Agent.Exceptions", "Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj", "{010A7CF8-791C-4960-A556-89F077E694BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,6 +78,14 @@ Global
 		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{853030AB-2604-43FE-968F-A9CFD4A19C67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{853030AB-2604-43FE-968F-A9CFD4A19C67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{853030AB-2604-43FE-968F-A9CFD4A19C67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{853030AB-2604-43FE-968F-A9CFD4A19C67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{010A7CF8-791C-4960-A556-89F077E694BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{010A7CF8-791C-4960-A556-89F077E694BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{010A7CF8-791C-4960-A556-89F077E694BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{010A7CF8-791C-4960-A556-89F077E694BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DA13DAFB-6764-44A3-AB9C-D632984841BC} = {705959A0-0B89-43EB-B36A-430B806B0D39}

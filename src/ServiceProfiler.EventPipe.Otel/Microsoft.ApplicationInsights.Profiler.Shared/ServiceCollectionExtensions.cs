@@ -14,6 +14,7 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSharedServices(this IServiceCollection services)
     {
+        services.TryAddSingleton<IConnectionStringParserFactory, ConnectionStringParserFactory>();
         services.TryAddSingleton<IUploadContextValidator, UploadContextValidator>();
 
         services.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByEnvironmentVariable>();

@@ -17,6 +17,7 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
 {
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
     private readonly ServiceProfilerOptions _userConfiguration;
     private readonly IAuthTokenProvider _authTokenProvider;
 
@@ -24,12 +25,14 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
         IAuthTokenProvider authTokenServiceFactory,
         IServiceProfilerContext serviceProfilerContext,
         IOptions<ServiceProfilerOptions> userConfiguration,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        ILogger<ProfilerFrontendClient> logger)
     {
-        _serviceProfilerContext = serviceProfilerContext ?? throw new System.ArgumentNullException(nameof(serviceProfilerContext));
-        _loggerFactory = loggerFactory ?? throw new System.ArgumentNullException(nameof(loggerFactory));
-        _userConfiguration = userConfiguration?.Value ?? throw new System.ArgumentNullException(nameof(userConfiguration));
-        _authTokenProvider = authTokenServiceFactory ?? throw new System.ArgumentNullException(nameof(authTokenServiceFactory));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+        _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
+        _authTokenProvider = authTokenServiceFactory ?? throw new ArgumentNullException(nameof(authTokenServiceFactory));
     }
     public IProfilerFrontendClient CreateProfilerFrontendClient()
     {
@@ -39,6 +42,7 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
                 _loggerFactory.CreateLogger<AADAuthTokenCredential>()) :
             null;
 
+        _logger.LogInformation("Creating {name}. iKey: {iKey}", nameof(ProfilerFrontendClient), _serviceProfilerContext.AppInsightsInstrumentationKey);
         return new ProfilerFrontendClient(
             host: _serviceProfilerContext.StampFrontendEndpointUrl,
             instrumentationKey: _serviceProfilerContext.AppInsightsInstrumentationKey,
