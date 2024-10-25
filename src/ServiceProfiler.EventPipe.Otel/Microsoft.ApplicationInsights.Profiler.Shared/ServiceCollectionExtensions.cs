@@ -36,7 +36,7 @@ internal static class ServiceCollectionExtensions
         services.TryAddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
 
         services.TryAddSingleton<IMetadataWriter, MetadataWriter>();
-
+        services.TryAddSingleton<IEndpointProvider, EndpointProvider>();
         return services;
     }
 }

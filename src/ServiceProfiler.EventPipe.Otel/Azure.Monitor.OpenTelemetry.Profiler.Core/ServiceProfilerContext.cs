@@ -1,10 +1,18 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
-using Microsoft.ServiceProfiler.Contract;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
-internal class StubServiceProfilerContext : IServiceProfilerContext
+internal class ServiceProfilerContext : IServiceProfilerContext
 {
+    private readonly IEndpointProvider _endpointProvider;
+
+    public ServiceProfilerContext(IEndpointProvider endpointProvider)
+    {
+        _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
+
+        StampFrontendEndpointUrl = _endpointProvider.GetEndpoint();
+    }
+
     [Obsolete("Use GetAppInsightsAppIdAsync() instead.", error: true)]
     public Guid AppInsightsAppId => throw new NotImplementedException();
 
@@ -16,7 +24,7 @@ internal class StubServiceProfilerContext : IServiceProfilerContext
 
     public CancellationTokenSource ServiceProfilerCancellationTokenSource => new();
 
-    public Uri StampFrontendEndpointUrl { get; } = new Uri(FrontendEndpoints.ProdGlobal, UriKind.Absolute);
+    public Uri StampFrontendEndpointUrl { get; }
 
     public event EventHandler<AppIdFetchedEventArgs>? AppIdFetched;
 

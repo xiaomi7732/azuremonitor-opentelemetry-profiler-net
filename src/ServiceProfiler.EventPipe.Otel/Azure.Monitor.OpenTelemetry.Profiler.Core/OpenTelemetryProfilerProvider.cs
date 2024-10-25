@@ -151,7 +151,14 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fail to disable EventPipe profiling.");
+            if (!profilerStopped)
+            {
+                _logger.LogError(ex, "Fail to disable EventPipe profiling.");
+            }
+            else
+            {
+                _logger.LogError(ex, "Unexpected error after EventPipe profiler disabled.");
+            }
             throw;
         }
         finally

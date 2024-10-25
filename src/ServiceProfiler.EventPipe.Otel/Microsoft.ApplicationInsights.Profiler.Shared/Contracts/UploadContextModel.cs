@@ -18,8 +18,9 @@ internal class UploadContextModel
     private const string PipeNameKeyName = "pipeName";
     private const string RoleNameKeyName = "roleName";
     private const string TriggerTypeKeyName = "trigger";
-
     private const string EnvironmentKeyName = "environment";
+    private const string TraceFileFormatKeyName = "traceFileFormat";
+
 
     public Guid AIInstrumentationKey { get; init; }
 
@@ -48,6 +49,8 @@ internal class UploadContextModel
     public string Environment { get; init; } = "Production";
 
     public string? TriggerType { get; init; }
+
+    public string TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Nettrace;
 
     public override string ToString()
     {
@@ -85,6 +88,8 @@ internal class UploadContextModel
         {
             argumentLine += $@" --{EnvironmentKeyName} ""{Environment}"" ";
         }
+
+        argumentLine += $@" --{TraceFileFormatKeyName} ""{TraceFileFormat}""";
 
         return argumentLine;
     }

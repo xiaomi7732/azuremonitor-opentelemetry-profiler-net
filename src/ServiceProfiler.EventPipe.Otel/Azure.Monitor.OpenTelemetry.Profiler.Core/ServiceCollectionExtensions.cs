@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
-        services.TryAddSingleton<IServiceProfilerContext, StubServiceProfilerContext>();
+        services.TryAddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
         services.TryAddSingleton<IOrchestrator, OrchestrationImp>();
         // TODO: saars: Append specific schedulers
         // ~

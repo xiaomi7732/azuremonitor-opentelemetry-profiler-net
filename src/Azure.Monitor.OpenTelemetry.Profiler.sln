@@ -19,6 +19,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.ProcessMoni
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.Logging", "ServiceProfiler.Logging\ServiceProfiler.Logging.csproj", "{8BDA3D99-B856-45E3-BA11-32347B6928A4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.EventPipe", "ServiceProfiler.EventPipe", "{705959A0-0B89-43EB-B36A-430B806B0D39}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{DA13DAFB-6764-44A3-AB9C-D632984841BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Agent.Ingestion", "Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj", "{93969473-24D2-47EB-B854-AD23B15BCF8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,5 +66,16 @@ Global
 		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8BDA3D99-B856-45E3-BA11-32347B6928A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA13DAFB-6764-44A3-AB9C-D632984841BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA13DAFB-6764-44A3-AB9C-D632984841BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA13DAFB-6764-44A3-AB9C-D632984841BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA13DAFB-6764-44A3-AB9C-D632984841BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93969473-24D2-47EB-B854-AD23B15BCF8A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DA13DAFB-6764-44A3-AB9C-D632984841BC} = {705959A0-0B89-43EB-B36A-430B806B0D39}
 	EndGlobalSection
 EndGlobal
