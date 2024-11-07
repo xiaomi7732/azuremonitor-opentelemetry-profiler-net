@@ -52,10 +52,6 @@ internal class PostStopProcessor : IPostStopProcessor
 
     public async Task PostStopProcessAsync(PostStopOptions e, CancellationToken cancellationToken)
     {
-        // TODO: Remove
-        await Task.Yield();
-        // ~
-
         _logger.LogTrace("Entering {name}", nameof(PostStopProcessAsync));
 
         try
@@ -111,6 +107,10 @@ internal class PostStopProcessor : IPostStopProcessor
                         {
                             throw new InvalidOperationException($"Datacube {appId} is invalid.");
                         }
+                        
+                        // Contract with Upload, sending additional data
+                        IPCAdditionalData additionalData = CreateAdditonalData();
+                        await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
                     }
                     finally
                     {

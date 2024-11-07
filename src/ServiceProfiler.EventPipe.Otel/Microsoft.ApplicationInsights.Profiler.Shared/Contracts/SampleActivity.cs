@@ -15,7 +15,7 @@ internal class SampleActivity
     public string? StopActivityIdPath { get; set; }
     public DateTimeOffset StartTimeUtc { get; set; }
     public DateTimeOffset StopTimeUtc { get; set; }
-    public string? RequestId { get; set; }
+    public string RequestId { get; set; } = null!;
     public string? RoleInstance { get; set; }
     public string? OperationName { get; set; }
     public string? OperationId { get; set; }
