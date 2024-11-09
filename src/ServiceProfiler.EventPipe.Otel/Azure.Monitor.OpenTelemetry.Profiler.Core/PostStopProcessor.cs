@@ -7,6 +7,9 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract;
+using Microsoft.ServiceProfiler.Orchestration;
+using Microsoft.ServiceProfiler.Utilities;
+using System.Collections.Immutable;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
@@ -22,6 +25,7 @@ internal class PostStopProcessor : IPostStopProcessor
     private readonly IMetadataWriter _metadataWriter;
     private readonly ICustomEventsTracker _customEventsTracker;
     private readonly IRoleNameSource _roleNameSource;
+    private readonly ICustomEventsBuilder _customEventsBuilder;
     private readonly ILogger _logger;
 
     public PostStopProcessor(
@@ -35,6 +39,7 @@ internal class PostStopProcessor : IPostStopProcessor
         IMetadataWriter metadataWriter,
         ICustomEventsTracker customEventsTracker,
         IRoleNameSource roleNameSource,
+        ICustomEventsBuilder customEventsBuilder,
         ILogger<PostStopProcessor> logger)
     {
         _serviceProfilerOptions = serviceProfilerOptions?.Value ?? throw new ArgumentNullException(nameof(serviceProfilerOptions));
@@ -47,6 +52,7 @@ internal class PostStopProcessor : IPostStopProcessor
         _metadataWriter = metadataWriter ?? throw new ArgumentNullException(nameof(metadataWriter));
         _customEventsTracker = customEventsTracker ?? throw new ArgumentNullException(nameof(customEventsTracker));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
+        _customEventsBuilder = customEventsBuilder ?? throw new ArgumentNullException(nameof(customEventsBuilder));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -107,9 +113,9 @@ internal class PostStopProcessor : IPostStopProcessor
                         {
                             throw new InvalidOperationException($"Datacube {appId} is invalid.");
                         }
-                        
+
                         // Contract with Upload, sending additional data
-                        IPCAdditionalData additionalData = CreateAdditonalData();
+                        IPCAdditionalData additionalData = CreateAdditonalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
                         await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
                     }
                     finally
@@ -128,9 +134,7 @@ internal class PostStopProcessor : IPostStopProcessor
                 {
                     // Trace is uploaded.
                     int validSampleCount = e.Samples.Count();
-                    _logger.LogDebug("Sending {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
-
-                    _customEventsTracker.Send(e.Samples, uploadContext, processId, e.ProfilerSource, appId);
+                    _logger.LogDebug("Sent {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
                 }
             }
 
@@ -152,6 +156,25 @@ internal class PostStopProcessor : IPostStopProcessor
             throw;
         }
     }
+
+    private IPCAdditionalData CreateAdditonalData(
+        IReadOnlyCollection<SampleActivity> samples,
+        string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
+        => new()
+        {
+            ConnectionString = _serviceProfilerContext.ConnectionString,
+            ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
+            fileId: EnvironmentUtilities.CreateSessionId(),
+            stampId: stampId,
+            sessionId: sessionId,
+            appId: appId,
+            profilerSource: profilerSource),
+            ServiceProfilerSamples = _customEventsBuilder.CreateServiceProfilerSamples(
+            samples: samples,
+            stampId: stampId,
+            sessionId: sessionId,
+            appId: appId),
+        };
 
     /// <summary>
     /// Upload the trace file.
@@ -179,7 +202,7 @@ internal class PostStopProcessor : IPostStopProcessor
             sampleFilePath: null,// Replaced by namedpipe name.
             namedPipeName,
             _roleNameSource.CloudRoleName,
-            options.ProfilerSource,
+            options.ProfilerSource.Source,
             cancellationToken,
             options.UploaderFullPath).ConfigureAwait(false);
     }

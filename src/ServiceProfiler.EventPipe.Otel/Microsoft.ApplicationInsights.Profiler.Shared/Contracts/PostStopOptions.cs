@@ -28,19 +28,14 @@ internal class PostStopOptions
         SessionId = sessionId;
         StampFrontendHostUrl = stampFrontendHostUrl;
         Samples = samples ?? throw new ArgumentNullException(nameof(samples));
-        if (profilerSource is null)
-        {
-            throw new ArgumentNullException(nameof(profilerSource));
-        }
-
-        ProfilerSource = profilerSource.Source ?? throw new ArgumentNullException(nameof(profilerSource));
+        ProfilerSource = profilerSource ?? throw new ArgumentNullException(nameof(profilerSource));
         UploaderFullPath = uploaderFullPath;
     }
 
     public string TraceFilePath { get; }
     public DateTimeOffset SessionId { get; }
     public Uri StampFrontendHostUrl { get; }
-    public string ProfilerSource { get; }
+    public IProfilerSource ProfilerSource { get; }
 
     public string? UploaderFullPath { get; set; }
     public IEnumerable<SampleActivity> Samples { get; set; }
