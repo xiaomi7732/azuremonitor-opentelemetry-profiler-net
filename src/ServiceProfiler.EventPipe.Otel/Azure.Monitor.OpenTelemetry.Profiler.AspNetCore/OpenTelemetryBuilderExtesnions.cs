@@ -33,15 +33,29 @@ public static class OpenTelemetryBuilderExtesnions
 
         builder.Services.AddSingleton<IOptions<UserConfigurationBase>>(p =>
         {
-            ServiceProfilerOptions profilerOptions = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
+            ServiceProfilerOptions profilerOptions = GetRequiredOptions<ServiceProfilerOptions>(p);
             return Options.Create(profilerOptions);
         });
 
         builder.Services.AddServiceProfilerCore();
 
-        builder.Services.AddSingleton<IServiceProfilerAgentBootstrap, ServiceProfilerAgentBootstrap>();
+        builder.Services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
+        {
+            ServiceProfilerOptions userConfiguration = GetRequiredOptions<ServiceProfilerOptions>(p);
+            // Choose one by configurations to register.
+            return userConfiguration.IsDisabled ?
+                ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p) :
+                ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
+        });
+
         builder.Services.AddHostedService<ProfilerBackgroundService>();
         return builder;
+    }
+
+    private static T GetRequiredOptions<T>(IServiceProvider p)
+        where T : class
+    {
+        return p.GetRequiredService<IOptions<T>>().Value ?? throw new InvalidOperationException($"Option {typeof(T).FullName} is required.");
     }
 }
 

@@ -24,12 +24,12 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         ISerializationProvider serializer,
         ILogger<ServiceProfilerAgentBootstrap> logger)
     {
-        _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
-        _userConfiguration = userConfiguration?.Value ?? throw new System.ArgumentNullException(nameof(userConfiguration));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
 
-        _compatibilityUtilityFactory = compatibilityUtilityFactory ?? throw new System.ArgumentNullException(nameof(compatibilityUtilityFactory));
-        _serializer = serializer ?? throw new System.ArgumentNullException(nameof(serializer));
-        _serviceProfilerContext = serviceProfilerContext ?? throw new System.ArgumentNullException(nameof(serviceProfilerContext));
+        _compatibilityUtilityFactory = compatibilityUtilityFactory ?? throw new ArgumentNullException(nameof(compatibilityUtilityFactory));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
     }
 
