@@ -31,17 +31,15 @@ public static class ServiceCollectionExtensions
         // Transient trace session listeners
         services.TryAddTransient<SampleActivityContainer>();
         services.TryAddTransient<SampleCollector>();
-        services.TryAddTransient<TraceSessionListener>();
         services.TryAddSingleton<TraceSessionListenerFactory>();
 
         services.AddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
         services.AddSingleton<ITraceUploader, TraceUploaderProxy>();
 
-        services.AddSingleton<ICustomEventsTracker, CustomEventsTracker>();
-
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();
 
-        services.TryAddSingleton<IPostStopProcessor, PostStopProcessor>();
+        services.TryAddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
+        services.TryAddTransient<IPostStopProcessorFactory, PostStopProcessorFactory>();
 
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 

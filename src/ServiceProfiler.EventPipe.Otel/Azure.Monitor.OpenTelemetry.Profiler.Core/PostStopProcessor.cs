@@ -23,7 +23,6 @@ internal class PostStopProcessor : IPostStopProcessor
     private readonly ISerializationProvider _serializer;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IMetadataWriter _metadataWriter;
-    private readonly ICustomEventsTracker _customEventsTracker;
     private readonly IRoleNameSource _roleNameSource;
     private readonly ICustomEventsBuilder _customEventsBuilder;
     private readonly ILogger _logger;
@@ -37,7 +36,6 @@ internal class PostStopProcessor : IPostStopProcessor
         ISerializationProvider serializer,
         IServiceProfilerContext serviceProfilerContext,
         IMetadataWriter metadataWriter,
-        ICustomEventsTracker customEventsTracker,
         IRoleNameSource roleNameSource,
         ICustomEventsBuilder customEventsBuilder,
         ILogger<PostStopProcessor> logger)
@@ -50,7 +48,6 @@ internal class PostStopProcessor : IPostStopProcessor
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _metadataWriter = metadataWriter ?? throw new ArgumentNullException(nameof(metadataWriter));
-        _customEventsTracker = customEventsTracker ?? throw new ArgumentNullException(nameof(customEventsTracker));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _customEventsBuilder = customEventsBuilder ?? throw new ArgumentNullException(nameof(customEventsBuilder));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -116,7 +113,27 @@ internal class PostStopProcessor : IPostStopProcessor
 
                         // Contract with Upload, sending additional data
                         IPCAdditionalData additionalData = CreateAdditonalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
+                        if (_logger.IsEnabled(LogLevel.Trace))
+                        {
+                            _logger.LogTrace("Sending additional data for the uploader to use.");
+                            if (_serializer.TrySerialize(additionalData, out string? serializedObject))
+                            {
+                                _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
+                            }
+                            else
+                            {
+                                if (e.Samples.Any())
+                                {
+                                    _logger.LogWarning("Although there are valid samples, there's no additonal data. Why?");
+                                }
+                                else
+                                {
+                                    _logger.LogTrace("No additional data");
+                                }
+                            }
+                        }
                         await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
+                        _logger.LogTrace("Additional data sent.");
                     }
                     finally
                     {
