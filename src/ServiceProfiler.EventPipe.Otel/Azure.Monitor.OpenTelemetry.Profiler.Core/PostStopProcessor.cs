@@ -92,8 +92,7 @@ internal class PostStopProcessor : IPostStopProcessor
                         // The uploader might need a while for sample validation before it returns the result. That is especially true under heavy loaded system.
                         // Give it at least 10 minutes as a reasonable timeout. The user could choose to overwrite it with even longer timespan by set up operation timeout.
                         double longerTimeoutMilliseconds = Math.Max(TimeSpan.FromMinutes(10).TotalMilliseconds, _serviceProfilerOptions.NamedPipe.DefaultMessageTimeout.TotalMilliseconds);
-                        e.Samples = (await namedPipeClient.ReadAsync<IEnumerable<SampleActivity>>(timeout: TimeSpan.FromMilliseconds(longerTimeoutMilliseconds)).ConfigureAwait(false))
-                            ?? Enumerable.Empty<SampleActivity>();
+                        e.Samples = (await namedPipeClient.ReadAsync<IEnumerable<SampleActivity>>(timeout: TimeSpan.FromMilliseconds(longerTimeoutMilliseconds)).ConfigureAwait(false)) ?? [];
                         _logger.LogTrace("Finished loading valid samples.");
 
                         // Sending the AccessToken for AAD authentication in case it is enabled.

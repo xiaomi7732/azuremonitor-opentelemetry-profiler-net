@@ -28,7 +28,7 @@ internal class UploadContextModel
 
     public DateTimeOffset SessionId { get; init; }
 
-    public string StampId { get; init; } = null!;
+    public string? StampId { get; init; }
 
     public string TraceFilePath { get; init; } = null!;
 

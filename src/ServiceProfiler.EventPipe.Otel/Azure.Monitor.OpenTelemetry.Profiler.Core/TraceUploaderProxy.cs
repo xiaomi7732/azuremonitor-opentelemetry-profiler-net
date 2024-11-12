@@ -21,11 +21,9 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly IUploadContextValidator _uploadContextValidator;
     private readonly ServiceProfilerOptions _userConfiguration;
     private readonly IUploaderPathProvider _uploaderPathProvider;
-    private IProfilerFrontendClientFactory _profilerFrontendClientFactory;
 
     public TraceUploaderProxy(
         IUploaderPathProvider uploaderPathProvider,
-        IProfilerFrontendClientFactory profilerFrontendClient,
         IFile fileService,
         IOutOfProcCallerFactory uploaderCallerFactory,
         IServiceProfilerContext context,
@@ -35,7 +33,6 @@ internal class TraceUploaderProxy : ITraceUploader
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _uploaderPathProvider = uploaderPathProvider ?? throw new ArgumentNullException(nameof(uploaderPathProvider));
-        _profilerFrontendClientFactory = profilerFrontendClient ?? throw new ArgumentNullException(nameof(profilerFrontendClient));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
         _uploaderCallerFactory = uploaderCallerFactory ?? throw new ArgumentNullException(nameof(uploaderCallerFactory));
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -77,33 +74,6 @@ internal class TraceUploaderProxy : ITraceUploader
             return null;
         }
 
-        string stampIdFetchFailureMessage = "Could not get the stamp id. Aborting the upload process.";
-
-        // TODO: Defer the fetch of StampId to the uploader will simplify this a lot. Let the uploader return the stamp id. It also address the issue that
-        // 2 getting stamp ids might return different values.
-
-        // Stamp Id should be fetched successfully.
-        string? stampId;
-        try
-        {
-            stampId = await _profilerFrontendClientFactory.CreateProfilerFrontendClient().GetStampIdAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (InstrumentationKeyInvalidException)
-        {
-            stampId = null;
-            stampIdFetchFailureMessage = $"{stampIdFetchFailureMessage} Please make sure the instrumentation key is valid.";
-        }
-        catch (HttpRequestException requestException) when (requestException.Message.Contains("401 (Unauthorized)."))
-        {
-            stampId = null;
-            stampIdFetchFailureMessage = $"{stampIdFetchFailureMessage} Please make sure the instrumentation key is authorized.";
-        }
-
-        if (string.IsNullOrEmpty(stampId))
-        {
-            _logger.LogError(stampIdFetchFailureMessage);
-            return null;
-        }
         // Locate uploader.
         uploaderFullPath ??= _uploaderPathProvider.GetUploaderFullPath();
 
@@ -120,7 +90,7 @@ internal class TraceUploaderProxy : ITraceUploader
         {
             AIInstrumentationKey = _context.AppInsightsInstrumentationKey,
             HostUrl = _context.StampFrontendEndpointUrl,
-            StampId = stampId,
+            StampId = string.Empty,
             SessionId = sessionId,
             TraceFilePath = traceFilePath,
             MetadataFilePath = metadataFilePath,
