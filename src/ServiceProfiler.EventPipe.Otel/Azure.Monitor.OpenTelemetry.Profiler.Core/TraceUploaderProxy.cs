@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
@@ -101,6 +102,7 @@ internal class TraceUploaderProxy : ITraceUploader
             RoleName = roleName,
             TriggerType = triggerType,
             Environment = _userConfiguration.UploaderEnvironment,
+            TraceFileFormat = TraceFileFormat.Nettrace,
         };
 
         // Validation Failed
