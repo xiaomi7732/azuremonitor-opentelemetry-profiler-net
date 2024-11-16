@@ -1,3 +1,6 @@
+#define CONSOLE_LOGGING
+#undef CONSOLE_LOGGING    // Comment out this line for traces before the finishing of the constructor
+
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
@@ -40,14 +43,14 @@ internal class SampleCollector : EventListener
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
         // This event might tirgger before the constructor is done.
-        TryLogInfo($"Event source creating: {eventSource.Name}");
+        TryLogDebug($"Event source creating: {eventSource.Name}");
         // Dispatch this onto a different thread to avoid holding the thread to finish 
         // the constructor
         Task.Run(() =>
         {
             _ = HandleEventSourceCreated(eventSource).ConfigureAwait(false);
         });
-        TryLogInfo($"Event source created: {eventSource.Name}");
+        TryLogDebug($"Event source created: {eventSource.Name}");
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -135,7 +138,7 @@ internal class SampleCollector : EventListener
 
         try
         {
-            _logger.LogInformation("Got manual trigger for source: {name}", eventSource.Name);
+            _logger.LogDebug("Got manual trigger for source: {name}", eventSource.Name);
 
             await Task.Yield();
             if (string.Equals(eventSource.Name, _targetEventSourceName, StringComparison.OrdinalIgnoreCase))
@@ -190,7 +193,7 @@ internal class SampleCollector : EventListener
                 _logger.LogInformation(message, requestId);
                 _hasActivityReported = true;
             }
-            else
+            else if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(message, requestId);
             }
@@ -247,13 +250,16 @@ internal class SampleCollector : EventListener
         base.Dispose();
     }
 
-    private void TryLogInfo(string message)
+    private void TryLogDebug(string message)
     {
+        // It is possible that this is called before the finish of the constructor, when the ILogger is not there yet.
         if (_logger is null)
         {
-            Console.WriteLine(message);
+#if CONSOLE_LOGGING
+        Console.WriteLine(message);
+#endif
             return;
         }
-        _logger.LogInformation(message);
+        _logger.LogDebug(message);
     }
 }

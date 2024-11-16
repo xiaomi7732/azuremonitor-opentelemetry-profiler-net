@@ -19,11 +19,11 @@ internal class ProfilerBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Triggering Profiler bootstrap ...");
+        _logger.LogDebug("Triggering Profiler bootstrap ...");
         // Reduce chance to block the startup of the host. Refer to https://github.com/dotnet/runtime/issues/36063 for more details.
         await Task.Yield();
         await _bootstrap.ActivateAsync(stoppingToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Profiler bootstrap finished.");
+        _logger.LogDebug("Profiler bootstrap finished.");
     }
 }

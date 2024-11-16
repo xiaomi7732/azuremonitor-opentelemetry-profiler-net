@@ -57,119 +57,110 @@ internal class PostStopProcessor : IPostStopProcessor
     {
         _logger.LogTrace("Entering {name}", nameof(PostStopProcessAsync));
 
-        try
+        int sampleCount = e.Samples.Count();
+
+        _logger.LogDebug("There are {sampleNumber} samples before validation.", sampleCount);
+        UploadMode uploadMode = _serviceProfilerOptions.UploadMode;
+
+        // Execute the upload
+        if ((sampleCount > 0 || uploadMode == UploadMode.Always) && _uploaderPathProvider.TryGetUploaderFullPath(out string uploaderFullPath))
         {
-            int sampleCount = e.Samples.Count();
+            e.UploaderFullPath = uploaderFullPath;
 
-            _logger.LogDebug("There are {sampleNumber} samples before validation.", sampleCount);
-            UploadMode uploadMode = _serviceProfilerOptions.UploadMode;
+            int processId = CurrentProcessUtilities.GetId();
 
-            // Execute the upload
-            if ((sampleCount > 0 || uploadMode == UploadMode.Always) && _uploaderPathProvider.TryGetUploaderFullPath(out string uploaderFullPath))
+            string pipeName = Guid.NewGuid().ToString("D");
+            Guid appId = Guid.Empty;
+
+            Task namedPipeClientTask = Task.Run(async () =>
             {
-                e.UploaderFullPath = uploaderFullPath;
-
-                int processId = CurrentProcessUtilities.GetId();
-
-                string pipeName = Guid.NewGuid().ToString("D");
-                Guid appId = Guid.Empty;
-
-                Task namedPipeClientTask = Task.Run(async () =>
+                INamedPipeClientService namedPipeClient = _namedPipeClientFactory.CreateNamedPipeService();
+                try
                 {
-                    INamedPipeClientService namedPipeClient = _namedPipeClientFactory.CreateNamedPipeService();
-                    try
+                    _logger.LogTrace("Waiting for connection of named pipe: {name}", pipeName);
+                    await namedPipeClient.ConnectAsync(pipeName, cancellationToken).ConfigureAwait(false);
+                    _logger.LogTrace("Namedpipe {name} connected.", namedPipeClient.PipeName);
+
+                    _logger.LogTrace("Sending serialized samples.");
+                    await namedPipeClient.SendAsync(e.Samples).ConfigureAwait(false);
+                    _logger.LogTrace("Finished sending samples.");
+
+                    // Contract with Uploader: Only valid samples are written back.
+                    _logger.LogTrace("Waiting for the uploader to write back valid samples according to the contract.");
+                    // The uploader might need a while for sample validation before it returns the result. That is especially true under heavy loaded system.
+                    // Give it at least 10 minutes as a reasonable timeout. The user could choose to overwrite it with even longer timespan by set up operation timeout.
+                    double longerTimeoutMilliseconds = Math.Max(TimeSpan.FromMinutes(10).TotalMilliseconds, _serviceProfilerOptions.NamedPipe.DefaultMessageTimeout.TotalMilliseconds);
+                    e.Samples = (await namedPipeClient.ReadAsync<IEnumerable<SampleActivity>>(timeout: TimeSpan.FromMilliseconds(longerTimeoutMilliseconds)).ConfigureAwait(false)) ?? [];
+                    _logger.LogTrace("Finished loading valid samples.");
+
+                    // Sending the AccessToken for AAD authentication in case it is enabled.
+                    _logger.LogTrace("Sending access token");
+                    AccessToken accessToken = await _authTokenProvider.GetTokenAsync(cancellationToken: default).ConfigureAwait(false);
+                    await namedPipeClient.SendAsync(accessToken).ConfigureAwait(false);
+                    _logger.LogTrace("Finished sending access token for the uploader to use.");
+
+                    // Contract with Uploader: Return app id.
+                    _logger.LogTrace("Waiting for the uploader to write back valid appId as dataCube.");
+                    appId = await namedPipeClient.ReadAsync<Guid>().ConfigureAwait(false);
+                    _logger.LogTrace("Finished retrieving a valid appId (dataCube): {appId}", appId);
+                    if (appId == Guid.Empty)
                     {
-                        _logger.LogTrace("Waiting for connection of named pipe: {name}", pipeName);
-                        await namedPipeClient.ConnectAsync(pipeName, cancellationToken).ConfigureAwait(false);
-                        _logger.LogTrace("Namedpipe {name} connected.", namedPipeClient.PipeName);
+                        throw new InvalidOperationException($"Datacube {appId} is invalid.");
+                    }
 
-                        _logger.LogTrace("Sending serialized samples.");
-                        await namedPipeClient.SendAsync(e.Samples).ConfigureAwait(false);
-                        _logger.LogTrace("Finished sending samples.");
-
-                        // Contract with Uploader: Only valid samples are written back.
-                        _logger.LogTrace("Waiting for the uploader to write back valid samples according to the contract.");
-                        // The uploader might need a while for sample validation before it returns the result. That is especially true under heavy loaded system.
-                        // Give it at least 10 minutes as a reasonable timeout. The user could choose to overwrite it with even longer timespan by set up operation timeout.
-                        double longerTimeoutMilliseconds = Math.Max(TimeSpan.FromMinutes(10).TotalMilliseconds, _serviceProfilerOptions.NamedPipe.DefaultMessageTimeout.TotalMilliseconds);
-                        e.Samples = (await namedPipeClient.ReadAsync<IEnumerable<SampleActivity>>(timeout: TimeSpan.FromMilliseconds(longerTimeoutMilliseconds)).ConfigureAwait(false)) ?? [];
-                        _logger.LogTrace("Finished loading valid samples.");
-
-                        // Sending the AccessToken for AAD authentication in case it is enabled.
-                        _logger.LogTrace("Sending access token");
-                        AccessToken accessToken = await _authTokenProvider.GetTokenAsync(cancellationToken: default).ConfigureAwait(false);
-                        await namedPipeClient.SendAsync(accessToken).ConfigureAwait(false);
-                        _logger.LogTrace("Finished sending access token for the uploader to use.");
-
-                        // Contract with Uploader: Return app id.
-                        _logger.LogTrace("Waiting for the uploader to write back valid appId as dataCube.");
-                        appId = await namedPipeClient.ReadAsync<Guid>().ConfigureAwait(false);
-                        _logger.LogTrace("Finished retrieving a valid appId (dataCube): {appId}", appId);
-                        if (appId == Guid.Empty)
+                    // Contract with Upload, sending additional data
+                    IPCAdditionalData additionalData = CreateAdditonalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        _logger.LogTrace("Sending additional data for the uploader to use.");
+                        if (_serializer.TrySerialize(additionalData, out string? serializedObject))
                         {
-                            throw new InvalidOperationException($"Datacube {appId} is invalid.");
+                            _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
                         }
-
-                        // Contract with Upload, sending additional data
-                        IPCAdditionalData additionalData = CreateAdditonalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
-                        if (_logger.IsEnabled(LogLevel.Trace))
+                        else
                         {
-                            _logger.LogTrace("Sending additional data for the uploader to use.");
-                            if (_serializer.TrySerialize(additionalData, out string? serializedObject))
+                            if (e.Samples.Any())
                             {
-                                _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
+                                _logger.LogWarning("Although there are valid samples, there's no additonal data. Why?");
                             }
                             else
                             {
-                                if (e.Samples.Any())
-                                {
-                                    _logger.LogWarning("Although there are valid samples, there's no additonal data. Why?");
-                                }
-                                else
-                                {
-                                    _logger.LogTrace("No additional data");
-                                }
+                                _logger.LogTrace("No additional data");
                             }
                         }
-                        await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
-                        _logger.LogTrace("Additional data sent.");
                     }
-                    finally
-                    {
-                        (namedPipeClient as IDisposable)?.Dispose();
-                    }
-                }, cancellationToken);
-
-                Task<UploadContextModel?> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
-
-                // Waiting for both task to finish.
-                await Task.WhenAll(namedPipeClientTask, uploadTask).ConfigureAwait(false);
-
-                UploadContextModel? uploadContext = uploadTask.Result;
-                if (uploadContext != null)
-                {
-                    // Trace is uploaded.
-                    int validSampleCount = e.Samples.Count();
-                    _logger.LogDebug("Sent {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
+                    await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
+                    _logger.LogTrace("Additional data sent.");
                 }
-            }
+                finally
+                {
+                    (namedPipeClient as IDisposable)?.Dispose();
+                }
+            }, cancellationToken);
 
-            // Delete trace unless set to preserve.
-            _logger.LogDebug("{preserveTraceFile} is set to {value}.", nameof(_serviceProfilerOptions.PreserveTraceFile), _serviceProfilerOptions.PreserveTraceFile);
-            if (!_serviceProfilerOptions.PreserveTraceFile)
+            Task<UploadContextModel?> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
+
+            // Waiting for both task to finish.
+            await Task.WhenAll(namedPipeClientTask, uploadTask).ConfigureAwait(false);
+
+            UploadContextModel? uploadContext = uploadTask.Result;
+            if (uploadContext != null)
             {
-                TryDeleteFiles(e.TraceFilePath);
-            }
-            else
-            {
-                _logger.LogInformation("Trace is preserved locally at: {tracePath}", e.TraceFilePath);
+                // Trace is uploaded.
+                int validSampleCount = e.Samples.Count();
+                _logger.LogDebug("Sent {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
             }
         }
-        catch (Exception ex)
+
+        // Delete trace unless set to preserve.
+        _logger.LogDebug("{preserveTraceFile} is set to {value}.", nameof(_serviceProfilerOptions.PreserveTraceFile), _serviceProfilerOptions.PreserveTraceFile);
+        if (!_serviceProfilerOptions.PreserveTraceFile)
         {
-            _logger.LogError(ex, "Unexpected error happens on stopping service profiler.");
-            _logger.LogTrace(ex, message: ex.ToString());
-            throw;
+            TryDeleteFiles(e.TraceFilePath);
+        }
+        else
+        {
+            _logger.LogInformation("Trace is preserved locally at: {tracePath}", e.TraceFilePath);
         }
     }
 

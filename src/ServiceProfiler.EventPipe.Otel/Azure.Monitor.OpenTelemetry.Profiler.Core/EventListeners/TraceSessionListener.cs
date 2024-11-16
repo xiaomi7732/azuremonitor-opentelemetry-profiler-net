@@ -1,3 +1,6 @@
+#define CONSOLE_LOGGING
+#undef CONSOLE_LOGGING    // Comment out this line for traces before the finishing of the constructor
+
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -19,6 +22,7 @@ internal class TraceSessionListener : EventListener
     private readonly SampleCollector _sampleCollector;
     private readonly ILogger<TraceSessionListener> _logger;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
+    private volatile bool _hasActivityReported = false;
 
     public SampleActivityContainer? SampleActivities => _sampleCollector?.SampleActivities;
 
@@ -39,14 +43,14 @@ internal class TraceSessionListener : EventListener
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
         // This event might tirgger before the constructor is done.
-        TryLogInfo($"Event source creating: {eventSource.Name}");
+        TryLogDebug($"Event source creating: {eventSource.Name}");
         // Dispatch this onto a different thread to avoid holding the thread to finish 
         // the constructor
         Task.Run(() =>
         {
             _ = HandleEventSourceCreated(eventSource).ConfigureAwait(false);
         });
-        TryLogInfo($"Event source created: {eventSource.Name}");
+        TryLogDebug($"Event source created: {eventSource.Name}");
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -126,7 +130,7 @@ internal class TraceSessionListener : EventListener
 
         try
         {
-            _logger.LogInformation("Got manual trigger for source: {name}", eventSource.Name);
+            _logger.LogDebug("Got manual trigger for source: {name}", eventSource.Name);
 
             await Task.Yield();
             if (string.Equals(eventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.OrdinalIgnoreCase))
@@ -151,7 +155,12 @@ internal class TraceSessionListener : EventListener
     private void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
     {
         Guid currentActivityId = eventData.ActivityId;
-        _logger.LogInformation("Request started: Activity Id: {activityId}", currentActivityId);
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Request started: Activity Id: {activityId}", currentActivityId);
+        }
+
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
             name: requestName,
             id: spanId,
@@ -161,9 +170,19 @@ internal class TraceSessionListener : EventListener
 
     private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string spanId)
     {
-        _logger.LogInformation("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
+        }
+
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
             name: requestName, id: spanId, requestId: requestId, operationId: operationId);
+
+        if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Activity detected.");
+            _hasActivityReported = true;
+        }
     }
 
     public override void Dispose()
@@ -172,14 +191,16 @@ internal class TraceSessionListener : EventListener
         base.Dispose();
     }
 
-    private void TryLogInfo(string message)
+    private void TryLogDebug(string message)
     {
         if (_logger is null)
         {
+#if CONSOLE_LOGGING
             Console.WriteLine(message);
+#endif
             return;
         }
-        _logger.LogInformation(message);
+        _logger.LogDebug(message);
     }
 
     // span id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
