@@ -32,6 +32,7 @@ public abstract class ProfilerSettingsBase
 
         Enabled = !userConfiguration.Value.IsDisabled;
         SamplingOptions.SamplingRate = userConfiguration.Value.RandomProfilingOverhead;
+        SamplingOptions.ProfilingDurationInSeconds = (int)userConfiguration.Value.Duration.TotalSeconds;
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
         settingsService.SettingsUpdated += SetFromSettingsContract;

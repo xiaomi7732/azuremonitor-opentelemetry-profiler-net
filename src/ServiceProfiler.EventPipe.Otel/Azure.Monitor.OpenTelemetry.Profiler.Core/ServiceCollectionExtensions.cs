@@ -1,4 +1,3 @@
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
@@ -15,7 +14,6 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 
@@ -29,13 +27,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConnectionStringParserFactory, ConnectionStringParserFactory>();
         services.AddSingleton<IRoleNameSource, EnvRoleName>();
 
+
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
-        services.TryAddTransient<IDelaySource, DefaultDelaySource>();
+        services.AddSingleton<IDelaySource, DefaultDelaySource>();
+        services.AddSingleton<IRandomSource, DefaultRandomSource>();
 
-        services.TryAddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
-        services.TryAddSingleton<IUserCacheManager, UserCacheManager>();
+        services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
+        services.AddSingleton<IUserCacheManager, UserCacheManager>();
 
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
@@ -87,7 +87,7 @@ public static class ServiceCollectionExtensions
 
         // Customizations
         services.AddSingleton<ProfilerSettings>();
-        services.TryAddSingleton<IProfilerSettingsService>(p =>
+        services.AddSingleton<IProfilerSettingsService>(p =>
         {
             ServiceProfilerOptions userConfiguration = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
 
@@ -124,10 +124,14 @@ public static class ServiceCollectionExtensions
 
     private static void AddSchedulers(IServiceCollection services)
     {
+        services.AddSingleton<ProcessExpirationPolicy>();
+        services.AddSingleton<LimitedExpirationPolicyFactory>();
+        
         services.TryAddSingleton<IOrchestrator, OrchestrationImp>();
 
         // TODO: saars: Append specific schedulers
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, RandomSchedulingPolicy>());
         // ~
     }
 }

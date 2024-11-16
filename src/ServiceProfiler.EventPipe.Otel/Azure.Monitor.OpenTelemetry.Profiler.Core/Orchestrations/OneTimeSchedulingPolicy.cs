@@ -13,6 +13,7 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         ProfilerSettings profilerSettings,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        LimitedExpirationPolicyFactory limitedExpirationPolicyFactory,
         ILogger<OneTimeSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -20,7 +21,7 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         userConfiguration.Value.ConfigurationUpdateFrequency,
         profilerSettings,
         delaySource,
-        new LimitedExpirationPolicy(1),
+        limitedExpirationPolicyFactory.Create(1),
         resourceUsageSource,
         logger
     )
