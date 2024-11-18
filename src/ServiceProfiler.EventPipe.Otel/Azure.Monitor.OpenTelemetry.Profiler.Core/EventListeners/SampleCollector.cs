@@ -56,7 +56,6 @@ internal class SampleCollector : EventListener
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
         _logger.LogTrace("OnEventWritten by {eventSource}", eventData.EventSource.Name);
-        base.OnEventWritten(eventData);
 
         try
         {

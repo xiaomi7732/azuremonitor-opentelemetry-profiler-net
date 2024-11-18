@@ -56,7 +56,6 @@ internal class TraceSessionListener : EventListener
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
         _logger.LogTrace("OnEventWritten by {eventSource}", eventData.EventSource.Name);
-        base.OnEventWritten(eventData);
 
         try
         {
@@ -206,7 +205,7 @@ internal class TraceSessionListener : EventListener
     // span id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
     private static (string operationId, string requestId) ExtractKeyIds(string spanId)
     {
-        string[] tokens = spanId.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        string[] tokens = spanId.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length != 4)
         {
             throw new InvalidDataException(FormattableString.Invariant($"Span id shall have 4 sections separated by `-`. Actual: {spanId}"));

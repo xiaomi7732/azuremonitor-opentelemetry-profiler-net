@@ -129,7 +129,7 @@ internal class PostStopProcessor : IPostStopProcessor
                             }
                         }
                     }
-                    await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMicroseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
+                    await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMilliseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
                     _logger.LogTrace("Additional data sent.");
                 }
                 finally
