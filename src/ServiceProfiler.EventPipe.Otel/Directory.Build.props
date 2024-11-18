@@ -1,0 +1,17 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  
+  <!--Properties for NuGet package-->
+  <!--Refer aka.ms/nuget for Microsoft NuGet packages authoring compliance-->
+  <PropertyGroup>
+    <PackageVersion Condition=" '$(PackageVersion)' == '' ">1.0.0-alpha1</PackageVersion>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Authors>Microsoft</Authors>
+    <Owners>microsoft,MicrosoftServiceProfiler</Owners>
+    <PackageProjectUrl>https://github.com/Azure/azuremonitor-opentelemetry-profiler-net</PackageProjectUrl>
+    <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <NuspecProperties>version=$(PackageVersion); authors=$(Authors); owners=$(Owners); projectUrl=$(PackageProjectUrl); requireLicenseAcceptance=$(RequireLicenseAcceptance); releaseNotes='$(PackageReleaseNotes)'; copyright='$(Copyright)'; $(NuspecProperties)
+    </NuspecProperties>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <description>$description$</description>
+    <authors>$authors$</authors>
+
+    <projectUrl>$projectUrl$</projectUrl>
+    <license type="expression">MIT</license>
+    <!-- <icon>icon.png</icon>, see more: https://learn.microsoft.com/en-us/nuget/reference/nuspec#icon -->
+    <readme>docs/Readme.md</readme>
+    <requireLicenseAcceptance>$requireLicenseAcceptance$</requireLicenseAcceptance>
+    <releaseNotes>$releaseNotes$</releaseNotes>
+    <copyright>$copyright$</copyright>
+    <tags>$packageTags$</tags>
+
+    <dependencies>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="Azure.Core" version="$azureCoreVersion$" exclude="Build,Analyzers" />
+        <dependency id="CommandLineParser" version="$commandlineParserVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Diagnostics.NETCore.Client" version="$MicrosoftDiagnosticsNETCoreClientVersion$" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\$configuration$\$targetFramework$\Azure.Monitor.OpenTelemetry.Profiler.Core.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.Shared.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Common.Utilities.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Contract.Agent.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Contract.Agent.Profiler.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Logging.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Orchestration.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.dll" target="lib/$targetFramework$"></file>
+
+    <file src="..\Readme.md" target="docs\" />
+  </files>
+</package>
