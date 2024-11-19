@@ -1,14 +1,11 @@
 param(
     [ValidateSet('Debug', 'Release')]
-    [Parameter(Mandatory)]
-    [string]$Configuration,
+    [string]$Configuration='Release',
     [string]$PackageType = "private",
-    [switch]$Rebuild,
-    [ValidateSet('netstandard2.1')]
-    [string]$TargetFramework = "netstandard2.1"
+    [switch]$Rebuild
 )
 
-Write-Host "Target Configuration: $Configuration. ReBuild: $Rebuild. Package Type: $PackageType. Target Framework: $TargetFramework"
+Write-Host "Target Configuration: $Configuration. ReBuild: $Rebuild. Package Type: $PackageType."
 
 $VersionSuffixAddon = Get-Date -Format "yyMMddHHmm"
 $VersionSuffix = "$PackageType$VersionSuffixAddon"

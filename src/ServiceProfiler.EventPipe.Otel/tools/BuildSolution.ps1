@@ -12,10 +12,10 @@ function GetAVersionNumber {
         [int]$Major = "99"
     )
     
-    $rev = [float](Get-Date -Format "mmss");
+    $rev = [float](Get-Date -Format "HHmmss");
     $rev = $rev % 65536;
 
-    return (Get-Date -Format "$Major.yyMM.ddHH.$rev");
+    return (Get-Date -Format "$Major.yyyy.MMdd.$rev");
 }
 
 
