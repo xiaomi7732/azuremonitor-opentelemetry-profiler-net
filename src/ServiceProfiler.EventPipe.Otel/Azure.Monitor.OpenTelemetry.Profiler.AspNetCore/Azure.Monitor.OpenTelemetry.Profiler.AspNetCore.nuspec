@@ -27,11 +27,15 @@
         <dependency id="Microsoft.Extensions.Configuration.Binder" version="$MicrosoftExtensionsConfigurationBinderVersion$" exclude="Build,Analyzers" />
       </group>
     </dependencies>
+    <contentFiles>
+      <files include="any\net6.0\ServiceProfiler\TraceUpload.zip" buildAction="None" copyToOutput="true" flatten="true" />
+    </contentFiles>
   </metadata>
   <files>
     <file src="bin\$configuration$\$targetFramework$\Azure.Monitor.OpenTelemetry.Profiler.AspNetCore.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Azure.Monitor.OpenTelemetry.Profiler.AspNetCore.pdb" target="lib/$targetFramework$"></file>
 
     <file src="..\Readme.md" target="docs\" />
+    <file src="obj\$configuration$\Uploader\Uploader.zip" target="contentFiles\any\net6.0\ServiceProfiler\TraceUpload.zip"></file>
   </files>
 </package>
