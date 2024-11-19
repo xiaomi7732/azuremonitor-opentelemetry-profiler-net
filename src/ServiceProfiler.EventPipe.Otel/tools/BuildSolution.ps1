@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = "Undefined",
+    [Parameter(Mandatory)]
+    [string]$Configuration,
     [switch]$Rebuild
 )
 
@@ -32,8 +33,7 @@ Set-Location $PSScriptRoot
 
 $SolutionPath = "$PSScriptRoot\..\..\Azure.Monitor.OpenTelemetry.Profiler.sln"
 
-if($Rebuild)
-{
+if ($Rebuild) {
     Write-Host "Clean the solution for rebuilding..."
     Write-Debug "dotnet clean $SolutionPath"
     dotnet clean $SolutionPath
