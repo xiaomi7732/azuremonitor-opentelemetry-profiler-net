@@ -1,18 +1,46 @@
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration='Release',
+    [string]$Configuration = 'Release',
     [string]$PackageType = "private",
-    [switch]$Rebuild
+    [switch]$Rebuild,
+    [switch]$PushNuGet,
+    [string]$VersionSuffix
 )
+
+function GetNuGetPackageFileName {
+    param (
+        [string]$SearchRoot
+    )
+    return (Get-ChildItem -Path ($SearchRoot + "\*.nupkg") -Force -Recurse -File | Select-Object -Last 1).Name
+}
+
+
+function GenerateVersionSuffix {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('Debug', 'Release')]
+        [string]$Configuration
+    )
+
+    Write-Host "Generating default version suffix."
+    $VersionSuffixAddon = Get-Date -Format "yyMMddHHmm"
+    $VersionSuffix = "$PackageType$VersionSuffixAddon"
+
+    if ($Configuration -eq 'Debug') {
+        $VersionSuffix = $VersionSuffix + "debug"
+    }
+
+    return $VersionSuffix
+}
 
 Write-Host "Target Configuration: $Configuration. ReBuild: $Rebuild. Package Type: $PackageType."
 
-$VersionSuffixAddon = Get-Date -Format "yyMMddHHmm"
-$VersionSuffix = "$PackageType$VersionSuffixAddon"
-
-if ($Configuration -eq 'Debug') {
-    $VersionSuffix = $VersionSuffix + "debug"
+$UseDefaultVersionSuffix = [string]::IsNullOrEmpty($VersionSuffix)
+if ($UseDefaultVersionSuffix) {
+    $VersionSuffix = [string](GenerateVersionSuffix -Configuration $Configuration)
 }
+
+Write-Host "Effective version suffix: $VersionSuffix"
 
 $BaseDir = Split-Path -Parent $PSScriptRoot
 $SolutionDir = Split-Path -Parent $BaseDir
@@ -24,8 +52,11 @@ Write-Host "Prepare Output Folder: $OutputDir"
 New-Item -ItemType Directory -Path $OutputDir -Force
 New-Item -ItemType Directory -Path $NuGetOutDir -Force
 
-Remove-Item $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.Core\bin\$Configuration\*.nupkg -Force
-Remove-Item $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.AspNetCore\bin\$Configuration\*.nupkg -Force
+$CorePackageOutputDir = Join-Path "$BaseDir" "Azure.Monitor.OpenTelemetry.Profiler.Core" "bin" $Configuration
+$AspNetCorePackageOutputDir = Join-Path "$BaseDir" "Azure.Monitor.OpenTelemetry.Profiler.AspNetCore" "bin" $Configuration
+
+Remove-Item (Join-Path $CorePackageOutputDir *.nupkg) -Force
+Remove-Item (Join-Path $AspNetCorePackageOutputDir *.nupkg) -Force
 
 Write-Host Build the solution
 & $PSScriptRoot\BuildSolution.ps1 $Configuration -Rebuild:$Rebuild
@@ -36,19 +67,30 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Pack nuget packages"
-dotnet pack $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.Core --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
-dotnet pack $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.AspNetCore --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
+dotnet pack (Join-Path $BaseDir "Azure.Monitor.OpenTelemetry.Profiler.Core") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
+dotnet pack (Join-Path $BaseDir "Azure.Monitor.OpenTelemetry.Profiler.AspNetCore") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
 
-XCOPY $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.Core\bin\$Configuration\*.nupkg $NuGetOutDir /y /f
+$NuGetCoreFileName = GetNuGetPackageFileName -SearchRoot "$CorePackageOutputDir"
+$NuGetAspNetCoreFileName = GetNuGetPackageFileName -SearchRoot "$AspNetCorePackageOutputDir"
+
+XCOPY (Join-Path $CorePackageOutputDir $NuGetCoreFileName) $NuGetOutDir /y /f
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed copying the NuGet package file"
     EXIT -200
 }
 
-XCOPY $BaseDir\Azure.Monitor.OpenTelemetry.Profiler.AspNetCore\bin\$Configuration\*.nupkg $NuGetOutDir /y /f
+XCOPY (Join-Path $AspNetCorePackageOutputDir $NuGetAspNetCoreFileName) $NuGetOutDir /y /f
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed copying the NuGet package file"
     EXIT -200
 }
 
 Write-Host "Package succeeded :-)"
+
+if ($PushNuGet) {
+    Set-Location $PSScriptRoot
+    Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetCoreFileName)
+    dotnet nuget push (Join-Path $NuGetOutDir $NuGetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+    Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName)
+    dotnet nuget push (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+}
