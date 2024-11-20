@@ -2,7 +2,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-// using Microsoft.ServiceProfiler.Agent.Exceptions;
+using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Utilities;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
@@ -39,15 +39,11 @@ internal class ServiceProfilerContext : IServiceProfilerContext
             _logger.LogError("Instrumentation key does not exist.");
         }
 
-        // if (connectionStringParser.TryGetValue(ConnectionStringParser.Keys.ApplicationId, out string? appIdValue))
-        // {
-        //     _logger.LogDebug("App id in connnection string: {appId}", appIdValue);
-        //     Guid appId = Guid.Parse(appIdValue!);
-        //     AppInsightsAppId = appId;
-        //     AppIdFetched?.Invoke(this, new AppIdFetchedEventArgs(appId));
-        // }
-
         StampFrontendEndpointUrl = _endpointProvider.GetEndpoint();
+        if (StampFrontendEndpointUrl != new Uri(FrontendEndpoints.ProdGlobal, UriKind.Absolute))
+        {
+            _logger.LogWarning("Custom endpoint: {endpoint}. This is not supposed to be used in production. File an issue if this is not intended.", StampFrontendEndpointUrl);
+        }
     }
 
     // public Guid AppInsightsAppId { get; private set; }
