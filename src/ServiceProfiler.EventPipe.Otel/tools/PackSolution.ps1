@@ -90,7 +90,10 @@ Write-Host "Package succeeded :-)"
 if ($PushNuGet) {
     Set-Location $PSScriptRoot
     Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetCoreFileName)
-    dotnet nuget push (Join-Path $NuGetOutDir $NuGetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+    # It looks like pushing to feed from localbox is disabled
+    # dotnet nuget push (Join-Path $NuGetOutDir $NuGetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+    XCOPY (Join-Path $NuGetOutDir $NuGetCoreFileName) \\ddfiles\Team\Public\DiagnosticServices\NuGets /y /f
     Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName)
-    dotnet nuget push (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+    # dotnet nuget push (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
+    XCOPY (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) \\ddfiles\Team\Public\DiagnosticServices\NuGets /y /f
 }
