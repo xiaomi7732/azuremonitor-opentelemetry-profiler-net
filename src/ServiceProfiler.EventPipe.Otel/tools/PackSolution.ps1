@@ -96,4 +96,8 @@ if ($PushNuGet) {
     Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName)
     # dotnet nuget push (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
     XCOPY (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) \\ddfiles\Team\Public\DiagnosticServices\NuGets /y /f
+    
+    Write-Host Tagging with $VersionSuffix
+    git tag $VersionSuffix
+    Write-Host Push the tags by: git push --tags
 }
