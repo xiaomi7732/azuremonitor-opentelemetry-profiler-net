@@ -11,7 +11,7 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.AspNetCore;
 
 public static class OpenTelemetryBuilderExtesnions
 {
-    public static IOpenTelemetryBuilder UseServiceProfiler(this IOpenTelemetryBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler)
+    public static IOpenTelemetryBuilder UseServiceProfiler(this IOpenTelemetryBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
     {
         builder.Services.AddLogging();
         builder.Services.AddOptions();
