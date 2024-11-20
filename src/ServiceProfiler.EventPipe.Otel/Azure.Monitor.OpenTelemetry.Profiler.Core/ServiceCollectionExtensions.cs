@@ -95,12 +95,10 @@ public static class ServiceCollectionExtensions
             {
                 return ActivatorUtilities.CreateInstance<LocalProfileSettingsService>(p);
             }
-            // TODO: implement this later
-            // else
-            // {
-            //     return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
-            // }
-            throw new NotImplementedException("Settings other than local is not implemented.");
+            else
+            {
+                return ActivatorUtilities.CreateInstance<RemoteSettingsService>(p);
+            }
         });
 
         // Triggers
@@ -126,7 +124,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ProcessExpirationPolicy>();
         services.AddSingleton<LimitedExpirationPolicyFactory>();
-        
+
         services.TryAddSingleton<IOrchestrator, OrchestrationImp>();
 
         // TODO: saars: Append specific schedulers
