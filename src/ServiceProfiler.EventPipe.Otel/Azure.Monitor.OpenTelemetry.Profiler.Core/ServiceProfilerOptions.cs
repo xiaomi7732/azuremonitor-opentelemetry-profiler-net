@@ -1,3 +1,4 @@
+using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
@@ -11,4 +12,6 @@ public class ServiceProfilerOptions : UserConfigurationBase
     /// Gets or sets the connection string.
     /// </summary>
     public string? ConnectionString { get; set; } = string.Empty;
+
+    public TokenCredential? Credential { get; set; }
 }

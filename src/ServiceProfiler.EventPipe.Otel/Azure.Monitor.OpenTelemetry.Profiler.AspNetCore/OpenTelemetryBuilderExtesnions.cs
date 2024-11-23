@@ -31,13 +31,22 @@ public static class OpenTelemetryBuilderExtesnions
         builder.Services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorOptions>>((opt, configuration, azureMonitorOptions) =>
         {
             configuration.GetSection("ServiceProfiler").Bind(opt);
-            configureServiceProfiler?.Invoke(opt);
 
-            string? azureMnoitorConnectionStirng = azureMonitorOptions?.Value?.ConnectionString;
+            AzureMonitorOptions? monitorOptions = azureMonitorOptions.Value;
+
+            string? azureMnoitorConnectionStirng = monitorOptions.ConnectionString;
             if (string.IsNullOrEmpty(opt.ConnectionString))
             {
                 opt.ConnectionString = azureMnoitorConnectionStirng;
             }
+
+            if (opt.Credential is null)
+            {
+                opt.Credential = monitorOptions.Credential;
+                // Notice: the credential could still be null because monitorOptions is nullable, and its Credential object could be null.
+            }
+
+            configureServiceProfiler?.Invoke(opt);
         });
 
         builder.Services.AddSingleton<IOptions<UserConfigurationBase>>(p =>
