@@ -33,6 +33,15 @@ function GenerateVersionSuffix {
     return $VersionSuffix
 }
 
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    Write-Host "PowerShell 7 or later is installed."
+    Write-Host "Version: $($PSVersionTable.PSVersion)"
+}
+else {
+    Write-Host "PowerShell 7 is not installed."
+    Exit
+}
+
 Write-Host "Target Configuration: $Configuration. ReBuild: $Rebuild. Package Type: $PackageType."
 
 $UseDefaultVersionSuffix = [string]::IsNullOrEmpty($VersionSuffix)
