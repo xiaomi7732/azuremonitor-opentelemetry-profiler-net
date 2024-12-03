@@ -97,16 +97,27 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Package succeeded :-)"
 
 if ($PushNuGet) {
-    Set-Location $PSScriptRoot
+    $DDFiles = "\\ddfiles\Team\Public"
+    if (-not (Test-Path -Path $DDFiles)) {
+        Write-Error "NuGet feed base doesn't exist at: $DDFiles. Are you connected with VPN?"
+        EXIT
+    }
+    Write-Host "NuGet feed base exists: $DDFiles"
+
+    $NuGetFeedPath = Join-Path $DDFiles "DiagnosticServices" "NuGets"
+    New-Item -ItemType Directory -Path $NuGetFeedPath -Force
+
+    Push-Location $PSScriptRoot
     Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetCoreFileName)
     # It looks like pushing to feed from localbox is disabled
     # dotnet nuget push (Join-Path $NuGetOutDir $NuGetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
-    XCOPY (Join-Path $NuGetOutDir $NuGetCoreFileName) \\ddfiles\Team\Public\DiagnosticServices\NuGets /y /f
+    XCOPY (Join-Path $NuGetOutDir $NuGetCoreFileName) $NuGetFeedPath /y /f
     Write-Host "Push NuGet package" (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName)
     # dotnet nuget push (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) -s https://pkgs.dev.azure.com/devdiv/_packaging/DiagnosticServices/nuget/v3/index.json
-    XCOPY (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) \\ddfiles\Team\Public\DiagnosticServices\NuGets /y /f
+    XCOPY (Join-Path $NuGetOutDir $NuGetAspNetCoreFileName) $NuGetFeedPath /y /f
     
     Write-Host Tagging with $VersionSuffix
     git tag $VersionSuffix
     Write-Host Push the tags by: git push --tags
+    Pop-Location
 }
