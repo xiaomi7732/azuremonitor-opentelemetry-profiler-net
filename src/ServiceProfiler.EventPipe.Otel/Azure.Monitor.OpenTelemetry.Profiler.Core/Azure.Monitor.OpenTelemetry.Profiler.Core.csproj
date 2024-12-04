@@ -20,6 +20,7 @@
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
+    <PackageReference Include="OpenTelemetry" />
   </ItemGroup>
 
   <ItemGroup>

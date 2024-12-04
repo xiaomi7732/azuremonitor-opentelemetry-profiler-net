@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -10,9 +10,11 @@
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.Core" />
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.AspNetCore" />
   </ItemGroup>
-
-  <ItemGroup>
+  
+  <ItemGroup>  
+    <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj" />
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
   </ItemGroup>
 

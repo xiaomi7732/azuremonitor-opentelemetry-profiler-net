@@ -10,6 +10,7 @@ using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
 using System.Collections.Immutable;
+using EnvironmentUtilities = Microsoft.ApplicationInsights.Profiler.Shared.Services.EnvironmentUtilities;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 

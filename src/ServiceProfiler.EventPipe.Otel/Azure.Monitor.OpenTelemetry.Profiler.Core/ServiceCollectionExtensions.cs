@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Frontend;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
@@ -64,6 +65,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ITraceControl, DumbTraceControl>();
         services.TryAddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
         services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
+
+        // Client
+        services.TryAddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
 
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();
