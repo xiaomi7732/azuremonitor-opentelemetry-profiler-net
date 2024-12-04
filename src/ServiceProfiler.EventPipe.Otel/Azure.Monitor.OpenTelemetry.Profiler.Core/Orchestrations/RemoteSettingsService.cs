@@ -13,7 +13,7 @@ using OpenTelemetry;
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 
 // TODO: Make this a hosted service running on the background.
-internal sealed class RemoteSettingsService : RemoteSettingsServiceBase, IProfilerSettingsService, IRemoteSettingsService
+internal sealed class RemoteSettingsService : RemoteSettingsServiceBase, IProfilerSettingsService
 {
     public RemoteSettingsService(
         IProfilerFrontendClientFactory frontendClientFactory,

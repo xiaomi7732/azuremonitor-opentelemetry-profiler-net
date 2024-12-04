@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+
 internal abstract class RemoteSettingsServiceBase
 {
     private readonly ILogger _logger;
@@ -20,7 +21,7 @@ internal abstract class RemoteSettingsServiceBase
     private readonly UserConfigurationBase _userConfiguration;
     private IProfilerFrontendClientFactory _frontendClientFactory;
 
-    public SettingsContract CurrentSettings { get; private set; } = null;
+    public SettingsContract? CurrentSettings { get; private set; } = null;
 
     public event Action<SettingsContract>? SettingsUpdated;
 
