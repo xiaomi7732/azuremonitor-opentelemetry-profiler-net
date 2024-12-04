@@ -20,6 +20,7 @@
         <!-- Dependencies of current project -->
         <dependency id="CommandLineParser" version="$commandlineParserVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Diagnostics.NETCore.Client" version="$MicrosoftDiagnosticsNETCoreClientVersion$" exclude="Build,Analyzers" />
+        <dependency id="OpenTelemetry" version="$OpenTelemetryVersion$" exclude="Build,Analyzers" />
         
         <!-- Dependencies of Microsoft.ApplicationInsights.Profiler.Shared -->
         <dependency id="Azure.Core" version="$azureCoreVersion$" exclude="Build,Analyzers" />
