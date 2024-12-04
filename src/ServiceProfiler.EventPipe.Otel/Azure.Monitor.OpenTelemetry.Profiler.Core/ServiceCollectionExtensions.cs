@@ -1,5 +1,7 @@
-using System.Runtime.InteropServices;
-using System.Text.Json;
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
@@ -11,11 +13,15 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
+using Microsoft.ServiceProfiler.Utilities;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
@@ -71,7 +77,7 @@ public static class ServiceCollectionExtensions
         // Orchestrator
         AddSchedulers(services);
 
-        // Compatibilty test
+        // Compatibility test
         bool isRunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         if (isRunningOnWindows)
         {
@@ -103,6 +109,10 @@ public static class ServiceCollectionExtensions
 
         // Triggers
         services.TryAddSingleton<IResourceUsageSource, StubResourceUsageSource>();
+
+        // Scavengers
+        AddTraceScavengerServices(services);
+
         return services;
     }
 
@@ -131,5 +141,30 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, RandomSchedulingPolicy>());
         // ~
+    }
+
+    private static IServiceCollection AddTraceScavengerServices(this IServiceCollection services)
+    {
+        // Register FileScavenger
+        services.AddSingleton<IFileScavengerEventListener, TraceScavengerListener>();
+
+        services.AddSingleton(CreateFileScavenger);
+
+        services.AddHostedService<TraceScavengerService>();
+
+        return services;
+    }
+
+    private static FileScavenger CreateFileScavenger(IServiceProvider serviceProvider)
+    {
+        ServiceProfilerOptions configuration = serviceProvider.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
+        IUserCacheManager cacheManager = serviceProvider.GetRequiredService<IUserCacheManager>();
+
+        return ActivatorUtilities.CreateInstance<FileScavenger>(serviceProvider,
+            new FileScavengerOptions(cacheManager.TempTraceDirectory.FullName)
+            {
+                DeletePattern = "*" + OpenTelemetryProfilerProvider.TraceFileExtension, // *.netperf
+                GracePeriod = configuration.TraceScavenger.GracePeriod,
+            });
     }
 }
