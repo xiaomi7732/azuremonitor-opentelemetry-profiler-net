@@ -14,7 +14,8 @@
   <ItemGroup>  
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj" />
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
   </ItemGroup>
 

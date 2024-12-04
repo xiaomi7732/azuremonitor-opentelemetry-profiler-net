@@ -22,7 +22,7 @@ internal abstract class RemoteSettingsServiceBase
 
     public SettingsContract CurrentSettings { get; private set; } = null;
 
-    public event Action<SettingsContract> SettingsUpdated;
+    public event Action<SettingsContract>? SettingsUpdated;
 
     public RemoteSettingsServiceBase(
         IProfilerFrontendClientFactory frontendClientFactory,

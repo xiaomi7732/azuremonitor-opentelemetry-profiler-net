@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Utilities;
-using EnvironmentUtilities = Microsoft.ApplicationInsights.Profiler.Shared.Services.EnvironmentUtilities;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 

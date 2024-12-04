@@ -3,14 +3,16 @@
 // -----------------------------------------------------------------------------
 
 using Azure.Core;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Agent.FrontendClient;
+using Microsoft.ServiceProfiler.Utilities;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Frontend;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
 {
@@ -32,8 +34,7 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
     }
     public IProfilerFrontendClient CreateProfilerFrontendClient()
     {
-
-        TokenCredential credential = _authTokenProvider.IsAADAuthenticateEnabled ?
+        TokenCredential? credential = _authTokenProvider.IsAADAuthenticateEnabled ?
             new AADAuthTokenCredential(
                 _authTokenProvider,
                 _loggerFactory.CreateLogger<AADAuthTokenCredential>()) :

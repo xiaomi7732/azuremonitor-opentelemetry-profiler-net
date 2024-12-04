@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -26,6 +26,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj" />
   </ItemGroup>
 </Project>
