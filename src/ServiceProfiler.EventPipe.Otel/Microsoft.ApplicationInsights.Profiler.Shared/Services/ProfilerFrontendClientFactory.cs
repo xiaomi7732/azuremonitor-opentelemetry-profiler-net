@@ -32,6 +32,7 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
         _userConfiguration = userConfiguration?.Value ?? throw new System.ArgumentNullException(nameof(userConfiguration));
         _authTokenProvider = authTokenServiceFactory ?? throw new System.ArgumentNullException(nameof(authTokenServiceFactory));
     }
+
     public IProfilerFrontendClient CreateProfilerFrontendClient()
     {
         TokenCredential? credential = _authTokenProvider.IsAADAuthenticateEnabled ?
