@@ -1,3 +1,6 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
 
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -9,7 +12,7 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
 internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, IProfilerSource, IDisposable
 {
-    private const string TraceFileExtension = ".nettrace";
+    internal const string TraceFileExtension = ".nettrace";
     private string? _currentTraceFilePath;
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
     private bool IsSemaphoreTaken => _singleProfilingSemaphore.CurrentCount == 0;
