@@ -24,6 +24,7 @@
         
         <!-- Dependencies of Microsoft.ApplicationInsights.Profiler.Shared -->
         <dependency id="Azure.Core" version="$azureCoreVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Hosting.Abstractions" version="$MicrosoftExtensionsHostingAbstractionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Abstractions" version="$MicrosoftExtensionsLoggingAbstractionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Options" version="$MicrosoftExtensionsOptionsVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Collections.Immutable" version="$SystemCollectionsImmutableVersion$" exclude="Build,Analyzers" />

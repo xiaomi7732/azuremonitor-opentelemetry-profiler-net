@@ -12,6 +12,9 @@ internal class ConnectionStringParser : IConnectionStringParser
         public const string IngestionEndpoint = "IngestionEndpoint";
         public const string LiveEndpoint = "LiveEndpoint";
         public const string ApplicationId = "ApplicationId";
+
+        // See https://learn.microsoft.com/azure/azure-monitor/app/azure-ad-authentication?tabs=net#token-audience for details.
+        public const string AadAudience = "AadAudience";
     }
 
     private readonly string _connectionString;

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.Core" />
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.AspNetCore" />
@@ -17,10 +17,12 @@
     <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="System.Collections.Immutable" />
