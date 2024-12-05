@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.Tracing;
 
-
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 /// <summary>
@@ -26,9 +25,9 @@ public class EventPipeProviderItem
     public EventLevel EventLevel { get; set; }
 
     /// <summary>
-    /// Gets or sets the keywords.
+    /// Gets or sets the keywords. Default to "0xF00000000000".
     /// </summary>
-    public long Keywords { get; set; }
+    public long Keywords { get; set; } = 0xF00000000000;
 
     /// <summary>
     /// Gets or sets the arguments for the event pipe provider.
