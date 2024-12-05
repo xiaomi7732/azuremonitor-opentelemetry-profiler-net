@@ -46,30 +46,32 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
-        services.TryAddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
+        services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
 
         // Uploader caller
         AddUploaderCallerServices(services);
 
         // Named pipe client
-        services.TryAddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
+        services.AddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
 
         // Profiler Context
-        services.TryAddSingleton<IEndpointProvider, EndpointProvider>();
-        services.TryAddTransient<IMetadataWriter, MetadataWriter>();
+        services.AddSingleton<IEndpointProvider, EndpointProvider>();
+        services.AddTransient<IMetadataWriter, MetadataWriter>();
 
         // Transient trace session listeners
-        services.TryAddTransient<SampleActivityContainer>();
-        services.TryAddTransient<SampleCollector>();
-        services.TryAddSingleton<TraceSessionListenerFactory>();
+        services.AddTransient<SampleActivityContainer>();
+        services.AddTransient<SampleCollector>();
+        services.AddSingleton<TraceSessionListenerFactory>();
 
         // Profiler
-        services.TryAddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
-        services.TryAddSingleton<IPostStopProcessorFactory, PostStopProcessorFactory>();
-        services.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
-        services.TryAddSingleton<ITraceControl, DumbTraceControl>();
-        services.TryAddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
-        services.TryAddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
+        services.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
+        services.AddSingleton<IPostStopProcessorFactory, PostStopProcessorFactory>();
+
+        services.AddSingleton(_ => DiagnosticsClientProvider.Instance);
+        services.AddSingleton<DiagnosticsClientTraceConfiguration>();
+        services.AddSingleton<ITraceControl, DiagnosticsClientTrace>();
+        services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
+        services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();
@@ -108,7 +110,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Triggers
-        services.TryAddSingleton<IResourceUsageSource, StubResourceUsageSource>();
+        services.AddSingleton<IResourceUsageSource, StubResourceUsageSource>();
 
         // Scavengers
         AddTraceScavengerServices(services);
@@ -135,7 +137,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ProcessExpirationPolicy>();
         services.AddSingleton<LimitedExpirationPolicyFactory>();
 
-        services.TryAddSingleton<IOrchestrator, OrchestrationImp>();
+        services.AddSingleton<IOrchestrator, OrchestrationImp>();
 
         // TODO: saars: Append specific schedulers
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());

@@ -2,9 +2,11 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Microsoft.Diagnostics.NETCore.Client;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.Tracing;
+
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
@@ -32,5 +34,10 @@ public class EventPipeProviderItem
     /// Gets or sets the arguments for the event pipe provider.
     /// </summary>
     /// <value></value>
-    public IDictionary<string, string> Arguments { get; set; } = ImmutableDictionary<string,string>.Empty;
+    public IDictionary<string, string> Arguments { get; set; } = ImmutableDictionary<string, string>.Empty;
+
+    /// <summary>
+    /// Converts to a <see cref="EventPipeProvider"/> object.
+    /// </summary>
+    public EventPipeProvider ToProvider() => new(Name, EventLevel, Keywords, Arguments);
 }

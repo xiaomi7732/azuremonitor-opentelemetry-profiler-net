@@ -1,8 +1,7 @@
+using Microsoft.ServiceProfiler.DataContract.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using Microsoft.ServiceProfiler.DataContract.Settings;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
@@ -151,7 +150,7 @@ public abstract class UserConfigurationBase
     /// Gets or sets the Custom EventPipeProviders. These are EventPipe providers in addition to the built-in event pipe providers.
     /// Go to https://aka.ms/ep-sp/custom-providers for more details.
     /// </summary>
-    public IEnumerable<EventPipeProviderItem> CustomEventPipeProviders { get; set; } = Enumerable.Empty<EventPipeProviderItem>();
+    public IEnumerable<EventPipeProviderItem> CustomEventPipeProviders { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the trace scavenger service options.

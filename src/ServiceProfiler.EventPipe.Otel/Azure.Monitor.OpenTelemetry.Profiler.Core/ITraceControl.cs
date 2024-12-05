@@ -1,3 +1,7 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
 public interface ITraceControl
@@ -14,7 +18,7 @@ public interface ITraceControl
         /// <remark>
         /// Only 1 profiler session is supported at a time.
         /// </remark>
-        Task EnableAsync(string traceFilePath = "default.nettrace", CancellationToken cancellationToken = default);
+        Task EnableAsync(string traceFilePath, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the session start time
