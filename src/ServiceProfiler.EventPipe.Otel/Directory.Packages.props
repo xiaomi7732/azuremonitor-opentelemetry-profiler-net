@@ -19,7 +19,8 @@
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <NuspecProperties><![CDATA[
+    <NuspecProperties>
+  <![CDATA[
 AzureCoreVersion=$(AzureCoreVersion);
 AzureMonitorOpenTelemetryAspNetCoreVersion=$(AzureMonitorOpenTelemetryAspNetCoreVersion);
 CommandlineParserVersion=$(CommandLineParserVersion);
@@ -29,6 +30,7 @@ MicrosoftExtensionsConfigurationBinderVersion=$(MicrosoftExtensionsConfiguration
 MicrosoftExtensionsHostingAbstractionsVersion=$(MicrosoftExtensionsHostingAbstractionsVersion);
 MicrosoftExtensionsLoggingAbstractionsVersion=$(MicrosoftExtensionsLoggingAbstractionsVersion);
 MicrosoftExtensionsOptionsVersion=$(MicrosoftExtensionsOptionsVersion);
+OpenTelemetryVersion=$(OpenTelemetryVersion);
 SystemCollectionsImmutableVersion=$(SystemCollectionsImmutableVersion);
 SystemTextJsonVersion=$(SystemTextJsonVersion);
 $(NuspecProperties)]]></NuspecProperties>
