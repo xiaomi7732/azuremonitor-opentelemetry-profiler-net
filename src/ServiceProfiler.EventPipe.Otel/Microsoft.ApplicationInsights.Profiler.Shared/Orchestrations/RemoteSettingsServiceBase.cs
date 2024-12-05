@@ -20,9 +20,10 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
-    private IProfilerFrontendClientFactory _frontendClientFactory;
-    private TimeSpan _frequency;
-    private bool _standaloneMode;
+    private readonly IProfilerFrontendClientFactory _frontendClientFactory;
+    private readonly TimeSpan _frequency;
+    private readonly bool _standaloneMode;
+    private readonly bool _isDisabled;
 
     public SettingsContract? CurrentSettings { get; private set; } = null;
 
@@ -39,6 +40,7 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService
         _taskCompletionSource = new TaskCompletionSource<bool>();
         _frequency = _userConfiguration.ConfigurationUpdateFrequency;
         _standaloneMode = _userConfiguration.StandaloneMode;
+        _isDisabled = _userConfiguration.IsDisabled;
     }
 
     public async Task<bool> WaitForInitializedAsync(TimeSpan timeout)
@@ -120,6 +122,13 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService
         if (_standaloneMode)
         {
             _logger.LogTrace("Running in standalone mode. No remote settings will be fetched.");
+            return;
+        }
+
+        if (_isDisabled)
+        {
+            _logger.LogTrace("Profiler is disabled. No remote settings will be fetched.");
+            return;
         }
 
         if (_frequency > TimeSpan.Zero)

@@ -43,9 +43,7 @@ internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
         IAuthTokenProvider authTokenProvider = _serviceProvider.GetRequiredService<IAuthTokenProvider>();
 
         TokenCredential? credential = authTokenProvider.IsAADAuthenticateEnabled ?
-            ActivatorUtilities.CreateInstance<AADAuthTokenCredential>(
-                _serviceProvider,
-                _loggerFactory.CreateLogger<AADAuthTokenCredential>()) :
+            ActivatorUtilities.CreateInstance<AADAuthTokenCredential>(_serviceProvider) :
             null;
 
         return ActivatorUtilities.CreateInstance<ProfilerFrontendClient>(
