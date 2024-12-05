@@ -13,7 +13,6 @@
     <MicrosoftExtensionsConfigurationBinderVersion>9.0.0</MicrosoftExtensionsConfigurationBinderVersion>
     <MicrosoftExtensionsHostingAbstractionsVersion>8.0.1</MicrosoftExtensionsHostingAbstractionsVersion>
     <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.2</MicrosoftExtensionsLoggingAbstractionsVersion>
->>>>>>> origin/main
     <MicrosoftExtensionsOptionsVersion>8.0.2</MicrosoftExtensionsOptionsVersion>
     <OpenTelemetryVersion>1.10.0</OpenTelemetryVersion>
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
