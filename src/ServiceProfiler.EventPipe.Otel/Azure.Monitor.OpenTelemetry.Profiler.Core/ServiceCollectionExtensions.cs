@@ -163,7 +163,7 @@ public static class ServiceCollectionExtensions
         return ActivatorUtilities.CreateInstance<FileScavenger>(serviceProvider,
             new FileScavengerOptions(cacheManager.TempTraceDirectory.FullName)
             {
-                DeletePattern = "*" + OpenTelemetryProfilerProvider.TraceFileExtension, // *.netperf
+                DeletePattern = "*" + OpenTelemetryProfilerProvider.TraceFileExtension, // => "*.nettrace"
                 GracePeriod = configuration.TraceScavenger.GracePeriod,
             });
     }
