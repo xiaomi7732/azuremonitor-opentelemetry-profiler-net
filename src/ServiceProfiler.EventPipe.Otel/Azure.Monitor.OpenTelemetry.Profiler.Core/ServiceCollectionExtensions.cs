@@ -110,6 +110,8 @@ public static class ServiceCollectionExtensions
             }
         });
 
+        services.AddHostedService<RemoteSettingsService>();
+
         // Triggers
         services.TryAddSingleton<IResourceUsageSource, StubResourceUsageSource>();
 

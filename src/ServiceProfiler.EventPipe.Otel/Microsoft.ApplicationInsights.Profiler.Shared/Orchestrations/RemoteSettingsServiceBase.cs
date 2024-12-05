@@ -4,6 +4,7 @@
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
@@ -14,12 +15,14 @@ using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 
-internal abstract class RemoteSettingsServiceBase
+internal abstract class RemoteSettingsServiceBase : BackgroundService
 {
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
     private IProfilerFrontendClientFactory _frontendClientFactory;
+    private TimeSpan _frequency;
+    private bool _standaloneMode;
 
     public SettingsContract? CurrentSettings { get; private set; } = null;
 
@@ -34,8 +37,8 @@ internal abstract class RemoteSettingsServiceBase
         _userConfiguration = userConfigurationOptions.Value ?? throw new ArgumentNullException(nameof(userConfigurationOptions));
         _frontendClientFactory = frontendClientFactory ?? throw new ArgumentNullException(nameof(frontendClientFactory));
         _taskCompletionSource = new TaskCompletionSource<bool>();
-        // Bootstrap the fetching service.
-        _ = Task.Run(() => StartAsync(_userConfiguration.ConfigurationUpdateFrequency, default));
+        _frequency = _userConfiguration.ConfigurationUpdateFrequency;
+        _standaloneMode = _userConfiguration.StandaloneMode;
     }
 
     public async Task<bool> WaitForInitializedAsync(TimeSpan timeout)
@@ -112,14 +115,19 @@ internal abstract class RemoteSettingsServiceBase
         SettingsUpdated?.Invoke(settingsContract);
     }
 
-    private async Task StartAsync(TimeSpan frequency, CancellationToken cancellationToken)
-    {
-        if (frequency > TimeSpan.Zero)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    {   
+        if (_standaloneMode)
+        {
+            _logger.LogTrace("Running in standalone mode. No remote settings will be fetched.");
+        }
+
+        if (_frequency > TimeSpan.Zero)
         {
             while (true)
             {
                 await FetchRemoteSettingsAsync(cancellationToken).ConfigureAwait(false);
-                await Task.Delay(frequency, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(_frequency, cancellationToken).ConfigureAwait(false);
             }
         }
         else
