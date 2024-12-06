@@ -9,16 +9,18 @@
     <AzureMonitorOpenTelemetryAspNetCoreVersion>1.2.0</AzureMonitorOpenTelemetryAspNetCoreVersion>
     <CommandLineParserVersion>2.9.1</CommandLineParserVersion>
     <MicrosoftDiagnosticsNETCoreClientVersion>0.2.532401</MicrosoftDiagnosticsNETCoreClientVersion>
-    <MicrosoftExtensionsConfigurationAbstractionsVersion>8.0.0</MicrosoftExtensionsConfigurationAbstractionsVersion>
-    <MicrosoftExtensionsConfigurationBinderVersion>8.0.2</MicrosoftExtensionsConfigurationBinderVersion>
+    <MicrosoftExtensionsConfigurationAbstractionsVersion>9.0.0</MicrosoftExtensionsConfigurationAbstractionsVersion>
+    <MicrosoftExtensionsConfigurationBinderVersion>9.0.0</MicrosoftExtensionsConfigurationBinderVersion>
     <MicrosoftExtensionsHostingAbstractionsVersion>8.0.1</MicrosoftExtensionsHostingAbstractionsVersion>
     <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.2</MicrosoftExtensionsLoggingAbstractionsVersion>
     <MicrosoftExtensionsOptionsVersion>8.0.2</MicrosoftExtensionsOptionsVersion>
+    <OpenTelemetryVersion>1.10.0</OpenTelemetryVersion>
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <NuspecProperties><![CDATA[
+    <NuspecProperties>
+  <![CDATA[
 AzureCoreVersion=$(AzureCoreVersion);
 AzureMonitorOpenTelemetryAspNetCoreVersion=$(AzureMonitorOpenTelemetryAspNetCoreVersion);
 CommandlineParserVersion=$(CommandLineParserVersion);
@@ -28,6 +30,7 @@ MicrosoftExtensionsConfigurationBinderVersion=$(MicrosoftExtensionsConfiguration
 MicrosoftExtensionsHostingAbstractionsVersion=$(MicrosoftExtensionsHostingAbstractionsVersion);
 MicrosoftExtensionsLoggingAbstractionsVersion=$(MicrosoftExtensionsLoggingAbstractionsVersion);
 MicrosoftExtensionsOptionsVersion=$(MicrosoftExtensionsOptionsVersion);
+OpenTelemetryVersion=$(OpenTelemetryVersion);
 SystemCollectionsImmutableVersion=$(SystemCollectionsImmutableVersion);
 SystemTextJsonVersion=$(SystemTextJsonVersion);
 $(NuspecProperties)]]></NuspecProperties>
@@ -42,6 +45,7 @@ $(NuspecProperties)]]></NuspecProperties>
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MicrosoftExtensionsHostingAbstractionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsOptionsVersion)" />
+    <PackageVersion Include="OpenTelemetry" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="System.Collections.Immutable" Version="$(SystemCollectionsImmutableVersion)" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="4.7.0" />
     <PackageVersion Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />

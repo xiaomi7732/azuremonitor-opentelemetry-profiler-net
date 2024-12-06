@@ -20,6 +20,7 @@
         <!-- Dependencies of current project -->
         <dependency id="CommandLineParser" version="$commandlineParserVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Diagnostics.NETCore.Client" version="$MicrosoftDiagnosticsNETCoreClientVersion$" exclude="Build,Analyzers" />
+        <dependency id="OpenTelemetry" version="$OpenTelemetryVersion$" exclude="Build,Analyzers" />
         
         <!-- Dependencies of Microsoft.ApplicationInsights.Profiler.Shared -->
         <dependency id="Azure.Core" version="$azureCoreVersion$" exclude="Build,Analyzers" />
@@ -37,6 +38,10 @@
 
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.Shared.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.Shared.pdb" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.Exceptions.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.Exceptions.pdb" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Common.Utilities.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Common.Utilities.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Contract.Agent.dll" target="lib/$targetFramework$"></file>
@@ -49,7 +54,6 @@
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Orchestration.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.pdb" target="lib/$targetFramework$"></file>
-
     <file src="..\Readme.md" target="docs\" />
   </files>
 </package>

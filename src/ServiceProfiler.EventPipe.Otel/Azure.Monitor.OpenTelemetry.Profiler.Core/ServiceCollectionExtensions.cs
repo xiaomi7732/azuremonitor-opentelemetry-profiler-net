@@ -73,6 +73,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
+        // Client
+        services.AddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
+
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();
 
@@ -108,6 +111,8 @@ public static class ServiceCollectionExtensions
                 return ActivatorUtilities.CreateInstance<RemoteSettingsService>(p);
             }
         });
+
+        services.AddHostedService<RemoteSettingsService>();
 
         // Triggers
         services.AddSingleton<IResourceUsageSource, StubResourceUsageSource>();
