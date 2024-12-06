@@ -73,15 +73,11 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         {
             using FileStream fileStream = File.OpenWrite(traceFilePath);
             await stream.CopyToAsync(fileStream).ConfigureAwait(false);
+            _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error writing trace file at: {filePath}", traceFilePath);
         }
-        finally
-        {
-            _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
-        }
     }
-    // ~
 }

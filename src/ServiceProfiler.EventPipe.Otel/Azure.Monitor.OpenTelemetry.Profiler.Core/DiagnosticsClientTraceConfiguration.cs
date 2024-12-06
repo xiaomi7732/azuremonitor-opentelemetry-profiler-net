@@ -26,7 +26,7 @@ internal class DiagnosticsClientTraceConfiguration : DiagnosticsClientTraceConfi
         // Two event pipe providers that is specific to OTel.
         
         // Open Telemetry SDK Event Source
-        yield return new EventPipeProvider("OpenTelemetry-Sdk", EventLevel.Verbose, keywords: 0xffffffffffff, arguments: null);
+        yield return new EventPipeProvider(TraceSessionListener.OpenTelemetrySDKEventSourceName, EventLevel.Verbose, keywords: 0xffffffffffff, arguments: null);
 
         // Open Telemetry Profiler Data adapter event source so that trace analysis knows about the activities
         yield return new EventPipeProvider(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName, EventLevel.Verbose, keywords: 0xffffffffffff, arguments: null);
