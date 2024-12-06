@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -19,7 +19,6 @@
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="CommandLineParser" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
     <PackageReference Include="OpenTelemetry" />
   </ItemGroup>
 

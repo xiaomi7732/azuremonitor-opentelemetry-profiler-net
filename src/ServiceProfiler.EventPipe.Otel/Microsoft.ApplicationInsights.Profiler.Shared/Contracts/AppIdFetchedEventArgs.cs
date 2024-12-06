@@ -1,6 +1,10 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 using System;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 internal sealed class AppIdFetchedEventArgs : EventArgs
 {
