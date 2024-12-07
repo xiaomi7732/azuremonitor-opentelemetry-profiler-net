@@ -120,7 +120,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Triggers
-        services.AddSingleton<IResourceUsageSource, StubResourceUsageSource>();
+        services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
 
         // Scavengers
         AddTraceScavengerServices(services);
