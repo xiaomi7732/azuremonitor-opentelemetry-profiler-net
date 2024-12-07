@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
@@ -122,6 +123,10 @@ public static class ServiceCollectionExtensions
         });
 
         // Triggers
+        services.TryAddSingleton(_ => SettingsParser.Instance);
+        services.TryAddSingleton<CpuTriggerSettings>();
+        services.TryAddSingleton<MemoryTriggerSettings>();
+
         services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

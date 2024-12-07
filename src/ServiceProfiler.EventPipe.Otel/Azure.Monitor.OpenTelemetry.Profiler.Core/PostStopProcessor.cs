@@ -137,7 +137,7 @@ internal class PostStopProcessor : IPostStopProcessor
                 }
 
                 // Contract with Upload, sending additional data
-                IPCAdditionalData additionalData = CreateAdditonalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
+                IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("Sending additional data for the uploader to use.");
@@ -182,7 +182,7 @@ internal class PostStopProcessor : IPostStopProcessor
         return true;
     }
 
-    private IPCAdditionalData CreateAdditonalData(
+    private IPCAdditionalData CreateAdditionalData(
         IReadOnlyCollection<SampleActivity> samples,
         string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
         => new()
