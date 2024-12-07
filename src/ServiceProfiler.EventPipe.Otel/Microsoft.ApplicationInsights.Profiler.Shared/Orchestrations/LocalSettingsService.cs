@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -9,7 +11,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 /// <summary>
 /// Settings service used in standalone mode.
 /// </summary>
-internal sealed class LocalProfileSettingsService : IProfilerSettingsService
+internal sealed class LocalProfileSettingsService : BackgroundService, IProfilerSettingsService
 {
     private readonly ILogger _logger;
 
@@ -33,4 +35,6 @@ internal sealed class LocalProfileSettingsService : IProfilerSettingsService
         // Task complete as long as the constructor is executed.
         return Task.FromResult(true);
     }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 }

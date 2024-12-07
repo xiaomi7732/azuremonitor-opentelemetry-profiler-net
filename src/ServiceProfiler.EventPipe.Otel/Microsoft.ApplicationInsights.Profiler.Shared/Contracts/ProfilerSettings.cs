@@ -14,12 +14,15 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 /// Settings contract for the Event Pipe agent.
 /// Contains the values provided in a user configuration on load and later from remote trigger settings if and when they are set.
 /// </summary>
-public abstract class ProfilerSettingsBase
+public class ProfilerSettings
 {
     private readonly ILogger _logger;
 
-    public ProfilerSettingsBase(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettingsBase> logger)
+    public ProfilerSettings(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettings> logger)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger.LogTrace("In ctor of {className}", nameof(ProfilerSettings));
+
         if (userConfiguration is null)
         {
             throw new ArgumentNullException(nameof(userConfiguration));
@@ -36,7 +39,6 @@ public abstract class ProfilerSettingsBase
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
         settingsService.SettingsUpdated += SetFromSettingsContract;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     private void SetFromSettingsContract(SettingsContract settingsContract)

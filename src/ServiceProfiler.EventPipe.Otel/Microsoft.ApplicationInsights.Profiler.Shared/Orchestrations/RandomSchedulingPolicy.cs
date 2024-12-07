@@ -2,14 +2,17 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.Modes;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
-using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 
 /// <summary>
 /// Scheduling policy that will profile on a schedule such that a certain percentage of the day consists of profiling, the rest is idling.

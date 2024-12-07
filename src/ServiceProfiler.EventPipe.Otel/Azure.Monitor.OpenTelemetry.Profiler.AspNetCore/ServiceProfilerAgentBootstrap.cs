@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 using System.Diagnostics;
-using Azure.Monitor.OpenTelemetry.Profiler.Core;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
