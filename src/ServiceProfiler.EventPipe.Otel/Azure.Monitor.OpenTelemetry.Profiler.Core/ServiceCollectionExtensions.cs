@@ -124,15 +124,19 @@ public static class ServiceCollectionExtensions
         // Triggers
         services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
 
-        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             services.AddKeyedSingleton<IMetricsProvider, WindowsMemoryMetricsProvider>(MetricsProviderCategory.Memory);
         }
-        else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             services.AddSingleton<MemInfoItemParser>();
             services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
             services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
+        }
+        else
+        {
+            throw new NotSupportedException($"Only support {OSPlatform.Windows} and {OSPlatform.Linux}.");
         }
 
         services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
