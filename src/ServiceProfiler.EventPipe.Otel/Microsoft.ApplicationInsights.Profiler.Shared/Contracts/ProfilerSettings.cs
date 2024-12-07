@@ -20,9 +20,6 @@ public class ProfilerSettings
 
     public ProfilerSettings(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettings> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _logger.LogTrace("In ctor of {className}", nameof(ProfilerSettings));
-
         if (userConfiguration is null)
         {
             throw new ArgumentNullException(nameof(userConfiguration));
@@ -39,6 +36,7 @@ public class ProfilerSettings
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
         settingsService.SettingsUpdated += SetFromSettingsContract;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     private void SetFromSettingsContract(SettingsContract settingsContract)
