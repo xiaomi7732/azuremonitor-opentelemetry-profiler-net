@@ -93,6 +93,12 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         _memoryBaselineTracker = CreateAndStartMemoryBaselineTracker(memoryMetricsProvider, memoryTriggerSettings);
     }
 
+    public float GetAverageCPUUsage()
+    => LogAndReturn(() => _currentCPUBaseline, MetricsProviderCategory.CPU);
+
+    public float GetAverageMemoryUsage()
+        => LogAndReturn(() => _currentMemoryBaseline, MetricsProviderCategory.Memory);
+
     private BaselineTracker CreateAndStartMemoryBaselineTracker(IMetricsProvider memoryMetricsProvider, MemoryTriggerSettings memoryTriggerSettings)
     {
         BaselineTracker memoryBaselineTracker = new(
@@ -130,9 +136,12 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         return cpuBaselineTracker;
     }
 
-    public float GetAverageCPUUsage() => _currentCPUBaseline;
-
-    public float GetAverageMemoryUsage() => _currentMemoryBaseline;
+    private float LogAndReturn(Func<float> valueProvider, MetricsProviderCategory category)
+    {
+        float value = valueProvider();
+        _logger.LogDebug("Getting current {category} usage: {value}", category, value);
+        return value;
+    }
 
     public void Dispose()
     {
