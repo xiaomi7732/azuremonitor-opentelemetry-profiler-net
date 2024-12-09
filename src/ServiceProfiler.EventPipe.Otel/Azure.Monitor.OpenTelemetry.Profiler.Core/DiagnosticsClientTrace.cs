@@ -30,11 +30,12 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
 
     public async Task DisableAsync(CancellationToken cancellationToken = default)
     {
-        if (_session is not null)
+        if (_session is null)
         {
-            await _session.StopAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogWarning("{name} is called when the session doesn't exist.", nameof(DisableAsync));
+            return;
         }
-        _logger.LogWarning("{name} is called when the session doesn't exist.", nameof(DisableAsync));
+        await _session.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()
