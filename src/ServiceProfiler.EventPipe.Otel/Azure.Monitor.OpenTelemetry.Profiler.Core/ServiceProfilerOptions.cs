@@ -1,6 +1,7 @@
 using Azure.Core;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
 /// <summary>
 /// Service Profiler Options

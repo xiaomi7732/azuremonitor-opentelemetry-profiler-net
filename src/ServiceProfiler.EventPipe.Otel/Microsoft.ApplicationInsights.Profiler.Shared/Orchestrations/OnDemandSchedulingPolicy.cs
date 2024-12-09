@@ -14,6 +14,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 
 internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
 {
+    private readonly IProfilerSettingsService _profilerSettingsService;
+    private string? _evaluatedCollectionPlan;
+    private const int DefaultProfileNowDurationInSeconds = 120;
+
     /// <summary>
     /// Scheduling policy that will start profiling when the Azure Portal "Start Profiling" button is clicked
     /// </summary>
@@ -70,10 +74,11 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
                     durationInSeconds = DefaultProfileNowDurationInSeconds;
                 }
 
-                return new List<(TimeSpan, ProfilerAction)>() {
-                        (TimeSpan.FromSeconds(durationInSeconds), ProfilerAction.StartProfilingSession),
-                        (ProfilingCooldown, ProfilerAction.Standby),
-                    };
+                return new List<(TimeSpan, ProfilerAction)>
+                {
+                    (TimeSpan.FromSeconds(durationInSeconds), ProfilerAction.StartProfilingSession),
+                    (ProfilingCooldown, ProfilerAction.Standby),
+                };
             }
         }
 
@@ -81,12 +86,4 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
                 (PollingInterval, ProfilerAction.Standby),
             };
     }
-
-    #region Private
-    private IProfilerSettingsService _profilerSettingsService;
-
-    private string? _evaluatedCollectionPlan;
-    private const int DefaultProfileNowDurationInSeconds = 120;
-
-    #endregion
 }

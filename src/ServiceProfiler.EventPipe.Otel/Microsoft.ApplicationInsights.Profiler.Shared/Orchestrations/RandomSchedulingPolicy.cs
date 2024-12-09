@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -26,7 +27,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
     private double _overhead;
 
     public RandomSchedulingPolicy(
-        IOptions<ServiceProfilerOptions> userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         ProfilerSettings profilerSettings,
         ProcessExpirationPolicy expirationPolicy,
         IDelaySource delaySource,

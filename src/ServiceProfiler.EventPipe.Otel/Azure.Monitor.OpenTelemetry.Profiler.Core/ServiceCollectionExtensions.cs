@@ -113,7 +113,6 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService(p =>
         {
-            ServiceProfilerOptions userConfiguration = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
             BackgroundService? backgroundService = p.GetRequiredService<IProfilerSettingsService>() as BackgroundService;
             return backgroundService ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service.");
         });

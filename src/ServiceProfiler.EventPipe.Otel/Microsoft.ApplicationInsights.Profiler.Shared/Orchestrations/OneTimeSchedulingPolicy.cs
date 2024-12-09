@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,7 +18,7 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
 {
     public OneTimeSchedulingPolicy(
-        IOptions<ServiceProfilerOptions> userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         ProfilerSettings profilerSettings,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
