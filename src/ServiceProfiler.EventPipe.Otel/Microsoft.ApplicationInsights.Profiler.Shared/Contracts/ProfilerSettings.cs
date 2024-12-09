@@ -14,11 +14,11 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 /// Settings contract for the Event Pipe agent.
 /// Contains the values provided in a user configuration on load and later from remote trigger settings if and when they are set.
 /// </summary>
-public abstract class ProfilerSettingsBase
+public class ProfilerSettings
 {
     private readonly ILogger _logger;
 
-    public ProfilerSettingsBase(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettingsBase> logger)
+    public ProfilerSettings(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettings> logger)
     {
         if (userConfiguration is null)
         {

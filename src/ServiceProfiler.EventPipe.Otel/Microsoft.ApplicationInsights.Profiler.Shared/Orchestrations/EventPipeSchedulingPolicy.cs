@@ -11,7 +11,7 @@ public abstract class EventPipeSchedulingPolicy : SchedulingPolicy
         TimeSpan profilingDuration,
         TimeSpan profilingCooldown,
         TimeSpan pollingInterval,
-        ProfilerSettingsBase profilerSettings,
+        ProfilerSettings profilerSettings,
         IDelaySource delaySource,
         IExpirationPolicy expirationPolicy,
         IResourceUsageSource resourceUsageSource,
@@ -39,6 +39,6 @@ public abstract class EventPipeSchedulingPolicy : SchedulingPolicy
         return false;
     }
 
-    protected ProfilerSettingsBase ProfilerSettings { get; }
+    protected ProfilerSettings ProfilerSettings { get; }
     protected IResourceUsageSource ResourceUsageSource { get; }
 }

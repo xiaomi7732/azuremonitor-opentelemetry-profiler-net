@@ -9,13 +9,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
+using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 
-internal abstract class RemoteSettingsServiceBase : BackgroundService
+internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfilerSettingsService
 {
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
@@ -118,7 +119,7 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
-    {   
+    {
         if (_standaloneMode)
         {
             _logger.LogTrace("Running in standalone mode. No remote settings will be fetched.");

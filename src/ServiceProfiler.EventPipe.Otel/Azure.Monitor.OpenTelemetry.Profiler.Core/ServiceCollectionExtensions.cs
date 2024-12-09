@@ -2,10 +2,10 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
@@ -17,6 +17,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
@@ -112,7 +113,11 @@ public static class ServiceCollectionExtensions
             }
         });
 
-        services.AddHostedService<RemoteSettingsService>();
+        services.AddHostedService(p =>
+        {
+            BackgroundService? backgroundService = p.GetRequiredService<IProfilerSettingsService>() as BackgroundService;
+            return backgroundService ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service.");
+        });
 
         // Triggers
         services.AddSingleton<IResourceUsageSource, StubResourceUsageSource>();
@@ -147,6 +152,7 @@ public static class ServiceCollectionExtensions
         // TODO: saars: Append specific schedulers
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, RandomSchedulingPolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OnDemandSchedulingPolicy>());
         // ~
     }
 

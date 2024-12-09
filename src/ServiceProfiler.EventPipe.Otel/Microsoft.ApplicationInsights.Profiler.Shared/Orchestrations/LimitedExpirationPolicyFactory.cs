@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceProfiler.Orchestration;
+using System;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 
 internal class LimitedExpirationPolicyFactory(IServiceProvider serviceProvider)
 {

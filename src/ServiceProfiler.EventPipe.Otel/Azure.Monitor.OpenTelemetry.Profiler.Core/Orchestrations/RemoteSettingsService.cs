@@ -7,13 +7,12 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Orchestration;
 using OpenTelemetry;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 
 // TODO: Make this a hosted service running on the background.
-internal sealed class RemoteSettingsService : RemoteSettingsServiceBase, IProfilerSettingsService
+internal sealed class RemoteSettingsService : RemoteSettingsServiceBase
 {
     public RemoteSettingsService(
         IProfilerFrontendClientFactory frontendClientFactory,

@@ -1,15 +1,23 @@
-using Azure.Monitor.OpenTelemetry.Profiler.Core.Contracts;
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 
 internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
 {
     public OneTimeSchedulingPolicy(
-        IOptions<ServiceProfilerOptions> userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         ProfilerSettings profilerSettings,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
