@@ -54,6 +54,8 @@
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Orchestration.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.pdb" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Utilities.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Utilities.pdb" target="lib/$targetFramework$"></file>
     <file src="..\Readme.md" target="docs\" />
   </files>
 </package>
