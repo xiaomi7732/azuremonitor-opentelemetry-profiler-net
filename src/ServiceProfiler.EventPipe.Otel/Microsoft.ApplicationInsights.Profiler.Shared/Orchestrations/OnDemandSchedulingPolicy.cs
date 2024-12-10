@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
 {

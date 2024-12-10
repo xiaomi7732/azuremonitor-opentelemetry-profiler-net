@@ -14,7 +14,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfilerSettingsService
 {

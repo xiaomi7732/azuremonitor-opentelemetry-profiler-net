@@ -7,7 +7,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations.MetricsProviders;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 
 internal sealed class MemInfoFileMemoryMetricsProvider : IMetricsProvider
 {
@@ -38,7 +38,7 @@ internal sealed class MemInfoFileMemoryMetricsProvider : IMetricsProvider
         // Get the memory used, avoid div by 0.
         if (total != 0)
         {
-            return (1 - (free / total)) * 100;
+            return (1 - free / total) * 100;
         }
 
         return 0;

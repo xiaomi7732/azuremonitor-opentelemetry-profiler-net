@@ -5,7 +5,7 @@
 using System.IO;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations.MetricsProviders;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 
 /// <summary>
 /// An implementation to get meminfo from proc/meminfo file.

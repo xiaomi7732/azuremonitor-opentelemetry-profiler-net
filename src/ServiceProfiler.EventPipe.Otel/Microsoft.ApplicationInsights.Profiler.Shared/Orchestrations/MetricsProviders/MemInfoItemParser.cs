@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations.MetricsProviders;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 
 /// <summary>
 /// A line parser to parse /proc/meminfo for Linux.
@@ -36,7 +36,7 @@ internal sealed class MemInfoItemParser
         string[] tokens = input.Split([' '], StringSplitOptions.RemoveEmptyEntries);
         if (tokens?.Length == 2)
         {
-            if(ulong.TryParse(tokens[0], out value))
+            if (ulong.TryParse(tokens[0], out value))
             {
                 unit = tokens[1].Trim();
                 return true;

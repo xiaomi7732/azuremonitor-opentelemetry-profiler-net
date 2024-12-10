@@ -15,7 +15,7 @@ using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.ProcessMonitor;
 using System;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal sealed class ResourceUsageSource : IResourceUsageSource
 {

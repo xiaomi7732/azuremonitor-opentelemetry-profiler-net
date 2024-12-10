@@ -4,12 +4,12 @@
 
 using System.IO;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations.MetricsProviders;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 
 /// <summary>
 /// A service to read mem info as a stream.
 /// </summary>
-public interface IMemInfoReader
+internal interface IMemInfoReader
 {
     /// <summary>
     /// Gets a stream for memory info from a file.
