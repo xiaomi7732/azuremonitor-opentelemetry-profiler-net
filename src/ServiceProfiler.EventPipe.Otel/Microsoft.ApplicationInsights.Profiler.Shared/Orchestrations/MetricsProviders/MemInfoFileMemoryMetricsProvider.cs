@@ -27,9 +27,9 @@ internal sealed class MemInfoFileMemoryMetricsProvider : IMetricsProvider
     }
 
     /// <summary>
-    /// Get the memory usage in percentage. 25.5 for 25.5%.
+    /// Get the memory usage in percentage.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>Returns the memory usages in form of 100 x percentage. For example, 25.5 for 25.5%.</returns>
     public float GetNextValue()
     {
         (float total, float free) = GetMetrics();

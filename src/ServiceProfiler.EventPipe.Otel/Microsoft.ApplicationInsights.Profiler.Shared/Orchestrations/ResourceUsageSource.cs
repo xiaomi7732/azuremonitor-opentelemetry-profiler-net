@@ -19,13 +19,14 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal sealed class ResourceUsageSource : IResourceUsageSource
 {
-    private readonly BaselineTracker? _cpuBaselineTracker;
-    private readonly BaselineTracker? _memoryBaselineTracker;
     private float _currentCPUBaseline = 0f;
     private float _currentMemoryBaseline = 0f;
+    private bool _disposed = false;
+    
+    private readonly BaselineTracker? _cpuBaselineTracker;
+    private readonly BaselineTracker? _memoryBaselineTracker;
     private readonly UserConfigurationBase _userConfigurations;
     private readonly ILogger _logger;
-    private bool _disposed = false;
 
     ///<summary>
     /// Aggregates CPU and RAM usage in recent times.
