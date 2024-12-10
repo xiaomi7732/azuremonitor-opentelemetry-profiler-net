@@ -56,7 +56,6 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
     {
         if (startProfilingSession)
         {
-            Logger.LogTrace("CPU triggered");
             yield return (ProfilingDuration, ProfilerAction.StartProfilingSession);
             yield return (ProfilingCooldown, ProfilerAction.Standby);
         }
