@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal class LimitedExpirationPolicyFactory(IServiceProvider serviceProvider)
 {

@@ -6,20 +6,23 @@ using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
+using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
+using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -120,7 +123,28 @@ public static class ServiceCollectionExtensions
         });
 
         // Triggers
-        services.AddSingleton<IResourceUsageSource, StubResourceUsageSource>();
+        services.AddSingleton(_ => SettingsParser.Instance);
+        services.AddSingleton<CpuTriggerSettings>();
+        services.AddSingleton<MemoryTriggerSettings>();
+
+        services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            services.AddKeyedSingleton<IMetricsProvider, WindowsMemoryMetricsProvider>(MetricsProviderCategory.Memory);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            services.AddSingleton<MemInfoItemParser>();
+            services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
+            services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
+        }
+        else
+        {
+            throw new NotSupportedException($"Only support {OSPlatform.Windows} and {OSPlatform.Linux}.");
+        }
+
+        services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
 
         // Scavengers
         AddTraceScavengerServices(services);

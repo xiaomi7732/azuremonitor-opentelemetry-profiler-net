@@ -3,7 +3,7 @@ using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 public abstract class EventPipeSchedulingPolicy : SchedulingPolicy
 {
@@ -24,7 +24,7 @@ public abstract class EventPipeSchedulingPolicy : SchedulingPolicy
 
     protected T UpdateRefreshAndGetSetting<T>(T newSetting, T currentSetting, ref bool needsRefresh)
     {
-        needsRefresh = needsRefresh || (currentSetting is not null && !currentSetting.Equals(newSetting));
+        needsRefresh = needsRefresh || currentSetting is not null && !currentSetting.Equals(newSetting);
 
         return newSetting;
     }

@@ -1,3 +1,7 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using Microsoft.ServiceProfiler.DataContract.Settings;
@@ -16,10 +20,16 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 /// </summary>
 public class ProfilerSettings
 {
+    private readonly SettingsParser _settingsParser;
     private readonly ILogger _logger;
 
-    public ProfilerSettings(IOptions<UserConfigurationBase> userConfiguration, IProfilerSettingsService settingsService, ILogger<ProfilerSettings> logger)
+    public ProfilerSettings(
+        IOptions<UserConfigurationBase> userConfiguration,
+        IProfilerSettingsService settingsService,
+        SettingsParser settingsParser,
+        ILogger<ProfilerSettings> logger)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         if (userConfiguration is null)
         {
             throw new ArgumentNullException(nameof(userConfiguration));
@@ -29,6 +39,7 @@ public class ProfilerSettings
         {
             throw new ArgumentNullException(nameof(settingsService));
         }
+        _settingsParser = settingsParser ?? throw new ArgumentNullException(nameof(settingsParser));
 
         Enabled = !userConfiguration.Value.IsDisabled;
         SamplingOptions.SamplingRate = userConfiguration.Value.RandomProfilingOverhead;
@@ -36,7 +47,6 @@ public class ProfilerSettings
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
         settingsService.SettingsUpdated += SetFromSettingsContract;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     private void SetFromSettingsContract(SettingsContract settingsContract)
@@ -53,12 +63,11 @@ public class ProfilerSettings
                 settingsContract.DefaultConfiguration
             };
 
-        AgentSettings parsedSettings = SettingsParser.Instance.ParseManyAgentSettings(settingsToParse.Where(setting => !String.IsNullOrEmpty(setting)).ToArray());
+        AgentSettings parsedSettings = _settingsParser.ParseManyAgentSettings(settingsToParse.Where(setting => !String.IsNullOrEmpty(setting)).ToArray());
 
         if (parsedSettings is not null)
         {
             parsedSettings.Enabled = settingsContract.Enabled;
-
             Enabled = parsedSettings.Enabled;
             SamplingOptions = parsedSettings.Engine.SamplingOptions ?? SamplingOptions;
             CpuTriggerSettings = parsedSettings.Engine.CpuTriggerSettings ?? CpuTriggerSettings;

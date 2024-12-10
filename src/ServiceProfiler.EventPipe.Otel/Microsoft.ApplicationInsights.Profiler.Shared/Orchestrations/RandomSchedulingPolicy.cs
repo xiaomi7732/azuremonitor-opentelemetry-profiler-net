@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Orchestrations;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 /// <summary>
 /// Scheduling policy that will profile on a schedule such that a certain percentage of the day consists of profiling, the rest is idling.
@@ -129,10 +129,10 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         bool needsRefresh = false;
         SamplingOptions samplingSettings = ProfilerSettings.SamplingOptions;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting<bool>(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
-        PolicyEnabled = UpdateRefreshAndGetSetting<bool>(samplingSettings.Enabled, PolicyEnabled, ref needsRefresh);
-        ProfilingDuration = UpdateRefreshAndGetSetting<TimeSpan>(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
-        _overhead = UpdateRefreshAndGetSetting<double>(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
+        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
+        PolicyEnabled = UpdateRefreshAndGetSetting(samplingSettings.Enabled, PolicyEnabled, ref needsRefresh);
+        ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
+        _overhead = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
 
         return needsRefresh;
     }
