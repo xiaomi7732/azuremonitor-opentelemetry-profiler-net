@@ -48,10 +48,10 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         float memoryUsage = ResourceUsageSource.GetAverageMemoryUsage();
         Logger.LogTrace("Memory Usage: {0}", memoryUsage);
 
-        return Task.FromResult(GetProfilingSchedule(memoryUsage > _memoryThreshold));
+        return Task.FromResult(GetSchedule(memoryUsage > _memoryThreshold));
     }
 
-    private IEnumerable<(TimeSpan duration, ProfilerAction action)> GetProfilingSchedule(bool startProfilingSession)
+    private IEnumerable<(TimeSpan duration, ProfilerAction action)> GetSchedule(bool startProfilingSession)
     {
         if (startProfilingSession)
         {

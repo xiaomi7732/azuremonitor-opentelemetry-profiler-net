@@ -2,7 +2,6 @@ using System;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using System.Collections.Generic;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
