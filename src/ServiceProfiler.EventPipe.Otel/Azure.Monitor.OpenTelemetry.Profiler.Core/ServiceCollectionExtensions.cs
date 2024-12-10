@@ -123,9 +123,9 @@ public static class ServiceCollectionExtensions
         });
 
         // Triggers
-        services.TryAddSingleton(_ => SettingsParser.Instance);
-        services.TryAddSingleton<CpuTriggerSettings>();
-        services.TryAddSingleton<MemoryTriggerSettings>();
+        services.AddSingleton(_ => SettingsParser.Instance);
+        services.AddSingleton<CpuTriggerSettings>();
+        services.AddSingleton<MemoryTriggerSettings>();
 
         services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
 

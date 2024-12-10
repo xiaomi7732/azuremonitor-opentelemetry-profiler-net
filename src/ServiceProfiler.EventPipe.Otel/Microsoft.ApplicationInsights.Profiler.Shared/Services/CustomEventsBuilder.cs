@@ -1,6 +1,9 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
