@@ -15,7 +15,12 @@ using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
-internal class ProfilerFrontendClientFactory : IProfilerFrontendClientFactory
+/// <summary>
+/// This is a helper creator for the frontend client that makes the registering
+/// of the <see cref="IProfilerFrontendClient" /> easier. Please do NOT inject this directly.
+/// Injecting <see cref="IProfilerFrontendClient"/> instead.
+/// </summary>
+internal class ProfilerFrontendClientFactory
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IServiceProfilerContext _serviceProfilerContext;

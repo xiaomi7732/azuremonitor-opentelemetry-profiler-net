@@ -3,11 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
+using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
@@ -21,7 +21,7 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
-    private readonly IProfilerFrontendClientFactory _frontendClientFactory;
+    private readonly IProfilerFrontendClient _frontendClient;
     private readonly TimeSpan _frequency;
     private readonly bool _standaloneMode;
     private readonly bool _isDisabled;
@@ -31,13 +31,13 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
     public event Action<SettingsContract>? SettingsUpdated;
 
     public RemoteSettingsServiceBase(
-        IProfilerFrontendClientFactory frontendClientFactory,
+        IProfilerFrontendClient frontendClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
         ILogger<RemoteSettingsServiceBase> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _userConfiguration = userConfigurationOptions.Value ?? throw new ArgumentNullException(nameof(userConfigurationOptions));
-        _frontendClientFactory = frontendClientFactory ?? throw new ArgumentNullException(nameof(frontendClientFactory));
+        _frontendClient = frontendClient ?? throw new ArgumentNullException(nameof(frontendClient));
         _taskCompletionSource = new TaskCompletionSource<bool>();
         _frequency = _userConfiguration.ConfigurationUpdateFrequency;
         _standaloneMode = _userConfiguration.StandaloneMode;
@@ -67,24 +67,17 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         using IDisposable internalZoneHandler = EnterInternalZone();
         try
         {
-            if (_frontendClientFactory != null)
+            _logger.LogTrace("Fetching remote settings.");
+            SettingsContract newContract = await _frontendClient.GetProfilerSettingsAsync(cancellationToken).ConfigureAwait(false);
+            if (newContract != null)
             {
-                _logger.LogTrace("Fetching remote settings.");
-                SettingsContract newContract = await _frontendClientFactory.CreateProfilerFrontendClient().GetProfilerSettingsAsync(cancellationToken).ConfigureAwait(false);
-                if (newContract != null)
-                {
-                    _logger.LogTrace("Remote settings fetched.");
-                    // New settings coming.
-                    OnSettingsUpdated(newContract);
-                }
-                else
-                {
-                    _logger.LogTrace("No settings contract fetched.");
-                }
+                _logger.LogTrace("Remote settings fetched.");
+                // New settings coming.
+                OnSettingsUpdated(newContract);
             }
             else
             {
-                _logger.LogTrace("{0} is null. Indicating it is disposed.", nameof(_frontendClientFactory));
+                _logger.LogTrace("No settings contract fetched.");
             }
         }
         catch (InstrumentationKeyInvalidException ikie)
