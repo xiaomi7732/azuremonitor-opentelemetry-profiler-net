@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         // Client
-        services.AddSingleton<IProfilerFrontendClientFactory, ProfilerFrontendClientFactory>();
+        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
 
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();

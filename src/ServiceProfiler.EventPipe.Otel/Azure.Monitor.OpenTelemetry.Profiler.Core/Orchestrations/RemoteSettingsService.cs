@@ -4,9 +4,9 @@
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using OpenTelemetry;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
@@ -15,14 +15,11 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 internal sealed class RemoteSettingsService : RemoteSettingsServiceBase
 {
     public RemoteSettingsService(
-        IProfilerFrontendClientFactory frontendClientFactory,
+        IProfilerFrontendClient frontendClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
-        ILogger<RemoteSettingsService> logger) : base(frontendClientFactory, userConfigurationOptions, logger)
+        ILogger<RemoteSettingsService> logger) : base(frontendClient, userConfigurationOptions, logger)
     {
     }
 
-    protected override IDisposable EnterInternalZone()
-    {
-        return SuppressInstrumentationScope.Begin();
-    }
+    protected override IDisposable EnterInternalZone() => SuppressInstrumentationScope.Begin();
 }
