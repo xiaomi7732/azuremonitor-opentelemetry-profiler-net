@@ -6,7 +6,8 @@ Welcome to the home page of `Azure Monitor OpenTelemetry Profiler for .NET`.
 
 ## Get Started
 ### Step 0: Prerequisites
-Install the latest .NET Core SDK.https://dotnet.microsoft.com/en-us/download/dotnet
+- **.NET 8 SDK**: Install the latest .NET Core SDK from [here](https://dotnet.microsoft.com/en-us/download/dotnet).
+- **Local authentication**: Ensure local authentication is enabled for the Application Insights resource.
 
 ### Step 1: Create an ASP.NET Core Application
 If you don't have an app already, you can create a new web API project using the following command:
