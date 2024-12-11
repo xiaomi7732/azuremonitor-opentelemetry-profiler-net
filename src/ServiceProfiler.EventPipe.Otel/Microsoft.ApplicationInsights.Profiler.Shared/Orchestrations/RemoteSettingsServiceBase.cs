@@ -50,12 +50,12 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         if (completed == _taskCompletionSource.Task)
         {
             // Initialize done.
-            _logger.LogTrace("Initial remote settings fetched within given time: {0}.", timeout);
+            _logger.LogTrace("Initial remote settings fetched within given time: {timeout}.", timeout);
             return true;
         }
         else
         {
-            _logger.LogDebug("Remote settings fetch timed out. Timeout settings: {0}", timeout);
+            _logger.LogDebug("Remote settings fetch timed out. Timeout settings: {timeout}", timeout);
             return false;
         }
     }
@@ -95,8 +95,8 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
 #pragma warning restore CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.
         {
             // Move on for the next iteration.
-            _logger.LogDebug("Unexpected error contacting service profiler service endpoint for settings. Details: {0}", ex);
-            _logger.LogTrace(ex.ToString());
+            _logger.LogDebug("Unexpected error contacting service profiler service endpoint for settings. Details: {details}", ex);
+            _logger.LogTrace("Error with trace: {error}", ex.ToString());
         }
         finally
         {
