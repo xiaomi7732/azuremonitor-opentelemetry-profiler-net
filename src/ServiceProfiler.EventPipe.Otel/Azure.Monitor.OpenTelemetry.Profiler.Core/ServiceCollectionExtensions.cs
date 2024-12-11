@@ -173,11 +173,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IOrchestrator, OrchestrationImp>();
 
-        // TODO: saars: Append specific schedulers
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, RandomSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OnDemandSchedulingPolicy>());
-        // ~
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, MemoryMonitoringSchedulingPolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, CPUMonitoringSchedulingPolicy>());
     }
 
     private static IServiceCollection AddTraceScavengerServices(this IServiceCollection services)
