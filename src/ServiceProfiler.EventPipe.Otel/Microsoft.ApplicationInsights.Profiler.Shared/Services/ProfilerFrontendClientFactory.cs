@@ -16,9 +16,8 @@ using System;
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 /// <summary>
-/// This is a helper creator for the frontend client that makes the registering
-/// of the <see cref="IProfilerFrontendClient" /> easier. Please do NOT inject this directly.
-/// Injecting <see cref="IProfilerFrontendClient"/> instead.
+/// This helper function simplifies the registration process for the <see cref="IProfilerFrontendClient" />.
+/// Please do NOT inject this directly. Instead, inject the <see cref="IProfilerFrontendClient"/>.
 /// </summary>
 internal class ProfilerFrontendClientFactory
 {
