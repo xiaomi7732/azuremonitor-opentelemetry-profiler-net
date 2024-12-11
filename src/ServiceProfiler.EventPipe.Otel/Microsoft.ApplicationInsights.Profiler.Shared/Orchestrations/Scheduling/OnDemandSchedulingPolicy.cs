@@ -74,16 +74,10 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
                     durationInSeconds = DefaultProfileNowDurationInSeconds;
                 }
 
-                return new List<(TimeSpan, ProfilerAction)>
-                {
-                    (TimeSpan.FromSeconds(durationInSeconds), ProfilerAction.StartProfilingSession),
-                    (ProfilingCooldown, ProfilerAction.Standby),
-                };
+                return CreateProfilingSchedule(TimeSpan.FromSeconds(durationInSeconds));
             }
         }
 
-        return new List<(TimeSpan, ProfilerAction)>() {
-                (PollingInterval, ProfilerAction.Standby),
-            };
+        return CreateStandbySchedule();
     }
 }

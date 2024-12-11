@@ -2,6 +2,7 @@ using System;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using System.Collections.Generic;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -41,4 +42,15 @@ public abstract class EventPipeSchedulingPolicy : SchedulingPolicy
 
     protected ProfilerSettings ProfilerSettings { get; }
     protected IResourceUsageSource ResourceUsageSource { get; }
+
+    protected IEnumerable<(TimeSpan duration, ProfilerAction action)> CreateProfilingSchedule(TimeSpan profilingDuration)
+    {
+        yield return (profilingDuration, ProfilerAction.StartProfilingSession);
+        yield return (ProfilingCooldown, ProfilerAction.Standby);
+    }
+
+    protected IEnumerable<(TimeSpan duration, ProfilerAction action)> CreateStandbySchedule()
+    {
+        yield return (PollingInterval, ProfilerAction.Standby);
+    }
 }

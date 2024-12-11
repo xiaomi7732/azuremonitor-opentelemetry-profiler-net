@@ -49,20 +49,12 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         float cpuUsage = ResourceUsageSource.GetAverageCPUUsage();
         Logger.LogTrace("CPU Usage: {0}", cpuUsage);
 
-        return Task.FromResult(GetSchedule(cpuUsage > _cpuThreshold));
-    }
+        if (cpuUsage > _cpuThreshold)
+        {
+            return Task.FromResult(CreateProfilingSchedule(ProfilingDuration));
+        }
 
-    private IEnumerable<(TimeSpan duration, ProfilerAction action)> GetSchedule(bool startProfilingSession)
-    {
-        if (startProfilingSession)
-        {
-            yield return (ProfilingDuration, ProfilerAction.StartProfilingSession);
-            yield return (ProfilingCooldown, ProfilerAction.Standby);
-        }
-        else
-        {
-            yield return (PollingInterval, ProfilerAction.Standby);
-        }
+        return Task.FromResult(CreateStandbySchedule());
     }
 
     protected override bool PolicyNeedsRefresh()
