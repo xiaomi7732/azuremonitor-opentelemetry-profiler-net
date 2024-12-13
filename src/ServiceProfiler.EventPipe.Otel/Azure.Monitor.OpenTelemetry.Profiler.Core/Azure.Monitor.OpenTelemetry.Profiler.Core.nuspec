@@ -40,6 +40,8 @@
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.Shared.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.Exceptions.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.Exceptions.pdb" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Common.Utilities.dll" target="lib/$targetFramework$"></file>
