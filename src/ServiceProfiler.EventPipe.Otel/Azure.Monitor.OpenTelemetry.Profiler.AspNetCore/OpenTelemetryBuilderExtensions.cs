@@ -12,12 +12,8 @@ using OpenTelemetry;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.AspNetCore;
 
-public static class OpenTelemetryBuilderExtesnions
+public static class OpenTelemetryBuilderExtensions
 {
-    [Obsolete($"Use {nameof(UseProfiler)} instead", error: true)]
-    public static IOpenTelemetryBuilder UseServiceProfiler(this IOpenTelemetryBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
-        => UseProfiler(builder, configureServiceProfiler);
-
     /// <summary>
     /// Register the services needed to enable Profiler.
     /// </summary>
@@ -34,10 +30,10 @@ public static class OpenTelemetryBuilderExtesnions
 
             AzureMonitorOptions? monitorOptions = azureMonitorOptions.Value;
 
-            string? azureMnoitorConnectionStirng = monitorOptions.ConnectionString;
+            string? azureMonitorConnectionString = monitorOptions.ConnectionString;
             if (string.IsNullOrEmpty(opt.ConnectionString))
             {
-                opt.ConnectionString = azureMnoitorConnectionStirng;
+                opt.ConnectionString = azureMonitorConnectionString;
             }
 
             if (opt.Credential is null)
