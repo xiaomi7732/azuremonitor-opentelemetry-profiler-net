@@ -10,6 +10,11 @@ internal class ConnectionStringParserFactory(IServiceProvider serviceProvider) :
 
     public IConnectionStringParser Create(string connectionString)
     {
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("Can't create a connection string parser without a connection string. Please make sure the connection string is properly set.");
+        }
+
         return ActivatorUtilities.CreateInstance<ConnectionStringParser>(provider: _serviceProvider, connectionString);
     }
 }
