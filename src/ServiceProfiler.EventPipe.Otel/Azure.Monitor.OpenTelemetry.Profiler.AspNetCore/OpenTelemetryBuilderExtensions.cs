@@ -47,7 +47,7 @@ public static class OpenTelemetryBuilderExtensions
             // This should never happen, or the profiler is not going to work.
             if(string.IsNullOrEmpty(opt.ConnectionString))
             {
-                throw new InvalidOperationException("Connection string is fetched. Please follow the instructions to setup connection string properly.");
+                throw new InvalidOperationException("Connection string can't be fetched. Please follow the instructions to setup connection string properly.");
             }
         });
 
