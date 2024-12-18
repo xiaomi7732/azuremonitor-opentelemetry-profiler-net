@@ -30,19 +30,25 @@ public static class OpenTelemetryBuilderExtensions
 
             AzureMonitorOptions? monitorOptions = azureMonitorOptions.Value;
 
+            // Inherit connection string from the Azure Monitor Options unless
+            // the value is already there.
             string? azureMonitorConnectionString = monitorOptions.ConnectionString;
-            if (string.IsNullOrEmpty(opt.ConnectionString))
+            if (string.IsNullOrWhiteSpace(opt.ConnectionString))
             {
                 opt.ConnectionString = azureMonitorConnectionString;
             }
 
-            if (opt.Credential is null)
-            {
-                opt.Credential = monitorOptions.Credential;
-                // Notice: the credential could still be null because monitorOptions is nullable, and its Credential object could be null.
-            }
-
+            // Inherit the credential object from the Azure Monitor Options unless
+            // the value is already there.
+            opt.Credential ??= monitorOptions.Credential;
             configureServiceProfiler?.Invoke(opt);
+
+            // Fast fail when the connection string is not set.
+            // This should never happen, or the profiler is not going to work.
+            if(string.IsNullOrEmpty(opt.ConnectionString))
+            {
+                throw new InvalidOperationException("Connection string can't be fetched. Please follow the instructions to setup connection string properly.");
+            }
         });
 
         builder.Services.AddSingleton<IOptions<UserConfigurationBase>>(p =>

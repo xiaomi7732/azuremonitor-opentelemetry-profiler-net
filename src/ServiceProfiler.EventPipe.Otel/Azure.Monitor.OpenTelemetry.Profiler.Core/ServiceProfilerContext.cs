@@ -25,11 +25,12 @@ internal class ServiceProfilerContext : IServiceProfilerContext
 
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
-        _connectionStringParserFactory = connectionStringParserFactory ?? throw new ArgumentNullException(nameof(connectionStringParserFactory));
-        ConnectionString = _options.ConnectionString;
+
+        ConnectionString = GetRequiredConnectionString(_options);
         _logger.LogDebug("Building {name}. Connection string: {connectionString}", nameof(ServiceProfilerContext), ConnectionString);
 
-        IConnectionStringParser connectionStringParser = _connectionStringParserFactory.Create(ConnectionString!);
+        _connectionStringParserFactory = connectionStringParserFactory ?? throw new ArgumentNullException(nameof(connectionStringParserFactory));
+        IConnectionStringParser connectionStringParser = _connectionStringParserFactory.Create(ConnectionString);
         if (connectionStringParser.TryGetValue(ConnectionStringParser.Keys.InstrumentationKey, out string? instrumentationKeyValue))
         {
             _logger.LogDebug("Instrumentation key value: {iKey}", instrumentationKeyValue);
@@ -47,8 +48,6 @@ internal class ServiceProfilerContext : IServiceProfilerContext
         }
     }
 
-    // public Guid AppInsightsAppId { get; private set; }
-
     public Guid AppInsightsInstrumentationKey { get; }
 
     public bool HasAppInsightsInstrumentationKey => true;
@@ -59,44 +58,15 @@ internal class ServiceProfilerContext : IServiceProfilerContext
 
     public Uri StampFrontendEndpointUrl { get; }
 
-    public string? ConnectionString { get; }
+    public string ConnectionString { get; }
 
-    // public event EventHandler<AppIdFetchedEventArgs>? AppIdFetched;
-
-    // public Task<Guid> GetAppInsightsAppIdAsync()
-    // {
-    //     return GetAppInsightsAppIdAsync(cancellationToken: default);
-    // }
-
-    // public async Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken)
-    // {
-    //     if (AppInsightsAppId != default)
-    //     {
-    //         return AppInsightsAppId;
-    //     }
-
-    //     try
-    //     {
-    //         // Fetch & return.
-    //         cancellationToken.ThrowIfCancellationRequested();
-    //         AppInsightsProfile appInsightsProfile = await _appInsightsProfileFetcher.FetchProfileAsync(AppInsightsInstrumentationKey, retryCount: 5).ConfigureAwait(false);
-
-    //         cancellationToken.ThrowIfCancellationRequested();
-    //         Guid appId = appInsightsProfile.AppId;
-    //         AppInsightsAppId = appId;
-    //         OnAppIdFetched(appId);
-
-    //         return appId;
-    //     }
-    //     catch (InstrumentationKeyInvalidException ikie)
-    //     {
-    //         _logger.LogError(ikie, "Profiler Instrumentation Key is invalid.");
-    //         throw;
-    //     }
-    // }
-
-    // public void OnAppIdFetched(Guid appId)
-    // {
-    //     AppIdFetched?.Invoke(this, new AppIdFetchedEventArgs(appId));
-    // }
+    private string GetRequiredConnectionString(ServiceProfilerOptions options)
+    {
+        string? connectionString = options.ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("Connection string is required. Please make sure its properly set.");
+        }
+        return connectionString;
+    }
 }
