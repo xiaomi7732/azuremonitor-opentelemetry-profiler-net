@@ -25,15 +25,22 @@ If you don't have an app already, you can create a new web API project using the
 dotnet new web
 ```
 
-### Step 2: Generate a PAT
+### Step 2: Restore NuGet Packages
 
-Generate a Personal Access Token (PAT) that will be used to download the NuGet package by following [these instructions](https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic).
+Follow the steps below to restore NuGet packages using GitHub Packages as the source registry. If you prefer not to use GitHub Packages or a Personal Access Token (PAT), here are the alternatives:
+
+1. [Restore NuGet Packages from Private Feed](./docs/UseBagetter.md) -- use a temporary private NuGet feed to restore the packages needed
+1. [Use Profiler Assemblies Directly](./docs/UseAssembly.md) -- update the project to reference the assembly files instead of NuGet packages
+
+#### a. Generate a Personal Access Token (PAT)
+
+ Generate a Personal Access Token (PAT) that will be used to download the NuGet package by following [these instructions](https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic).
 
 Ensure that the Personal Access Token (PAT) has the `read:packages` permission.
 
 ![PAT read](./images/PAT-read.png)
 
-### Step 3: Add NuGet Source
+#### b. Add NuGet Source
 
 Create a `nuget.config` in your project root with the following content, replacing `your-user-name` with your GitHub username and `GITHUB-PAT` with the PAT from the previous step:
 
@@ -56,7 +63,7 @@ Create a `nuget.config` in your project root with the following content, replaci
 
 For additional details on using the GitHub Packages registry, please refer to the [documentation](https://docs.github.com/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#installing-a-package).
 
-### Step 4: Add NuGet Package Reference
+#### c. Add NuGet Package Reference
 
 Add a reference to the latest NuGet packages:
 
@@ -66,13 +73,13 @@ dotnet add package Azure.Monitor.OpenTelemetry.Profiler.AspNetCore --prerelease
 
 This will automatically add a dependency to `Azure.Monitor.OpenTelemetry.AspNetCore`.
 
-### Step 5: Enable Application Insights with OpenTelemetry
+### Step 3: Enable Application Insights with OpenTelemetry
 
 Follow the [instructions](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore#enable-opentelemetry-with-application-insights) to enable Azure Monitor OpenTelemetry for .NET.
 
 Verify that the connection to Application Insights works -- [Confirm Data is Flowing](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore#confirm-data-is-flowing).
 
-### Step 6: Enable Profiler
+### Step 4: Enable Profiler
 
 Append the call to `UseProfiler()` in your code:
 
@@ -88,7 +95,7 @@ builder.Services.AddOpenTelemetry()
 ...
 ```
 
-### Step 7: Run Your Application
+### Step 5: Run Your Application
 
 Run your application and check the log output. A successful execution will look like this:
 
@@ -112,7 +119,7 @@ info: Azure.Monitor.OpenTelemetry.Profiler.Core.DumbTraceControl[0]
 ...
 ```
 
-### Step 8: View Profiler Data
+### Step 6: View Profiler Data
 
 You can view the profiler data by following [these instructions](https://learn.microsoft.com/azure/azure-monitor/profiler/profiler-data).
 
