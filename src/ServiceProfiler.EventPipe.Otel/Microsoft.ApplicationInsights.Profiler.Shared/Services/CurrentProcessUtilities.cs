@@ -5,6 +5,8 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
@@ -26,5 +28,14 @@ internal class CurrentProcessUtilities : ITargetProcess
     {
         using Process currentProcess = Process.GetCurrentProcess();
         return currentProcess.Id;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// For current process, its always available at the time this class is called.
+    /// </remarks>
+    public Task<int> WaitUntilAvailableAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(ProcessId);
     }
 }

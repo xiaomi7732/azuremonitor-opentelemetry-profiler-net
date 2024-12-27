@@ -4,6 +4,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

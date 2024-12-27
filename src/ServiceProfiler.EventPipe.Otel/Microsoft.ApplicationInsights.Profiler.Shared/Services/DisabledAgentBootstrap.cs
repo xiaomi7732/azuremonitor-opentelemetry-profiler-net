@@ -3,8 +3,11 @@
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Azure.Monitor.OpenTelemetry.AspNetCore;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal class DisabledAgentBootstrap(ILogger<DisabledAgentBootstrap> logger) : IServiceProfilerAgentBootstrap
 {

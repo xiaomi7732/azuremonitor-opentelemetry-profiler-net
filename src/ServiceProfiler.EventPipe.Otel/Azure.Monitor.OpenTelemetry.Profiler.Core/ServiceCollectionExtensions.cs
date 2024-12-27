@@ -48,7 +48,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUserCacheManager, UserCacheManager>();
 
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
-        services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
 
