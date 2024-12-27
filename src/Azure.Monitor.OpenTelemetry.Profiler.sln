@@ -41,6 +41,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.Common.Utilities", "ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj", "{F4113A80-9D83-4A49-8BB7-DBC27A628E07}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.EventPipe.Otel", "ServiceProfiler.EventPipe.Otel", "{94518F6D-2B03-4E23-8D11-8A41A73C22FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Monitor.OpenTelemetry.Profiler.OOPHost", "ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.OOPHost\Azure.Monitor.OpenTelemetry.Profiler.OOPHost.csproj", "{1388A280-CF6D-4F00-94A5-D93FD5E02C81}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -122,9 +126,14 @@ Global
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1388A280-CF6D-4F00-94A5-D93FD5E02C81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1388A280-CF6D-4F00-94A5-D93FD5E02C81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1388A280-CF6D-4F00-94A5-D93FD5E02C81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1388A280-CF6D-4F00-94A5-D93FD5E02C81}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DA13DAFB-6764-44A3-AB9C-D632984841BC} = {705959A0-0B89-43EB-B36A-430B806B0D39}
 		{99B7D763-3D5F-4C09-8E49-4D459CB80954} = {705959A0-0B89-43EB-B36A-430B806B0D39}
+		{1388A280-CF6D-4F00-94A5-D93FD5E02C81} = {94518F6D-2B03-4E23-8D11-8A41A73C22FE}
 	EndGlobalSection
 EndGlobal

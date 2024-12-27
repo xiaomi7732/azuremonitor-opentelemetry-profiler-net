@@ -1,0 +1,15 @@
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Azure.Monitor.OpenTelemetry.Profiler.OOPHost": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "APPLICATIONINSIGHTS_Comment": "Linux-001",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=5d8258e7-abb2-4066-89a5-8c73071b74ff;IngestionEndpoint=https://westus2-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westus2.livediagnostics.monitor.azure.com/;ApplicationId=e54708db-77b6-457e-b577-103e84229f2c",
+        "ServiceProfiler__TargetProcessName": "VanillaApp"
+      }
+    }
+  }
+}
