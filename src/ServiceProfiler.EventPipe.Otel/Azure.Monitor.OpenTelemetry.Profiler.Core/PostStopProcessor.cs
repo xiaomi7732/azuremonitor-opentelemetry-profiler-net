@@ -1,6 +1,9 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
@@ -76,7 +79,7 @@ internal class PostStopProcessor : IPostStopProcessor
     {
         if (uploadMode == UploadMode.Never)
         {
-            _logger.LogInformation("Skip uploading. Uploade mode: {mode}.", uploadMode);
+            _logger.LogInformation("Skip uploading. Upload mode: {mode}.", uploadMode);
             return false;
         }
 
@@ -94,8 +97,6 @@ internal class PostStopProcessor : IPostStopProcessor
         }
 
         e.UploaderFullPath = uploaderFullPath;
-
-        int processId = CurrentProcessUtilities.GetId();
 
         string pipeName = Guid.NewGuid().ToString("D");
         Guid appId = Guid.Empty;
@@ -137,7 +138,7 @@ internal class PostStopProcessor : IPostStopProcessor
                 }
 
                 // Contract with Upload, sending additional data
-                IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
+                IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.TargetProcessId, e.SessionId, appId, e.ProfilerSource);
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("Sending additional data for the uploader to use.");
@@ -166,7 +167,7 @@ internal class PostStopProcessor : IPostStopProcessor
             }
         }, cancellationToken);
 
-        Task<UploadContextModel?> uploadTask = UploadTraceAsync(e, processId, pipeName, cancellationToken);
+        Task<UploadContextModel?> uploadTask = UploadTraceAsync(e, pipeName, cancellationToken);
 
         // Waiting for both task to finish.
         await Task.WhenAll(namedPipeClientTask, uploadTask).ConfigureAwait(false);
@@ -184,21 +185,27 @@ internal class PostStopProcessor : IPostStopProcessor
 
     private IPCAdditionalData CreateAdditionalData(
         IReadOnlyCollection<SampleActivity> samples,
-        string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
+        string stampId,
+        int targetProcessId, 
+        DateTimeOffset sessionId, 
+        Guid appId, 
+        IProfilerSource profilerSource)
         => new()
         {
             ConnectionString = _serviceProfilerContext.ConnectionString,
             ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
-            fileId: EnvironmentUtilities.CreateSessionId(),
-            stampId: stampId,
-            sessionId: sessionId,
-            appId: appId,
-            profilerSource: profilerSource),
+                fileId: EnvironmentUtilities.CreateSessionId(),
+                stampId: stampId,
+                targetProcessId: targetProcessId,
+                sessionId: sessionId,
+                appId: appId,
+                profilerSource: profilerSource),
             ServiceProfilerSamples = _customEventsBuilder.CreateServiceProfilerSamples(
-            samples: samples,
-            stampId: stampId,
-            sessionId: sessionId,
-            appId: appId),
+                samples: samples,
+                targetProcessId: targetProcessId,
+                stampId: stampId,
+                sessionId: sessionId,
+                appId: appId),
         };
 
     /// <summary>
@@ -206,7 +213,7 @@ internal class PostStopProcessor : IPostStopProcessor
     /// </summary>
     /// <returns>Returns the upload context when upload succeeded. Returns null otherwise.</returns>
     private async Task<UploadContextModel?> UploadTraceAsync(
-        PostStopOptions options, int processId, string namedPipeName, CancellationToken cancellationToken)
+        PostStopOptions options, string namedPipeName, CancellationToken cancellationToken)
     {
         bool areOptionsSerialized = _serializer.TrySerialize(options, out string? serializedOptions);
         _logger.LogTrace(@"Trace session finished. Invoking upload. Args:
@@ -217,7 +224,7 @@ internal class PostStopProcessor : IPostStopProcessor
         await CreateMetadataAsync(options.Samples.Select(sample =>
             // At this point, we don't have a stamp id or the datacube yet, just use 'localstamp' as the stamp id.
             // Since the metadata file stays in the .etl.zip, it is not needed to locate the trace file.
-            sample.ToArtifactLocationProperties("localstamp", processId, options.SessionId, Guid.Empty, machineName)
+            sample.ToArtifactLocationProperties("localstamp", options.TargetProcessId, options.SessionId, Guid.Empty, machineName)
         ), metadataPath, cancellationToken).ConfigureAwait(false);
 
         return await _traceUploader.UploadAsync(

@@ -132,16 +132,25 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             _listener?.Dispose();
 
             // Disable the EventPipe.
-            await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            int targetProcessId = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
             profilerStopped = true;
+
+            // When target process is zero, there's something wrong.
+            if (targetProcessId == 0)
+            {
+                _logger.LogWarning("Target process id can't be zero.");
+                return false;
+            }
+
             ReleaseSemaphoreForProfiling();
 
             await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
-                _currentTraceFilePath,
-                currentSessionId.Value,
+                traceFilePath: _currentTraceFilePath,
+                sessionId: currentSessionId.Value,
                 stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
-                sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                source), cancellationToken).ConfigureAwait(false);
+                samples: sampleActivities ?? Enumerable.Empty<SampleActivity>(),
+                profilerSource: source,
+                processId: targetProcessId), cancellationToken).ConfigureAwait(false);
 
             return true;
         }

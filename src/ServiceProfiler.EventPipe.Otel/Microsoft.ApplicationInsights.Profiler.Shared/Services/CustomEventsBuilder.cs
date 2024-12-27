@@ -16,7 +16,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal class CustomEventsBuilder : ICustomEventsBuilder
 {
-    private static readonly int _processId = CurrentProcessUtilities.GetId();
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IRoleNameSource _roleNameSource;
     private readonly IResourceUsageSource _resourceUsageSource;
@@ -35,7 +34,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
     }
 
-    public ServiceProfilerIndex CreateServiceProfilerIndex(string fileId, string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
+    public ServiceProfilerIndex CreateServiceProfilerIndex(string fileId, string stampId, int targetProcessId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
     {
         ServiceProfilerIndex result = new()
         {
@@ -45,7 +44,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             DataCube = StoragePathContract.GetDataCubeNameString(appId),
             EtlFileSessionId = TimestampContract.TimestampToString(sessionId),
             MachineName = _serviceProfilerContext.MachineName,
-            ProcessId = _processId,
+            ProcessId = targetProcessId,
             Source = profilerSource.Source,
             OperatingSystem = Environment.OSVersion.VersionString,
             AverageCPUUsage = _resourceUsageSource.GetAverageCPUUsage(),
@@ -58,17 +57,17 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         return result;
     }
 
-    public IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, DateTimeOffset sessionId, Guid appId)
+    public IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, int targetProcessId, DateTimeOffset sessionId, Guid appId)
     {
         foreach (SampleActivity sample in samples)
         {
-            yield return CreateServiceProfilerSample(sample, stampId, sessionId, appId);
+            yield return CreateServiceProfilerSample(sample, stampId, targetProcessId, sessionId, appId);
         }
     }
 
-    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, DateTimeOffset sessionId, Guid appId)
+    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, int targetProcessId, DateTimeOffset sessionId, Guid appId)
     {
-        ArtifactLocationProperties traceLocation = sample.ToArtifactLocationProperties(stampId, _processId, sessionId, appId, _serviceProfilerContext.MachineName);
+        ArtifactLocationProperties traceLocation = sample.ToArtifactLocationProperties(stampId, targetProcessId, sessionId, appId, _serviceProfilerContext.MachineName);
         return new ServiceProfilerSample()
         {
             Timestamp = sample.StartTimeUtc.UtcDateTime,

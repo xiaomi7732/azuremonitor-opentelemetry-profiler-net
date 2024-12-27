@@ -73,6 +73,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(_ => DiagnosticsClientProvider.Instance);
         services.AddSingleton<DiagnosticsClientTraceConfiguration>();
+        // Notes: this is for in-proc implementation, that the target process is always current process.
+        // In out of proc implementation, this should be overwritten.
+        services.AddSingleton<ITargetProcess, CurrentProcessUtilities>();
         services.AddSingleton<ITraceControl, DiagnosticsClientTrace>();
         services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();

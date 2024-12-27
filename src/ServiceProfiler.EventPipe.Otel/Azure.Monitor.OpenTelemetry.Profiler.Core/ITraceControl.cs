@@ -9,8 +9,9 @@ public interface ITraceControl
         /// <summary>
         /// Disables the current profiler session.
         /// </summary>
-        /// <exception cref="System.TimeoutException">Throws when timed out fetching the semaphore of the operation.</exception>
-        Task DisableAsync(CancellationToken cancellationToken = default);
+        /// <exception cref="TimeoutException">Throws when timed out fetching the semaphore of the operation.</exception>
+        /// <returns>The target process id.</returns>
+        Task<int> DisableAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Enables a profiler session.
