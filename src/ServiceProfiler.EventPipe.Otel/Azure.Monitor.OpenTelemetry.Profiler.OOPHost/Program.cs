@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Azure.Monitor.OpenTelemetry.Profiler.OOPHost;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -20,24 +19,22 @@ services.AddLogging(opt =>
     });
 });
 services.AddOptions();
-services.AddOpenTelemetry().UseAzureMonitor();
 
-services.AddOptions<ServiceProfilerOOPHostOptions>().Configure<IConfiguration, IOptions<AzureMonitorOptions>>((opt, configuration, azureMonitorOptions) =>
+services.AddOptions<ServiceProfilerOOPHostOptions>().Configure<IConfiguration, ILogger<Program>>((opt, configuration, logger) =>
 {
+
+    PrintSections(configuration.GetChildren(), logger);
     configuration.GetSection("ServiceProfiler").Bind(opt);
 
-    AzureMonitorOptions? monitorOptions = azureMonitorOptions.Value;
-
-    string? azureMonitorConnectionString = monitorOptions.ConnectionString;
     if (string.IsNullOrEmpty(opt.ConnectionString))
     {
-        opt.ConnectionString = azureMonitorConnectionString;
-    }
-
-    if (opt.Credential is null)
-    {
-        opt.Credential = monitorOptions.Credential;
-        // Notice: the credential could still be null because monitorOptions is nullable, and its Credential object could be null.
+        const string connectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING";
+        string? directConnectionStringEnv = configuration.GetValue<string>(connectionStringKey);
+        if (!string.IsNullOrEmpty(directConnectionStringEnv))
+        {
+            logger.LogInformation("Set connection string by environment variable of {name}", connectionStringKey);
+            opt.ConnectionString = directConnectionStringEnv;
+        }
     }
 });
 
@@ -69,8 +66,6 @@ services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
 
 services.AddHostedService<ProfilerBackgroundService>();
 
-
-
 var host = builder.Build();
 host.Run();
 
@@ -89,4 +84,18 @@ static void OverwriteServices(IServiceCollection services)
     services.AddSingleton<IServiceProfilerProvider, OOPProfilerProvider>();
 
     services.AddSingleton<IPostStopProcessorFactory, OOPPostStopProcessorFactory>();
+}
+
+static void PrintSections(IEnumerable<IConfigurationSection> sections, ILogger logger)
+{
+    foreach (IConfigurationSection line in sections)
+    {
+        logger.LogTrace("{path} == {value}", line.Path, line.Value);
+
+        IEnumerable<IConfigurationSection> children = line.GetChildren();
+        if (children is not null && children.Any())
+        {
+            PrintSections(children, logger);
+        }
+    }
 }

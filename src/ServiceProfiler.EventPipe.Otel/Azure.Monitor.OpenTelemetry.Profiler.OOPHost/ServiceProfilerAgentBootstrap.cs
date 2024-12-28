@@ -74,8 +74,13 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
             }
 
             _logger.LogInformation("Waiting for targeting process.");
-            await _targetProcess.WaitUntilAvailableAsync(cancellationToken).ConfigureAwait(false);
-            
+            int targetProcessId = await _targetProcess.WaitUntilAvailableAsync(cancellationToken).ConfigureAwait(false);
+            if(targetProcessId == 0)
+            {
+                _logger.LogError("Process id of 0 is not valid. Profiler won't start.");
+                return;
+            }
+
             _logger.LogInformation("Starting application insights profiler with connection string: {connectionString}", _serviceProfilerContext.ConnectionString);
             await _orchestrator.StartAsync(cancellationToken).ConfigureAwait(false);
         }

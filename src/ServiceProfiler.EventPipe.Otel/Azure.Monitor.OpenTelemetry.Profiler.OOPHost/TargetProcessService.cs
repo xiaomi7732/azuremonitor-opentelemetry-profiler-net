@@ -37,18 +37,19 @@ internal class TargetProcessService : ITargetProcess
     /// <returns></returns>
     public async Task<int> WaitUntilAvailableAsync(CancellationToken cancellationToken)
     {
-        using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        using PeriodicTimer timer = new(TimeSpan.FromSeconds(1));
         string targetProcessName = _options.TargetProcessName;
 
         if (string.IsNullOrEmpty(targetProcessName))
         {
-            _logger.LogError("Target process name is required. Profiler won't start.");
+            _logger.LogError("Target process name is required.");
             return 0;
         }
 
+        _logger.LogInformation("Looking for target process by name: {processName}", targetProcessName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            Process? targetProcess = Process.GetProcessesByName(_options.TargetProcessName).FirstOrDefault();
+            Process? targetProcess = Process.GetProcessesByName(targetProcessName).FirstOrDefault();
             try
             {
                 if (targetProcess is null)
@@ -60,6 +61,7 @@ internal class TargetProcessService : ITargetProcess
                 }
 
                 ProcessId = targetProcess.Id;
+                _logger.LogInformation("Hit process id {processId} by name {processName}", ProcessId, targetProcessName);
                 return ProcessId;
             }
             finally
