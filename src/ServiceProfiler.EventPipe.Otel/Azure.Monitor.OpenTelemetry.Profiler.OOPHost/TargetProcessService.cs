@@ -49,7 +49,24 @@ internal class TargetProcessService : ITargetProcess
         _logger.LogInformation("Looking for target process by name: {processName}", targetProcessName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            Process? targetProcess = Process.GetProcessesByName(targetProcessName).FirstOrDefault();
+            int currentProcessId;
+            using (Process currentProcess = Process.GetCurrentProcess())
+            {
+                currentProcessId = currentProcess.Id;
+            }
+
+            List<Process> processes = Process.GetProcessesByName(targetProcessName).Where(p => p.Id != currentProcessId).ToList();
+            if (processes.Count > 1)
+            {
+                _logger.LogWarning("More than 1 processes named {name} are found. Pick the first process.", targetProcessName);
+                foreach (Process process in processes)
+                {
+                    _logger.LogDebug("Process {id}: {name}", process.Id, process.ProcessName);
+                }
+            }
+
+            Process? targetProcess = processes.FirstOrDefault(p => p.Id != currentProcessId);
+
             try
             {
                 if (targetProcess is null)
@@ -61,7 +78,11 @@ internal class TargetProcessService : ITargetProcess
                 }
 
                 ProcessId = targetProcess.Id;
-                _logger.LogInformation("Hit process id {processId} by name {processName}", ProcessId, targetProcessName);
+                _logger.LogInformation("Hit process id {processId} by name {processName}, commandline: {commandLine} {arguments}",
+                    ProcessId,
+                    targetProcessName,
+                    targetProcess.StartInfo.FileName,
+                    targetProcess.StartInfo.Arguments);
                 return ProcessId;
             }
             finally
