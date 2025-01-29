@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
@@ -24,11 +24,11 @@ public static class OpenTelemetryBuilderExtensions
         builder.Services.AddLogging();
         builder.Services.AddOptions();
 
-        builder.Services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorOptions>>((opt, configuration, azureMonitorOptions) =>
+        builder.Services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorExporterOptions>>((opt, configuration, azureMonitorOptions) =>
         {
             configuration.GetSection("ServiceProfiler").Bind(opt);
 
-            AzureMonitorOptions? monitorOptions = azureMonitorOptions.Value;
+            AzureMonitorExporterOptions? monitorOptions = azureMonitorOptions.Value;
 
             // Inherit connection string from the Azure Monitor Options unless
             // the value is already there.
