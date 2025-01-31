@@ -59,6 +59,12 @@ public static class OpenTelemetryBuilderExtensions
             opt.Credential ??= monitorOptions.Credential;
             configureServiceProfiler?.Invoke(opt);
 
+            // Last effort to capture the connection string when all above failed
+            if (string.IsNullOrEmpty(opt.ConnectionString))
+            {
+                opt.ConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+            }
+
             // Fast fail when the connection string is not set.
             // This should never happen, or the profiler is not going to work.
             if (string.IsNullOrEmpty(opt.ConnectionString))
