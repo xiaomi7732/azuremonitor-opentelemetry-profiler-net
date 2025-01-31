@@ -7,7 +7,7 @@
     <!-- These versions is specific for EventPipe OTel Agent, and will be shared between the build project
      and the nuget spec as tokens through the property of `NuspecProperties`. -->
     <AzureCoreVersion>1.44.1</AzureCoreVersion>
-    <AzureMonitorOpenTelemetryAspNetCoreVersion>1.3.0-beta.2</AzureMonitorOpenTelemetryAspNetCoreVersion>
+    <AzureMonitorOpenTelemetryExporterVersion>1.4.0-beta.2</AzureMonitorOpenTelemetryExporterVersion>
     <CommandLineParserVersion>2.9.1</CommandLineParserVersion>
     <MicrosoftDiagnosticsNETCoreClientVersion>0.2.532401</MicrosoftDiagnosticsNETCoreClientVersion>
     <MicrosoftExtensionsConfigurationAbstractionsVersion>9.0.0</MicrosoftExtensionsConfigurationAbstractionsVersion>
@@ -20,10 +20,9 @@
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <NuspecProperties>
-  <![CDATA[
+    <NuspecProperties><![CDATA[
 AzureCoreVersion=$(AzureCoreVersion);
-AzureMonitorOpenTelemetryAspNetCoreVersion=$(AzureMonitorOpenTelemetryAspNetCoreVersion);
+AzureMonitorOpenTelemetryExporterVersion=$(AzureMonitorOpenTelemetryExporterVersion);
 CommandlineParserVersion=$(CommandLineParserVersion);
 MicrosoftDiagnosticsNETCoreClientVersion=$(MicrosoftDiagnosticsNETCoreClientVersion);
 MicrosoftExtensionsConfigurationAbstractionsVersion=$(MicrosoftExtensionsConfigurationAbstractionsVersion); 
@@ -38,7 +37,7 @@ $(NuspecProperties)]]></NuspecProperties>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Azure.Core" Version="$(AzureCoreVersion)" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="$(AzureMonitorOpenTelemetryAspNetCoreVersion)" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="$(AzureMonitorOpenTelemetryExporterVersion)" />
     <PackageVersion Include="CommandLineParser" Version="$(CommandLineParserVersion)" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="$(MicrosoftDiagnosticsNETCoreClientVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsConfigurationAbstractionsVersion)" />

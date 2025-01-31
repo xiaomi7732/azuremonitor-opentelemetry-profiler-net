@@ -17,10 +17,11 @@
 
     <dependencies>
       <group targetFramework="$targetFramework$">
-        <!-- Auzre Monitor Open Telemetry SDK for application insights -->
-        <dependency id="Azure.Monitor.OpenTelemetry.Profiler.Core" version="$version$" exclude="Build,Analyzers" />
+        <!-- Azure Monitor Open Telemetry SDK for application insights -->
+        <dependency id="Azure.Monitor.OpenTelemetry.Exporter" version="$AzureMonitorOpenTelemetryExporterVersion$" exclude="Build,Analyzers" />
+        
         <!-- Core package for profiler -->
-        <dependency id="Azure.Monitor.OpenTelemetry.AspNetCore" version="$AzureMonitorOpenTelemetryAspNetCoreVersion$" exclude="Build,Analyzers" />
+        <dependency id="Azure.Monitor.OpenTelemetry.Profiler.Core" version="$version$" exclude="Build,Analyzers" />
 
         <!-- Other packages -->
         <dependency id="Microsoft.Extensions.Configuration.Abstractions" version="$MicrosoftExtensionsConfigurationAbstractionsVersion$" exclude="Build,Analyzers" />
