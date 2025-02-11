@@ -62,7 +62,7 @@ New-Item -ItemType Directory -Path $OutputDir -Force
 New-Item -ItemType Directory -Path $NuGetOutDir -Force
 
 $CorePackageOutputDir = Join-Path "$BaseDir" "Azure.Monitor.OpenTelemetry.Profiler.Core" "bin" $Configuration
-$AspNetCorePackageOutputDir = Join-Path "$BaseDir" "Azure.Monitor.OpenTelemetry.Profiler.AspNetCore" "bin" $Configuration
+$AspNetCorePackageOutputDir = Join-Path "$BaseDir" "Azure.Monitor.OpenTelemetry.Profiler" "bin" $Configuration
 
 Remove-Item (Join-Path $CorePackageOutputDir *.nupkg) -Force
 Remove-Item (Join-Path $AspNetCorePackageOutputDir *.nupkg) -Force
@@ -77,7 +77,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Pack nuget packages"
 dotnet pack (Join-Path $BaseDir "Azure.Monitor.OpenTelemetry.Profiler.Core") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
-dotnet pack (Join-Path $BaseDir "Azure.Monitor.OpenTelemetry.Profiler.AspNetCore") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
+dotnet pack (Join-Path $BaseDir "Azure.Monitor.OpenTelemetry.Profiler") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
 
 $NuGetCoreFileName = GetNuGetPackageFileName -SearchRoot "$CorePackageOutputDir"
 $NuGetAspNetCoreFileName = GetNuGetPackageFileName -SearchRoot "$AspNetCorePackageOutputDir"
