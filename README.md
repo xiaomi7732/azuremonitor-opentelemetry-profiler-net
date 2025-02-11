@@ -68,6 +68,7 @@ For additional details on using the GitHub Packages registry, please refer to th
 Add a reference to the latest NuGet packages:
 
 ```sh
+dotnet add package Azure.Monitor.OpenTelemetry.AspNetCore --prerelease
 dotnet add package Azure.Monitor.OpenTelemetry.Profiler --prerelease
 ```
 
@@ -84,14 +85,13 @@ Verify that the connection to Application Insights works -- [Confirm Data is Flo
 Append the call to `UseProfiler()` in your code:
 
 ```csharp
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Monitor.OpenTelemetry.Profiler;
 
 ...
-
 builder.Services.AddOpenTelemetry()
         .UseAzureMonitor()
         .UseProfiler();  // Append this line
-
 ...
 ```
 
