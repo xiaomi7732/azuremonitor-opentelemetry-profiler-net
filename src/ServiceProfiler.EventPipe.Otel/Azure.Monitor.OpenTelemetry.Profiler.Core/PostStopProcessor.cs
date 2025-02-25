@@ -76,7 +76,7 @@ internal class PostStopProcessor : IPostStopProcessor
     {
         if (uploadMode == UploadMode.Never)
         {
-            _logger.LogInformation("Skip uploading. Uploade mode: {mode}.", uploadMode);
+            _logger.LogInformation("Skip uploading. Upload mode: {mode}.", uploadMode);
             return false;
         }
 
@@ -149,7 +149,7 @@ internal class PostStopProcessor : IPostStopProcessor
                     {
                         if (e.Samples.Any())
                         {
-                            _logger.LogWarning("Although there are valid samples, there's no additonal data. Why?");
+                            _logger.LogWarning("Although there are valid samples, there's no additional data. Why?");
                         }
                         else
                         {
