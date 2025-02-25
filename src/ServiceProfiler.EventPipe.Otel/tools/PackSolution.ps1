@@ -132,6 +132,7 @@ if ($PushNuGet) {
     
     Write-Host Tagging with $VersionSuffix
     git tag $VersionSuffix
-    Write-Host Push the tags by: git push --tags
+    Write-Host "Push the tags by: git push <remoteName> <tagName>"
+    Write-Host "For example: git push origin $VersionSuffix"
     Pop-Location
 }
