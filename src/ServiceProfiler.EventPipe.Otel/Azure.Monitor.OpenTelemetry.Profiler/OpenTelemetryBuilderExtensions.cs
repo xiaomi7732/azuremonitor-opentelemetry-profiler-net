@@ -9,27 +9,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenTelemetry;
-using OpenTelemetry.Trace;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler;
 
 public static class OpenTelemetryBuilderExtensions
 {
     /// <summary>
-    /// Register the services needed to enable Profiler. Use this when IOpenTelemetryBuilder
-    /// is not available.
-    /// </summary>
-    /// <param name="builder">A trace provider builder.</param>
-    /// <param name="configureServiceProfiler">An action to customize the behavior of the profiler.</param>
-    public static TracerProviderBuilder UseProfiler(this TracerProviderBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler = null) 
-        => builder.ConfigureServices(services => ConfigureServices(services, configureServiceProfiler));
-
-    /// <summary>
     /// Register the services needed to enable Profiler.
     /// </summary>
     /// <param name="builder">The service container.</param>
     /// <param name="configureServiceProfiler">An action to customize the behavior of the profiler.</param>
-    public static IOpenTelemetryBuilder UseProfiler(this IOpenTelemetryBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
+    public static IOpenTelemetryBuilder AddAzureMonitorProfiler(this IOpenTelemetryBuilder builder, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
     {
         ConfigureServices(builder.Services, configureServiceProfiler);
         return builder;
