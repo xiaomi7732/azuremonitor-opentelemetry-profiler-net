@@ -8,11 +8,11 @@ param(
     [string]$VersionSuffix
 )
 
-function GetNuGetPackageFileName {
+function GetNuGetPackageFileNames {
     param (
         [string]$SearchRoot
     )
-    return (Get-ChildItem -Path ($SearchRoot + "\*.nupkg") -Force -Recurse -File | Select-Object -Last 1).Name
+    return (Get-ChildItem -Path $SearchRoot -Force -Recurse -File -Filter "*.*nupkg" | Select-Object -ExpandProperty Name)
 }
 
 function GenerateVersionSuffix {
@@ -72,7 +72,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Clean the target folders
 $PackageOutputDir = Join-Path "$BaseDir" "$HeaderProjectName" "bin" $Configuration
-Remove-Item (Join-Path $PackageOutputDir *.nupkg) -Force
+Remove-Item (Join-Path $PackageOutputDir *.*nupkg) -Force
 
 Write-Debug "dotnet pack $(Join-Path $BaseDir "$HeaderProjectName") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration"
 dotnet pack (Join-Path $BaseDir "$HeaderProjectName") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
@@ -81,12 +81,18 @@ if ($LASTEXITCODE -ne 0) {
     EXIT -102
 }
 
+$NuGetFileNames = GetNuGetPackageFileNames -SearchRoot "$PackageOutputDir"
+foreach($pkgFile in $NuGetFileNames)
+{
+    $PkgSourceFileName = Join-Path $PackageOutputDir $pkgFile
 
-$NuGetFileName = GetNuGetPackageFileName -SearchRoot "$PackageOutputDir"
-XCOPY (Join-Path $PackageOutputDir $NuGetFileName) $NuGetOutDir /y /f
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed copying the NuGet package file"
-    EXIT -200
+    Write-Debug "Copy: $PkgSourceFileName => $NuGetOutDir"
+    XCOPY $PkgSourceFileName $NuGetOutDir /y /f
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed copying the NuGet package file"
+        EXIT -200
+    }
 }
 
 Write-Host "Package succeeded :-)"
