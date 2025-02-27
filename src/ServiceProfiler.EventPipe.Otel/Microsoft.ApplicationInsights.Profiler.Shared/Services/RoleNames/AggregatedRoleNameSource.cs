@@ -8,15 +8,13 @@ internal class AggregatedRoleNameSource : IRoleNameSource
 {
     private List<IRoleNameSource> _roleNameSources;
 
-    public AggregatedRoleNameSource(IEnumerable<IRoleNameSource> otherRoleNameSources)
+    public AggregatedRoleNameSource()
     {
         // Order matters: External source provider, then known environment.
         // The first one that is not null or empty will be used as the effective role name.
-        _roleNameSources =
-            [.. otherRoleNameSources, 
+        _roleNameSources = [
             new EnvRoleName("WEBSITE_SITE_NAME"), // Antares
             new EnvRoleName("RoleName"),    // Direct assignment
-
         ];
 
         string? roleName = _roleNameSources.FirstOrDefault(item => !string.IsNullOrEmpty(item.CloudRoleName))?.CloudRoleName;
