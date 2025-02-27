@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
     {
         // Utilities
         services.AddSingleton<IConnectionStringParserFactory, ConnectionStringParserFactory>();
-        services.AddSingleton<IRoleNameSource, EnvRoleName>();
+        services.AddSingleton<IRoleNameSource, AggregatedRoleNameSource>();
 
 
         services.AddSingleton<IFile, SystemFile>();
