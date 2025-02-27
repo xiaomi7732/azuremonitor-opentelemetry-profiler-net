@@ -15,10 +15,16 @@
     <Version Condition=" '$(VersionSuffix)' == '' ">$(VersionPrefix)</Version>
   </PropertyGroup>
 
+  <!-- Symol Package configuration -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
   <!--Shared Properties for NuGet package-->
   <!--Refer aka.ms/nuget for Microsoft NuGet packages authoring compliance-->
   <PropertyGroup>
-    <!-- Package version is defualt to version. -->
+    <!-- Package version is default to version. -->
     <PackageVersion Condition=" '$(PackageVersion)' == '' ">$(Version)</PackageVersion>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <Authors>Microsoft</Authors>

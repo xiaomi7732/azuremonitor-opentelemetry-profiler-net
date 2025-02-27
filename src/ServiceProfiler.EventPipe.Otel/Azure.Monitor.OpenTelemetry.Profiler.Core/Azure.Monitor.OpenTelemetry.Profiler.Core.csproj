@@ -17,6 +17,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Shipping -->
+    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="OpenTelemetry" />
