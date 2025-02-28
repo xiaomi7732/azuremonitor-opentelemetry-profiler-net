@@ -1,18 +1,2 @@
 #nullable enable
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource() -> void
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Keywords
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Keywords.Keywords() -> void
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.RequestStart(string! name, string! id, string! requestId, string! operationId) -> void
-Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.RequestStop(string! name, string! id, string! requestId, string! operationId) -> void
-Azure.Monitor.OpenTelemetry.Profiler.Core.ITraceControl
-Azure.Monitor.OpenTelemetry.Profiler.Core.ITraceControl.DisableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-Azure.Monitor.OpenTelemetry.Profiler.Core.ITraceControl.EnableAsync(string! traceFilePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-Azure.Monitor.OpenTelemetry.Profiler.Core.ITraceControl.SessionStartUTC.get -> System.DateTime?
-Azure.Monitor.OpenTelemetry.Profiler.Core.ServiceCollectionExtensions
-Azure.Monitor.OpenTelemetry.Profiler.Core.ServiceProfilerOptions
-Azure.Monitor.OpenTelemetry.Profiler.Core.ServiceProfilerOptions.ServiceProfilerOptions() -> void
-const Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName = "AzureMonitor-OpenTelemetry-Profiler-DataAdapter" -> string!
-const Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Keywords.Operations = (System.Diagnostics.Tracing.EventKeywords)1 -> System.Diagnostics.Tracing.EventKeywords
-static Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log -> Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners.AzureMonitorOpenTelemetryProfilerDataAdapterEventSource!
-static Azure.Monitor.OpenTelemetry.Profiler.Core.ServiceCollectionExtensions.AddServiceProfilerCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+
