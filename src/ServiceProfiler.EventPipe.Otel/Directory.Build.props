@@ -4,6 +4,11 @@
   <PropertyGroup Condition=" '$(SERVER_BUILD)' == 'true' ">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
+  
+  <!-- Warning as errors -->
+  <PropertyGroup>
+    <WarningsAsErrors>RS0017,RS0016</WarningsAsErrors>
+  </PropertyGroup>
 
   <!-- Determine the version to use -->
   <PropertyGroup>
@@ -15,7 +20,7 @@
     <Version Condition=" '$(VersionSuffix)' == '' ">$(VersionPrefix)</Version>
   </PropertyGroup>
 
-  <!-- Symol Package configuration -->
+  <!-- Symbol Package configuration -->
   <PropertyGroup>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
