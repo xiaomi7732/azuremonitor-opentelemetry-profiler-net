@@ -1,0 +1,130 @@
+#nullable enable
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Arguments.get -> System.Collections.Generic.IDictionary<string!, string!>!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Arguments.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.EventLevel.get -> System.Diagnostics.Tracing.EventLevel
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.EventLevel.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.EventPipeProviderItem() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Keywords.get -> long
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Keywords.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Name.get -> string!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.Name.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem.ToProvider() -> Microsoft.Diagnostics.NETCore.Client.EventPipeProvider!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.ConnectionTimeout.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.ConnectionTimeout.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.DefaultMessageTimeout.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.DefaultMessageTimeout.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.NamedPipeOptions() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.CollectionPlan.get -> string?
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.CpuTriggerSettings.get -> Microsoft.ServiceProfiler.DataContract.Settings.CpuTriggerSettings!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Enabled.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Engine.get -> Microsoft.ServiceProfiler.DataContract.Settings.EngineSettings!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Engine.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.MemoryTriggerSettings.get -> Microsoft.ServiceProfiler.DataContract.Settings.MemoryTriggerSettings!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.ProfilerSettings(Microsoft.Extensions.Options.IOptions<Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase!>! userConfiguration, Microsoft.ServiceProfiler.Orchestration.IProfilerSettingsService! settingsService, Microsoft.ServiceProfiler.DataContract.Settings.SettingsParser! settingsParser, Microsoft.Extensions.Logging.ILogger<Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings!>! logger) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.SamplingOptions.get -> Microsoft.ServiceProfiler.Orchestration.Modes.SamplingOptions!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.GracePeriod.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.GracePeriod.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.InitialDelay.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.InitialDelay.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.Interval.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.Interval.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.TraceScavengerServiceOptions() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode.Always = 1 -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode.Never = -1 -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode.OnSuccess = 0 -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.AllowsCrash.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.AllowsCrash.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.BufferSizeInMB.get -> int
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.BufferSizeInMB.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ConfigurationUpdateFrequency.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ConfigurationUpdateFrequency.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CPUTriggerCooldown.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CPUTriggerCooldown.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CPUTriggerThreshold.get -> float
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CPUTriggerThreshold.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CustomEventPipeProviders.get -> System.Collections.Generic.IEnumerable<Microsoft.ApplicationInsights.Profiler.Shared.Contracts.EventPipeProviderItem!>!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.CustomEventPipeProviders.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.Duration.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.Duration.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.Endpoint.get -> string?
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.Endpoint.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.InitialDelay.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.InitialDelay.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.IsDisabled.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.IsDisabled.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.IsSkipCompatibilityTest.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.IsSkipCompatibilityTest.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.LocalCacheFolder.get -> string!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.LocalCacheFolder.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.MemoryTriggerCooldown.get -> System.TimeSpan
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.MemoryTriggerCooldown.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.MemoryTriggerThreshold.get -> float
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.MemoryTriggerThreshold.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.NamedPipe.get -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.NamedPipe.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.PreserveTraceFile.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.PreserveTraceFile.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ProvideAnonymousTelemetry.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ProvideAnonymousTelemetry.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.RandomProfilingOverhead.get -> float
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.RandomProfilingOverhead.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SkipEndpointCertificateValidation.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SkipEndpointCertificateValidation.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.StandaloneMode.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.StandaloneMode.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.TraceScavenger.get -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.TraceScavenger.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.UploaderEnvironment.get -> string!
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.UploaderEnvironment.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.UploadMode.get -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UploadMode
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.UploadMode.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.UserConfigurationBase() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.CreateProfilingSchedule(System.TimeSpan profilingDuration) -> System.Collections.Generic.IEnumerable<(System.TimeSpan duration, Microsoft.ServiceProfiler.Orchestration.ProfilerAction action)>!
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.CreateStandbySchedule() -> System.Collections.Generic.IEnumerable<(System.TimeSpan duration, Microsoft.ServiceProfiler.Orchestration.ProfilerAction action)>!
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.EventPipeSchedulingPolicy(System.TimeSpan profilingDuration, System.TimeSpan profilingCooldown, System.TimeSpan pollingInterval, Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings! profilerSettings, Microsoft.ServiceProfiler.Orchestration.IDelaySource! delaySource, Microsoft.ServiceProfiler.Orchestration.IExpirationPolicy! expirationPolicy, Microsoft.ServiceProfiler.Orchestration.IResourceUsageSource! resourceUsageSource, Microsoft.Extensions.Logging.ILogger<Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy!>! logger) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.ProfilerSettings.get -> Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings!
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.ResourceUsageSource.get -> Microsoft.ServiceProfiler.Orchestration.IResourceUsageSource!
+Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.UpdateRefreshAndGetSetting<T>(T newSetting, T currentSetting, ref bool needsRefresh) -> T
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IOutOfProcCaller
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IOutOfProcCaller.ExecuteAndWait(System.Diagnostics.ProcessPriorityClass processPriorityClass = System.Diagnostics.ProcessPriorityClass.Normal) -> int
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeClientService
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeClientService.ConnectAsync(string! pipeName, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeOperations
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeOperations.PipeName.get -> string?
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeOperations.ReadAsync<T>(System.TimeSpan timeout = default(System.TimeSpan), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeOperations.SendAsync<T>(T message, System.TimeSpan timeout = default(System.TimeSpan), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeServerService
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.INamedPipeServerService.WaitForConnectionAsync(string! pipeName, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.IPayloadSerializer
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.IPayloadSerializer.TryDeserialize<T>(string! serialized, out T? obj) -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC.IPayloadSerializer.TrySerialize<T>(T obj, out string? serialized) -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPrioritizedUploaderLocator
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPrioritizedUploaderLocator.Locate() -> string?
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPrioritizedUploaderLocator.Priority.get -> int
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.ISerializationOptionsProvider<T>
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.ISerializationOptionsProvider<T>.Options.get -> T
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.ISerializationProvider
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.ISerializationProvider.TryDeserialize<T>(string! serialized, out T? obj) -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.ISerializationProvider.TrySerialize<T>(T obj, out string? serialized) -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IServiceProfilerProvider
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IServiceProfilerProvider.StartServiceProfilerAsync(Microsoft.ServiceProfiler.Orchestration.IProfilerSource! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IServiceProfilerProvider.StopServiceProfilerAsync(Microsoft.ServiceProfiler.Orchestration.IProfilerSource! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadContentException
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadContentException.UnsupportedPayloadContentException() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadContentException.UnsupportedPayloadContentException(string! message) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadContentException.UnsupportedPayloadContentException(string! message, System.Exception! inner) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadTypeException
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadTypeException.UnsupportedPayloadTypeException() -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadTypeException.UnsupportedPayloadTypeException(string! message) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC.UnsupportedPayloadTypeException.UnsupportedPayloadTypeException(string! message, System.Exception! inner) -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy.OutOfProcCaller
+Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy.OutOfProcCaller.ExecuteAndWait(System.Diagnostics.ProcessPriorityClass processPriorityClass = System.Diagnostics.ProcessPriorityClass.Normal) -> int
+Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy.OutOfProcCaller.OutOfProcCaller(string! fileName, string! arguments, Microsoft.Extensions.Logging.ILogger<Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy.OutOfProcCaller!>! logger) -> void
+override Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.EventPipeSchedulingPolicy.PolicyNeedsRefresh() -> bool
