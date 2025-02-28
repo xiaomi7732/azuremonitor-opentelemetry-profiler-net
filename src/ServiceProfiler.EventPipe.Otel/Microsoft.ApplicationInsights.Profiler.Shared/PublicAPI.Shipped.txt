@@ -16,15 +16,6 @@ Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.Connect
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.DefaultMessageTimeout.get -> System.TimeSpan
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.DefaultMessageTimeout.set -> void
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.NamedPipeOptions.NamedPipeOptions() -> void
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.CollectionPlan.get -> string?
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.CpuTriggerSettings.get -> Microsoft.ServiceProfiler.DataContract.Settings.CpuTriggerSettings!
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Enabled.get -> bool
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Engine.get -> Microsoft.ServiceProfiler.DataContract.Settings.EngineSettings!
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.Engine.set -> void
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.MemoryTriggerSettings.get -> Microsoft.ServiceProfiler.DataContract.Settings.MemoryTriggerSettings!
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.ProfilerSettings(Microsoft.Extensions.Options.IOptions<Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase!>! userConfiguration, Microsoft.ServiceProfiler.Orchestration.IProfilerSettingsService! settingsService, Microsoft.ServiceProfiler.DataContract.Settings.SettingsParser! settingsParser, Microsoft.Extensions.Logging.ILogger<Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings!>! logger) -> void
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.ProfilerSettings.SamplingOptions.get -> Microsoft.ServiceProfiler.Orchestration.Modes.SamplingOptions!
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.GracePeriod.get -> System.TimeSpan
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.TraceScavengerServiceOptions.GracePeriod.set -> void
