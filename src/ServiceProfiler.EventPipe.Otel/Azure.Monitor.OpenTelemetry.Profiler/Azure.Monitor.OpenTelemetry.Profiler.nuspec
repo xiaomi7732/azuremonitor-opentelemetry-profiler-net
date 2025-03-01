@@ -62,8 +62,6 @@
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Contract.Agent.Profiler.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.HttpPipeline.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.HttpPipeline.pdb" target="lib/$targetFramework$"></file>
-    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Logging.dll" target="lib/$targetFramework$"></file>
-    <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Logging.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Orchestration.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.Orchestration.pdb" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ServiceProfiler.ProcessMonitor.dll" target="lib/$targetFramework$"></file>
