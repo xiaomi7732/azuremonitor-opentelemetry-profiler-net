@@ -29,11 +29,6 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Text.Json" />
-
-    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>
