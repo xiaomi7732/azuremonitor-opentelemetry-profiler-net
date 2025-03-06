@@ -1,4 +1,4 @@
-# Enable Azure Monitor Profiler for a ASP.NET Core WebAPI
+# Enable Azure Monitor Profiler for an ASP.NET Core WebAPI
 
 This is an example app to enable Azure Monitor Profiler in ASP.NET Core WebAPI with [Azure Monitor OpenTelemetry distro](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore).
 
@@ -6,7 +6,7 @@ Here are the steps to build this example step to step.
 
 ## Create an application
 
-Run this command to create an web api application:
+Run this command to create a web api application:
 
 ```shell
 dotnet new web -n SimpleApp -o . -f net8.0
