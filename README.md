@@ -94,6 +94,12 @@ Assuming you are working with an **ASP.NET Core application**.
 
     ![sample trace](./images/sample-trace.png)
 
+## Examples
+
+Learn more by following the examples:
+
+- [Enable Azure Monitor OpenTelemetry Profiler in an ASP.NET Core WebAPI](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/tree/main/examples/aspnetcore-webapi)
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
