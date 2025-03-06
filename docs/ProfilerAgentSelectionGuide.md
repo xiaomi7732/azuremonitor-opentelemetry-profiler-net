@@ -26,7 +26,7 @@ If you are targeting [.NET](https://dotnet.microsoft.com/download/dotnet), **.NE
 
 _⚠️ Tip: Do NOT use both profiler at the same time considering the overhead._
 
-If you are planing to host your applications in Linux, or run your application inside containers, use **EventPipe Profiler**. Some well known host platforms like:
+If you are planning to host your applications in Linux, or run your application inside containers, use **EventPipe Profiler**. Some well known host platforms like:
 
 - [Azure Kubernetes Services](https://learn.microsoft.com/azure/aks/)
 - [Azure Container Apps](https://azure.microsoft.com/products/container-apps)
@@ -38,7 +38,7 @@ There are 2 flavors of the **EventPipe profilers**, it depends on the Applicatio
 
 - If you are using the traditional [Application Insights for ASP.NET Core applications](https://learn.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core), follow the instructions to use [Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore)
 
-You will need to add reference to NuGet packages and redeploy your application for those Profiler Agents to work. These profiler agnets runs in-proc with your application, and are lightweight.
+You will need to add reference to NuGet packages and redeploy your application for those Profiler Agents to work. These profiler agents runs in-proc with your application, and are lightweight.
 
 ## Get more support
 
