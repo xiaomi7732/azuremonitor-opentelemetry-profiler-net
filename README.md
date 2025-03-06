@@ -2,21 +2,22 @@
 
 ## Description
 
-Welcome to the home page of `Azure Monitor OpenTelemetry Profiler for .NET`. Enable profiler, integrate with application insights resource, get [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) and more. Find the [NuGet package](https://www.nuget.org/packages/Azure.Monitor.OpenTelemetry.Profiler).
+Welcome! Enable profiler, integrate seamlessly with your Application Insights resource, and unlock powerful [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) for your .NET applications. 
 
-## Prerequisites
+> ⭐ Not sure which `Profiler Agent` is right for you? Check out our [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) to help you choose the best option for your needs.
 
-- **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
-- **Supported Environments**:
-  - OS: Windows and Linux
-  - PaaS platforms: [Azure App Service](https://learn.microsoft.com/azure/app-service), [Container Instances](https://learn.microsoft.com/azure/container-instances)
-  - IaaS platforms: [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/products/kubernetes-service), [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/overview)
-
-- **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
+Get started by installing the [NuGet package](https://www.nuget.org/packages/Azure.Monitor.OpenTelemetry.Profiler) and take your application's performance to the next level!
 
 ## Get Started
 
-Assuming you are working with an **ASP.NET Core application**.
+### Prerequisites
+
+- **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
+- **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
+
+### Walkthrough
+
+Assuming you are building an **ASP.NET Core application**.
 
 - Create a .NET Application
 
