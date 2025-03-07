@@ -27,17 +27,24 @@ internal sealed class ActivityStartStopRelay : IDisposable
         _activityListener.ShouldListenTo += OnShouldListenTo;
         _activityListener.ActivityStarted += OnStarted;
         _activityListener.ActivityStopped += OnStopped;
+
+        ActivitySource.AddActivityListener(_activityListener);
     }
 
     private bool OnShouldListenTo(ActivitySource source)
     {
         _logger.LogTrace("Activity Source Name: {name}", source.Name);
+
+        if (string.IsNullOrEmpty(source.Name))
+        {
+            return false;
+        }
+
         return true;
     }
 
     private void OnStarted(Activity activity)
     {
-        _logger.LogTrace("In method: {name}", nameof(OnStarted));
         // Accessing activity.Id here will cause the Id to be initialized
         // before the sampler runs in case where the activity is created using legacy way
         // i.e. new Activity("Operation name"). This will result in Id not reflecting the
@@ -49,11 +56,15 @@ internal sealed class ActivityStartStopRelay : IDisposable
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Request started: Name: {name}, Activity Id: {activityId}, Operation Id: {operationId}, Request Id: {requestId}", name, activityId, operationId, requestId);
+            _logger.LogDebug("Request started: Name: {name}, Source: {sourceName} Activity Id: {activityId}, Operation Id: {operationId}, Request Id: {requestId}", name, activity.Source.Name, activityId, operationId, requestId);
         }
 
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
-            name, id: activityId, requestId, operationId);
+            name,
+            id: activityId,
+             requestId,
+             operationId,
+             activity.StartTimeUtc);
     }
 
     private void OnStopped(Activity activity)
@@ -63,11 +74,15 @@ internal sealed class ActivityStartStopRelay : IDisposable
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Request stopped: Name: {name}, Activity Id: {activityId}, Operation Id: {operationId}, Request Id: {requestId}", name, activityId, operationId, requestId);
+            _logger.LogDebug("Request stopped: Name: {name}, Source: {sourceName}, Activity Id: {activityId}, Operation Id: {operationId}, Request Id: {requestId}", name, activity.Source.Name, activityId, operationId, requestId);
         }
 
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
-            name: name, id: activityId, requestId, operationId);
+            name: name,
+            id: activityId,
+            requestId,
+            operationId,
+            activityStopTimeUtc: activity.StartTimeUtc + activity.Duration);
 
         if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
         {
@@ -90,7 +105,7 @@ internal sealed class ActivityStartStopRelay : IDisposable
         _activityListener.ActivityStarted -= OnStarted;
         _activityListener.ActivityStopped -= OnStopped;
         _activityListener.ShouldListenTo -= OnShouldListenTo;
-        
+
         _activityListener?.Dispose();
     }
 }

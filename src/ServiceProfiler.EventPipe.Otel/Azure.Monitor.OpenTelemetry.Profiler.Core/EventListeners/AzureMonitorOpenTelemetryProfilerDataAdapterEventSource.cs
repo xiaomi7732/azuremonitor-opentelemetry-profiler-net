@@ -23,14 +23,14 @@ internal class AzureMonitorOpenTelemetryProfilerDataAdapterEventSource : EventSo
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
     [Event(EventId.RequestStart, Keywords = Keywords.Operations)]
-    public void RequestStart(string name, string id, string requestId, string operationId)
+    public void RequestStart(string name, string id, string requestId, string operationId, DateTime activityStartTimeUtc)
     {
-        WriteEvent(EventId.RequestStart, name, id, requestId, operationId);
+        WriteEvent(EventId.RequestStart, name, id, requestId, operationId, activityStartTimeUtc);
     }
 
     [Event(EventId.RequestStop, Keywords = Keywords.Operations)]
-    public void RequestStop(string name, string id, string requestId, string operationId)
+    public void RequestStop(string name, string id, string requestId, string operationId, DateTime activityStopTimeUtc)
     {
-        WriteEvent(EventId.RequestStop, name, id, requestId, operationId);
+        WriteEvent(EventId.RequestStop, name, id, requestId, operationId, activityStopTimeUtc);
     }
 }

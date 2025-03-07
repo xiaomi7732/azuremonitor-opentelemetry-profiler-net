@@ -42,7 +42,7 @@ internal class SampleCollector : EventListener
 
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
-        // This event might tirgger before the constructor is done.
+        // This event might trigger before the constructor is done.
         TryLogDebug($"Event source creating: {eventSource.Name}");
         // Dispatch this onto a different thread to avoid holding the thread to finish 
         // the constructor
@@ -149,7 +149,7 @@ internal class SampleCollector : EventListener
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error enalbling event source. {name}", eventSource.Name);
+            _logger?.LogError(ex, "Error enabling event source. {name}", eventSource.Name);
         }
     }
 
