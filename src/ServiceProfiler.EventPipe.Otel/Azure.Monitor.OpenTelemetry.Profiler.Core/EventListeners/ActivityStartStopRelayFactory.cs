@@ -2,15 +2,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
-internal class TraceSessionListenerFactory
+internal class ActivityStartStopRelayFactory
 {
     private readonly IServiceProvider _serviceProvider;
 
-    public TraceSessionListenerFactory(IServiceProvider serviceProvider)
+    public ActivityStartStopRelayFactory(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
-    public TraceSessionListener Create() 
-        => ActivatorUtilities.CreateInstance<TraceSessionListener>(_serviceProvider);
+    public ActivityStartStopRelay Create()
+    {
+        return ActivatorUtilities.CreateInstance<ActivityStartStopRelay>(_serviceProvider);
+    }
 }

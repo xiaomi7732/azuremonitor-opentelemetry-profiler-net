@@ -19,25 +19,25 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     private readonly ITraceControl _traceControl;
     private readonly IUserCacheManager _userCacheManager;
-    private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
+    private readonly ActivityStartStopRelayFactory _activityStartStopRelayFactory;
     private readonly IPostStopProcessorFactory _postStopProcessorFactory;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
-    private TraceSessionListener? _listener;
+    private ActivityStartStopRelay? _listener;
 
     public string Source => nameof(OpenTelemetryProfilerProvider);
 
     public OpenTelemetryProfilerProvider(
         ITraceControl traceControl,
         IUserCacheManager userCacheManager,
-        TraceSessionListenerFactory traceSessionListenerFactory,
+        ActivityStartStopRelayFactory activityStartStopRelayFactory,
         IPostStopProcessorFactory postStopProcessorFactory,
         IServiceProfilerContext serviceProfilerContext,
         ILogger<OpenTelemetryProfilerProvider> logger)
     {
         _userCacheManager = userCacheManager ?? throw new ArgumentNullException(nameof(userCacheManager));
-        _traceSessionListenerFactory = traceSessionListenerFactory ?? throw new ArgumentNullException(nameof(traceSessionListenerFactory));
+        _activityStartStopRelayFactory = activityStartStopRelayFactory ?? throw new ArgumentNullException(nameof(activityStartStopRelayFactory));
         _postStopProcessorFactory = postStopProcessorFactory ?? throw new ArgumentNullException(nameof(postStopProcessorFactory));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -80,7 +80,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             // Dispose any previous trace session listener
             _listener?.Dispose();
-            _listener = _traceSessionListenerFactory.Create();
+            _listener = _activityStartStopRelayFactory.Create();
             _logger.LogDebug("New traceSessionListener created.");
 
             profilerStarted = true;

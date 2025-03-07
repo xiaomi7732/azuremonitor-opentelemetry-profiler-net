@@ -65,7 +65,7 @@ internal static class ServiceCollectionExtensions
         // Transient trace session listeners
         services.AddTransient<SampleActivityContainer>();
         services.AddTransient<SampleCollector>();
-        services.AddSingleton<TraceSessionListenerFactory>();
+        services.AddSingleton<ActivityStartStopRelayFactory>();
 
         // Profiler
         services.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
