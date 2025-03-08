@@ -1,12 +1,16 @@
 # Azure Monitor OpenTelemetry Profiler for .NET
 
+| Continuous Integration | Status |
+| ----------- | ----------- |
+| Package | [![Nuget](https://img.shields.io/nuget/v/Azure.Monitor.OpenTelemetry.Profiler)](https://www.nuget.org/packages/Azure.Monitor.OpenTelemetry.Profiler/) |
+| PR Build | [![Build Status](https://dev.azure.com/devdiv/OnlineServices/_apis/build/status%2FOneBranch%2FServiceProfiler%2FBuilds%2FEP-OTel-Profiler-PR?repoName=ServiceProfiler-EP-Profiler&branchName=refs%2Fpull%2F615631%2Fmerge)](https://dev.azure.com/devdiv/OnlineServices/_build/latest?definitionId=25440&repoName=ServiceProfiler-EP-Profiler&branchName=refs%2Fpull%2F615631%2Fmerge) |
+| Official Build | [![Build Status](https://dev.azure.com/devdiv/OnlineServices/_apis/build/status%2FOneBranch%2FServiceProfiler%2FBuilds%2FEP-OTel-Profiler-Official?repoName=ServiceProfiler-EP-Profiler&branchName=main)](https://dev.azure.com/devdiv/OnlineServices/_build/latest?definitionId=25454&repoName=ServiceProfiler-EP-Profiler&branchName=main) |
+
 ## Description
 
-Welcome! Enable profiler, integrate seamlessly with your Application Insights resource, and unlock powerful [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) for your .NET applications. 
+Welcome! Enable profiler, integrate seamlessly with your Application Insights resource, and unlock powerful [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) for your .NET applications.
 
 > ⭐ Not sure which `Profiler Agent` is right for you? Check out our [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) to help you choose the best option for your needs.
-
-Get started by installing the [NuGet package](https://www.nuget.org/packages/Azure.Monitor.OpenTelemetry.Profiler) and take your application's performance to the next level!
 
 ## Get Started
 
@@ -14,6 +18,8 @@ Get started by installing the [NuGet package](https://www.nuget.org/packages/Azu
 
 - **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
 - **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
+- **Azure Monitor OpenTelemetry**: Profiler works with Azure Monitor OpenTelemetry Activities for analysis.
+  - If you are using `Microsoft.ApplicationInsights.AspNetCore`, please go to [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) for instructions.
 
 ### Walkthrough
 
