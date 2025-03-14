@@ -174,7 +174,7 @@ internal class TraceSessionListener : EventListener
         {
             if (isDebugLoggingEnabled)
             {
-                _logger.LogDebug("Drop uninterested request by name: {requestName}", requestName);
+                _logger.LogDebug("Drop uninterested request by name: {requestName}, id: {id}", requestName, id);
             }
 
             // Do not relay this event since it is not interested.
