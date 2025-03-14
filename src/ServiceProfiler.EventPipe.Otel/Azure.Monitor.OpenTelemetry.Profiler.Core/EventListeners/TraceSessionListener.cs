@@ -27,7 +27,7 @@ internal class TraceSessionListener : EventListener
 
     public SampleActivityContainer? SampleActivities => _sampleCollector?.SampleActivities;
 
-    private readonly ConcurrentDictionary<string, string> _startedActivityIds = new();
+    private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
 
     public TraceSessionListener(
         ISerializationProvider serializer,
@@ -189,7 +189,7 @@ internal class TraceSessionListener : EventListener
         }
 
         // Note to the _startedActivityIds bag, so that when stop happens, it knows to match.
-        if (!_startedActivityIds.TryAdd(id, id))
+        if (!_startedActivityIds.TryAdd(id, default))
         {
             _logger.LogWarning("Failed to add started activity. Activity by id {id} already exists? Please report a bug.", id);
         }
