@@ -175,6 +175,7 @@ internal class TraceSessionListener : EventListener
             if (isDebugLoggingEnabled)
             {
                 _logger.LogDebug("Drop uninterested request by name: {requestName}", requestName);
+                return;
             }
         }
 
@@ -202,6 +203,7 @@ internal class TraceSessionListener : EventListener
             {
                 _logger.LogDebug("No start activity found for this stop activity. Request name: {requestName}, id: {id}", requestName, id);
             }
+            return;
         }
 
         if (isDebugLoggingEnabled)
