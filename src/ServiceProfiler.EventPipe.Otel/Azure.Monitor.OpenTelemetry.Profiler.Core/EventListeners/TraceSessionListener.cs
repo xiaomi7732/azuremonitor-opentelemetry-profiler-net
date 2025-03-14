@@ -107,19 +107,19 @@ internal class TraceSessionListener : EventListener
             (eventData.EventId == EventId.RequestStart || eventData.EventId == EventId.RequestStop))
         {
             string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
-            string spanId = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
+            string id = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
 
-            (string operationId, string requestId) = ExtractKeyIds(spanId);
+            (string operationId, string requestId) = ExtractKeyIds(id);
 
             if (eventData.EventId == 24) // Started
             {
-                HandleRequestStart(eventData, requestName, requestId, operationId, spanId);
+                HandleRequestStart(eventData, requestName, requestId, operationId, id);
                 return;
             }
 
             if (eventData.EventId == 25) // Stopped
             {
-                HandleRequestStop(eventData, requestName, requestId, operationId, spanId);
+                HandleRequestStop(eventData, requestName, requestId, operationId, id);
                 return;
             }
         }
@@ -253,14 +253,17 @@ internal class TraceSessionListener : EventListener
         _logger.LogDebug(message);
     }
 
-    // span id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
-    private static (string operationId, string requestId) ExtractKeyIds(string spanId)
+    // id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
+    private static (string operationId, string requestId) ExtractKeyIds(string id)
     {
-        string[] tokens = spanId.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
-        if (tokens.Length != 4)
+        string[] tokens = id.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
+        
+        // It at least contains 3 parts.
+        if (tokens.Length < 3)
         {
-            throw new InvalidDataException(FormattableString.Invariant($"Span id shall have 4 sections separated by `-`. Actual: {spanId}"));
+            throw new InvalidDataException(FormattableString.Invariant($"Id shall have at least 3 sections separated by `-`. Actual id: {id}"));
         }
+        
         return (tokens[1], tokens[2]);
     }
 }
