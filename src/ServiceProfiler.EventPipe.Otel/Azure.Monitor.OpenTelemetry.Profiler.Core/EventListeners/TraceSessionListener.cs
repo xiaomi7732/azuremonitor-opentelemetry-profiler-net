@@ -182,11 +182,18 @@ internal class TraceSessionListener : EventListener
         }
 
         // Interested request
+
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Interested start activity, name: {name}, id: {id}", requestName, id);
+        }
+
         // Note to the _startedActivityIds bag, so that when stop happens, it knows to match.
         if (!_startedActivityIds.TryAdd(id, id))
         {
-            _logger.LogWarning("Activity by id {id} already exists. Please report a bug", id);
+            _logger.LogWarning("Failed to add started activity. Activity by id {id} already exists? Please report a bug.", id);
         }
+
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
             name: requestName,
             id: id,
