@@ -204,6 +204,10 @@ internal class TraceSessionListener : EventListener
             }
         }
 
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Interested activity found. Name: {name}, id: {id}", requestName, id);
+        }
         // Interested start activity was captured, relay this stop activity.
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
             name: requestName, id: id, requestId: requestId, operationId: operationId);
