@@ -27,7 +27,7 @@ internal class TraceSessionListener : EventListener
 
     public SampleActivityContainer? SampleActivities => _sampleCollector?.SampleActivities;
 
-    private readonly ConcurrentBag<string> _startedActivityIds = new();
+    private readonly ConcurrentDictionary<string, string> _startedActivityIds = new();
 
     public TraceSessionListener(
         ISerializationProvider serializer,
@@ -182,7 +182,11 @@ internal class TraceSessionListener : EventListener
         }
 
         // Interested request
-        _startedActivityIds.Add(id);    // Note to the _startedActivityIds bag, so that when stop happens, it knows to match.
+        // Note to the _startedActivityIds bag, so that when stop happens, it knows to match.
+        if (!_startedActivityIds.TryAdd(id, id))
+        {
+            _logger.LogWarning("Activity by id {id} already exists. Please report a bug", id);
+        }
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
             name: requestName,
             id: id,
@@ -198,7 +202,7 @@ internal class TraceSessionListener : EventListener
             _logger.LogDebug("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
         }
 
-        if (!_startedActivityIds.TryTake(out _))
+        if (!_startedActivityIds.TryRemove(id, out _))
         {
             if (isDebugLoggingEnabled)
             {
