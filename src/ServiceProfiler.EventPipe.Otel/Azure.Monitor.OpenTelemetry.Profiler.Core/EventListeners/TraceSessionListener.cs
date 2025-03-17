@@ -174,18 +174,18 @@ internal class TraceSessionListener : EventListener
         {
             if (isDebugLoggingEnabled)
             {
-                _logger.LogDebug("Drop uninterested request by name: {requestName}, id: {id}", requestName, id);
+                _logger.LogDebug("Drop uninteresting request by name: {requestName}, id: {id}", requestName, id);
             }
 
-            // Do not relay this event since it is not interested.
+            // Do not relay this event since it is not interesting.
             return;
         }
 
-        // Interested request
+        // Interesting request
 
         if (isDebugLoggingEnabled)
         {
-            _logger.LogDebug("Interested start activity, name: {name}, id: {id}", requestName, id);
+            _logger.LogDebug("Interesting start activity, name: {name}, id: {id}", requestName, id);
         }
 
         // Note to the _startedActivityIds bag, so that when stop happens, it knows to match.
@@ -222,9 +222,9 @@ internal class TraceSessionListener : EventListener
 
         if (isDebugLoggingEnabled)
         {
-            _logger.LogDebug("Interested activity found. Name: {name}, id: {id}", requestName, id);
+            _logger.LogDebug("Interesting activity found. Name: {name}, id: {id}", requestName, id);
         }
-        // Interested start activity was captured, relay this stop activity.
+        // Interesting start activity was captured, relay this stop activity.
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
             name: requestName, id: id, requestId: requestId, operationId: operationId);
 
