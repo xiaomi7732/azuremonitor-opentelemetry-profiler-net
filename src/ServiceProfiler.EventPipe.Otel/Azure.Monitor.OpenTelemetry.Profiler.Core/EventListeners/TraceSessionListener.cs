@@ -154,7 +154,7 @@ internal class TraceSessionListener : EventListener
         }
     }
 
-    private bool IsInterestedRequest(string requestName)
+    private bool IsInterestingRequest(string requestName)
     {
         // We only are interested capturing Http In requests.
         // Http request out, for example, from HttpClient will be excluded.
@@ -170,7 +170,7 @@ internal class TraceSessionListener : EventListener
             _logger.LogDebug("Request started: Activity Id: {activityId}", currentActivityId);
         }
 
-        if (!IsInterestedRequest(requestName))
+        if (!IsInterestingRequest(requestName))
         {
             if (isDebugLoggingEnabled)
             {
