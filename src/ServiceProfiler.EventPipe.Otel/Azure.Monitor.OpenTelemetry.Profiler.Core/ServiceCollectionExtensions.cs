@@ -39,8 +39,10 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IConnectionStringParserFactory, ConnectionStringParserFactory>();
 
         // Role name detectors and sources
+        services.AddSingleton<OtelResourceDetector>();
+
         services.AddSingleton<IRoleNameDetector, OtelResourceRoleNameDetector>();
-        services.AddSingleton<IRoleNameDetector, EnvRoleNameDetector>(_=> new EnvRoleNameDetector("WEBSITE_SITE_NAME"));
+        services.AddSingleton<IRoleNameDetector, EnvRoleNameDetector>(_ => new EnvRoleNameDetector("WEBSITE_SITE_NAME"));
         services.AddSingleton<IRoleNameDetector, EnvRoleNameDetector>(_ => new EnvRoleNameDetector("RoleName"));
         services.AddSingleton<IRoleNameSource, AggregatedRoleNameSource>();
 
