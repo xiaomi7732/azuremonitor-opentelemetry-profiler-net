@@ -47,8 +47,8 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IRoleNameSource, AggregatedRoleNameSource>();
 
         // Role instance detectors and sources
-        services.AddSingleton<IRoleInstanceDetector, OtelResourceRoleInstanceDetector>();
         services.AddSingleton<IRoleInstanceDetector, ServiceProfilerContextRoleInstanceDetector>();
+        services.AddSingleton<IRoleInstanceDetector, OtelResourceRoleInstanceDetector>();
         services.AddSingleton<IRoleInstanceSource, AggregatedRoleInstanceSource>();
 
         services.AddSingleton<IFile, SystemFile>();
