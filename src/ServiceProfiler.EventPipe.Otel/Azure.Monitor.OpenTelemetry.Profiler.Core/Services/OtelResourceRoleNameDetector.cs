@@ -15,7 +15,7 @@ internal class OtelResourceRoleNameDetector : IRoleNameDetector
 
     private static string? Normalize(string? serviceName)
     {
-        if(string.IsNullOrEmpty(serviceName))
+        if (string.IsNullOrEmpty(serviceName))
         {
             return null;
         }
@@ -24,7 +24,7 @@ internal class OtelResourceRoleNameDetector : IRoleNameDetector
         // Refer to: https://github.com/open-telemetry/opentelemetry-dotnet/blob/1edcddbe0091b452dfb6a46fa34ff7b7c1374d3e/src/OpenTelemetry/Resources/ResourceBuilder.cs#L26C1-L27C1
         // That is implementation details and could change in the future. Check back on main branch for updates.
         // https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry/Resources/ResourceBuilder.cs
-        if(serviceName.StartsWith("unknown_service"))
+        if (serviceName.StartsWith("unknown_service", StringComparison.Ordinal))
         {
             return null;
         }
