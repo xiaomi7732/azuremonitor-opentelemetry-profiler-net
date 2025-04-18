@@ -14,13 +14,6 @@ internal class AggregatedRoleNameSource : IRoleNameSource
         ILogger<AggregatedRoleNameSource> logger
         )
     {
-        // Order matters: External source provider, then known environment.
-        // The first one that is not null or empty will be used as the effective role name.
-
-        // _roleNameSources = [
-        //     new EnvRoleNameDetector("WEBSITE_SITE_NAME"), // Antares
-        //     new EnvRoleNameDetector("RoleName"),    // Direct assignment
-        // ];
         _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
 
         if(!roleNameDetectors.Any())
@@ -32,7 +25,7 @@ internal class AggregatedRoleNameSource : IRoleNameSource
         {
             string roleName = roleNameDetector.GetRoleName()?? string.Empty;
             _logger.LogDebug("Role name detector {detector} returned role name: {roleName}", roleNameDetector.GetType().Name, roleName);
-            
+
             if (string.IsNullOrEmpty(roleName))
             {
                 // Try the next detector.

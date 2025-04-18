@@ -11,5 +11,5 @@ internal class OtelResourceRoleNameDetector : IRoleNameDetector
         _otelResourceDetector = otelResourceDetector ?? throw new ArgumentNullException(nameof(otelResourceDetector));
     }
 
-    public string? GetRoleName() => _otelResourceDetector.GetResource(OtelResourceSemanticConventions.AttributeServiceInstance);
+    public string? GetRoleName() => _otelResourceDetector.GetResource(OtelResourceSemanticConventions.AttributeServiceName);
 }

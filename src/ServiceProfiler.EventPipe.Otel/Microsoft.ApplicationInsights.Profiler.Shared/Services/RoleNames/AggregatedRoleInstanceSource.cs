@@ -21,9 +21,9 @@ internal class AggregatedRoleInstanceSource : IRoleInstanceSource
             _logger.LogWarning("There's no role instance detector registered. The role instance will be empty. This should not happen.");
         }
 
-        foreach (IRoleNameDetector roleInstanceDetector in roleInstanceDetectors)
+        foreach (IRoleInstanceDetector roleInstanceDetector in roleInstanceDetectors)
         {
-            string roleInstance = roleInstanceDetector.GetRoleName()?? string.Empty;
+            string roleInstance = roleInstanceDetector.GetRoleInstance()?? string.Empty;
             _logger.LogDebug("Role instance detector {detector} returned role instance: {roleInstance}", roleInstanceDetector.GetType().Name, roleInstance);
             
             if (string.IsNullOrEmpty(roleInstance))
