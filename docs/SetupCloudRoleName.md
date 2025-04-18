@@ -2,7 +2,7 @@
 
 Setting up a proper role name helps organize profiling sessions effectively. For example:
 
-![Screenshot shows readable role name for profiling sessions.](./images//RoleName.png)
+![Screenshot shows readable role name for profiling sessions.](./images/RoleName.png)
 
 ## How to set it up
 
