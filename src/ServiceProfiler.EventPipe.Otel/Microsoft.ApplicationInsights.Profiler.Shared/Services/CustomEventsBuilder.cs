@@ -64,15 +64,13 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
 
     public IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, DateTimeOffset sessionId, Guid appId)
     {
-        _roleInstanceCache ??= _roleInstanceSource.CloudRoleInstance;
         foreach (SampleActivity sample in samples)
         {
-            string? roleInstance = _roleInstanceCache ??= sample.RoleInstance;
-            yield return CreateServiceProfilerSample(sample, stampId, sessionId, appId, roleInstance);
+            yield return CreateServiceProfilerSample(sample, stampId, sessionId, appId);
         }
     }
 
-    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, DateTimeOffset sessionId, Guid appId, string? roleInstance)
+    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, DateTimeOffset sessionId, Guid appId)
     {
         ArtifactLocationProperties traceLocation = sample.ToArtifactLocationProperties(stampId, _processId, sessionId, appId, _serviceProfilerContext.MachineName);
         return new ServiceProfilerSample()
@@ -81,7 +79,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             ServiceProfilerContent = traceLocation.ToString(),
             ServiceProfilerVersion = "v2",
             RequestId = sample.RequestId,
-            RoleInstance = roleInstance,
+            RoleInstance = _roleInstanceCache ??= _roleInstanceSource.CloudRoleInstance,
             RoleName = _roleNameCache ??= _roleNameSource.CloudRoleName,
             OperationId = sample.OperationId,
             OperationName = sample.OperationName,
