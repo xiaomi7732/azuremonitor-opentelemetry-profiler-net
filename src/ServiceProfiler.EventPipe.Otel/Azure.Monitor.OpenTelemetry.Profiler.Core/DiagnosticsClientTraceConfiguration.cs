@@ -30,5 +30,11 @@ internal class DiagnosticsClientTraceConfiguration : DiagnosticsClientTraceConfi
 
         // Open Telemetry Profiler Data adapter event source so that trace analysis knows about the activities
         yield return new EventPipeProvider(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.EventSourceName, EventLevel.Verbose, keywords: 0xffffffffffff, arguments: null);
+
+        // Diagnostic Source Event Source
+        yield return new EventPipeProvider(TraceSessionListener.DiagnosticSourceEventSourceName, EventLevel.Verbose, keywords: 0xffffffffffff, arguments: new Dictionary<string, string>
+        {
+            ["FilterAndPayloadSpecs"] = "[AS]*"
+        });
     }
 }

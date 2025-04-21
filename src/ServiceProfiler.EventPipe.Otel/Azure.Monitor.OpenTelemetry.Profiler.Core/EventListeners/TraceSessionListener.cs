@@ -1,6 +1,7 @@
 #define CONSOLE_LOGGING
 #undef CONSOLE_LOGGING    // Comment out this line for traces before the finishing of the constructor
 
+using CommandLine;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ internal class TraceSessionListener : EventListener
     }
 
     public const string OpenTelemetrySDKEventSourceName = "OpenTelemetry-Sdk";
+    public const string DiagnosticSourceEventSourceName = "Microsoft-Diagnostics-DiagnosticSource";
     private readonly ISerializationProvider _serializer;
     private readonly SampleCollector _sampleCollector;
     private readonly ILogger<TraceSessionListener> _logger;
@@ -58,11 +60,12 @@ internal class TraceSessionListener : EventListener
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
-        _logger.LogTrace("OnEventWritten by {eventSource}", eventData.EventSource.Name);
+        _logger.LogInformation("OnEventWritten by {eventSource}", eventData.EventSource.Name);
 
         try
         {
-            if (!string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal))
+            if (!string.Equals(eventData.EventSource.Name, OpenTelemetrySDKEventSourceName, StringComparison.Ordinal) &&
+                !string.Equals(eventData.EventSource.Name, DiagnosticSourceEventSourceName, StringComparison.Ordinal))
             {
                 return;
             }
@@ -113,11 +116,35 @@ internal class TraceSessionListener : EventListener
 
             if (eventData.EventId == 24) // Started
             {
-                HandleRequestStart(eventData, requestName, requestId, operationId, id);
+                //HandleRequestStart(eventData, requestName, requestId, operationId, id);
                 return;
             }
 
             if (eventData.EventId == 25) // Stopped
+            {
+                //HandleRequestStop(eventData, requestName, requestId, operationId, id);
+                return;
+            }
+        }
+
+        // handles DiagnosticSourceEventSource
+        if (string.Equals(eventData.EventSource.Name, DiagnosticSourceEventSourceName, StringComparison.Ordinal) &&
+            (eventData.EventName.EndsWith("Start") || eventData.EventName.EndsWith("Stop")))
+        {
+            string requestName = eventData.GetPayload<string>("ActivityName") ?? "Unknown";
+            var arguments = eventData.GetPayload<System.Object[]>("Arguments") ?? throw new InvalidDataException("Argument payload is missing");
+            // Fixing the CS7036 error by replacing the incorrect 'Find' method with 'FirstOrDefault' from LINQ
+            var updatedArguments = arguments.Select(argument =>
+                argument.Cast<IDictionary<string, object>>());
+
+            string id = TryGetIdFromArguments(updatedArguments) ?? throw new InvalidDataException("Id argument is missing.");
+            (string operationId, string requestId) = ExtractKeyIds(id);
+            if (eventData.EventName.EndsWith("Start"))
+            {
+                HandleRequestStart(eventData, requestName, requestId, operationId, id);
+                return;
+            }
+            if (eventData.EventName.EndsWith("Stop"))
             {
                 HandleRequestStop(eventData, requestName, requestId, operationId, id);
                 return;
@@ -146,6 +173,13 @@ internal class TraceSessionListener : EventListener
                 // Activity IDs aren't enabled by default.
                 // Enabling Keyword 0x80 on the TplEventSource turns them on
                 EnableEvents(eventSource, EventLevel.LogAlways, (EventKeywords)0x80);
+            }
+            else if (eventSource.Name == DiagnosticSourceEventSourceName)
+            {
+                EnableEvents(eventSource, EventLevel.Informational, (EventKeywords)0xffffffffffff, new Dictionary<string, string>
+                {
+                    ["FilterAndPayloadSpecs"] = "[AS]*"
+                });
             }
         }
         catch (Exception ex)
@@ -194,8 +228,10 @@ internal class TraceSessionListener : EventListener
             _logger.LogWarning("Failed to add started activity. Activity by id {id} already exists? Please report a bug.", id);
         }
 
+        var sourceName = eventData.EventSource.Name;
+
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
-            name: requestName,
+            name: sourceName + requestName,
             id: id,
             requestId: requestId,
             operationId: operationId);
@@ -224,9 +260,11 @@ internal class TraceSessionListener : EventListener
         {
             _logger.LogDebug("Interesting activity found. Name: {name}, id: {id}", requestName, id);
         }
+
+        var sourceName = eventData.EventSource.Name;
         // Interesting start activity was captured, relay this stop activity.
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
-            name: requestName, id: id, requestId: requestId, operationId: operationId);
+            name: sourceName + requestName, id: id, requestId: requestId, operationId: operationId);
 
         if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
         {
@@ -265,5 +303,24 @@ internal class TraceSessionListener : EventListener
         }
         
         return (tokens[1], tokens[2]);
+    }
+
+    private static string TryGetIdFromArguments(IEnumerable<IDictionary<string, object>> arguments)
+    {
+        foreach (var argument in arguments)
+        {
+            var values = argument.Values.ToList();
+            if (values.Count > 1 && values[0].ToString() == "Id")
+            {
+                var idValue = values[1].ToString();
+
+                if (!string.IsNullOrEmpty(idValue))
+                {
+                    return idValue;
+                }
+            }
+        }
+        
+        return string.Empty;
     }
 }
