@@ -228,10 +228,8 @@ internal class TraceSessionListener : EventListener
             _logger.LogWarning("Failed to add started activity. Activity by id {id} already exists? Please report a bug.", id);
         }
 
-        var sourceName = eventData.EventSource.Name;
-
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
-            name: sourceName + requestName,
+            name: requestName,
             id: id,
             requestId: requestId,
             operationId: operationId);
@@ -261,10 +259,9 @@ internal class TraceSessionListener : EventListener
             _logger.LogDebug("Interesting activity found. Name: {name}, id: {id}", requestName, id);
         }
 
-        var sourceName = eventData.EventSource.Name;
         // Interesting start activity was captured, relay this stop activity.
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
-            name: sourceName + requestName, id: id, requestId: requestId, operationId: operationId);
+            name: requestName, id: id, requestId: requestId, operationId: operationId);
 
         if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
         {
