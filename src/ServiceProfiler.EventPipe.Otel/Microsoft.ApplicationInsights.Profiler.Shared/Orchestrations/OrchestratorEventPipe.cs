@@ -172,7 +172,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     catch
                     {
                         // Stop profiling can fail for various reasons. Check the current status to decide 
-                        // wether to give back the current profiling handler.
+                        // whether to give back the current profiling handler.
                         if (_currentProfilingPolicy == policy && !_profilerProvider.IsProfilerRunning)
                         {
                             _currentProfilingPolicy = null;
