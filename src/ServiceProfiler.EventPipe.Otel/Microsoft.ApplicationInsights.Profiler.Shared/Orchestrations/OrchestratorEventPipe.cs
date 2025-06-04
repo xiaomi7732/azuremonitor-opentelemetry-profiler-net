@@ -169,6 +169,17 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                             result = false;
                         }
                     }
+                    catch
+                    {
+                        // Stop profiling can fail for various reasons. Check the current status to decide 
+                        // whether to give back the current profiling handler.
+                        if (_currentProfilingPolicy == policy && !_profilerProvider.IsProfilerRunning)
+                        {
+                            _currentProfilingPolicy = null;
+                        }
+                        
+                        throw;
+                    }
                     finally
                     {
                         _policyChangeHandler.Release();
