@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Microsoft.ServiceProfiler</RootNamespace>
+    <AssemblyName>Microsoft.ServiceProfiler.EventPipe.Orchestration</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.AspNetCore" />
+
+    <InternalsVisibleTo Include="Microsoft.ServiceProfiler.DiagnosticAgent.Tests" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
+  </ItemGroup>
+
+</Project>

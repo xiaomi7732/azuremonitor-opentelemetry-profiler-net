@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>Microsoft.ApplicationInsights.Profiler.Uploader</AssemblyName>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <PackageId>Microsoft.ServiceProfiler.EventPipe.Uploader</PackageId>
+        <UseAppHost>false</UseAppHost>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <NoWarn>NU1608</NoWarn>
+        <RollForward>LatestMajor</RollForward>
+        <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+    </PropertyGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Upload.Tests" Key="$(TestPublicKey)" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CommandLineParser" />
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+        <!--
+            Without explicit reference to System.Text.Json we are relying on dependency versions brought in by the CLR.
+            This can introduce mismatched assembly errors depending on which version of .net the users project is relying on.
+            For more information review the bug report found here: https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore/issues/169
+        -->
+        <PackageReference Include="System.Text.Json" />
+        <PackageReference Include="Microsoft.ApplicationInsights" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Azure.Storage.Blobs" />
+        <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
+        <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
+        <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Contracts\UploadMode.cs" Link="UploadMode.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Contracts\SampleActivity.cs" Link="SampleActivity.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\EnumerableUtilities.cs" Link="EnumerableUtilities.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ISerializationProvider.cs" Link="ISerializationProvider.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ISerializationOptionsProvider.cs" Link="ISerializationOptionsProvider.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\HighPerfJsonSerializationProvider.cs" Link="HighPerfJsonSerializationProvider.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\HighPerfJsonStringConverter.cs" Link="HighPerfJsonStringConverter.cs" />
+
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ActivityIdUtilities.cs" Link="ActivityIdUtilities.cs" />
+
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\DuplexNamedPipeService.cs" Link="IPC\DuplexNamedPipeService.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\INamedPipeOperations.cs" Link="IPC\INamedPipeOperations.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\INamedPipeServerService.cs" Link="IPC\INamedPipeServerService.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\INamedPipeClientService.cs" Link="IPC\INamedPipeClientService.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\INamedPipeServerFactory.cs" Link="IPC\INamedPipeServerFactory.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeServerFactory.cs" Link="IPC\NamedPipeServerFactory.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeOptions.cs" Link="IPC\NamedPipeOptions.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeRole.cs" Link="IPC\NamedPipeRole.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\UnsupportedPayloadTypeException.cs" Link="UnsupportedPayloadTypeException.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\UnsupportedPayloadContentException.cs" Link="UnsupportedPayloadContentException.cs" />
+        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\IPayloadSerializer.cs" Link="IPayloadSerializer.cs" />
+
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(IsEPOtelProfilerBuild)' == 'true' ">
+        <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\CustomEvents\*.cs" />
+        <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\IPCAdditionalData.cs" />
+    </ItemGroup>
+
+    <Target Name="PostPublishExtension" AfterTargets="Publish">
+        <!--Pack up the whole uploader into zip-->
+        <Exec Command="$(MSBuildProjectDirectory)\..\tools\PackUploader.cmd $(Configuration) FALSE" Condition=" '$(BuildingInsideVisualStudio)' != 'true' and '$(IsSpOfficialBuild)' == 'true' " />
+    </Target>
+</Project>

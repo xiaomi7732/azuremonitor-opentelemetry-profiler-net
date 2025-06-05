@@ -1,0 +1,90 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Microsoft.ApplicationInsights.Profiler.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.AspNetCore" />
+    <InternalsVisibleTo Include="Microsoft.ServiceProfiler.EventPipe.Orchestration" />
+
+    <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(IsSpOfficialBuild)' == 'true' ">
+    <!--Only generate NuGet packages on server build-->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+
+  <!--NuGet package properties-->
+  <PropertyGroup>
+    <NuspecFile>ServiceProfiler.EventPipe.Core.nuspec</NuspecFile>
+    <Version Condition=" '$(Version)' == '' ">1.0.0</Version>
+    <PackageId>Microsoft.ApplicationInsights.Profiler.Core</PackageId>
+    <Description>Core Library for Microsoft Application Insights Profiler.</Description>
+    <PackageTags>Microsoft Azure ServiceProfiler Linux</PackageTags>
+    <NuspecProperties>
+      configuration=$(Configuration);
+      id=$(PackageId);
+      version=$(Version);
+      description=$(Description);
+      packageTags=$(PackageTags);
+      AzureCoreVersion=$(_AzureCoreVersion);
+      AzureIdentityVersion=$(_AzureIdentityVersion);
+      CommandLineParserVersion=$(_CommandLineParserVersion);
+      MicrosoftApplicationInsightsVersion=$(_MicrosoftApplicationInsightsSdkVersion);
+      MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
+      MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
+      MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsLoggingDebugVersion);
+      MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsOptionsVersion);
+      SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+      SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
+      SystemTextJsonVersion=$(_SystemTextJsonVersion);
+      SystemValueTupleVersion=$(_SystemValueTupleVersion);
+      $(NuspecProperties)
+    </NuspecProperties>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContext.cs" Link="UploadContext.cs" />
+    <Compile Include="../ServiceProfiler.EventPipe.Upload/IUploadContextValidator.cs" Link="IUploadContextValidator.cs" />
+    <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContextValidator.cs" Link="UploadContextValidator.cs" />
+    <Compile Include="../../ServiceProfiler.DiagnosticsAgent/Collectors/ValueBucket.cs" Link="EventListeners/Sampling/ValueBucket.cs" />
+    <Compile Include="../../ServiceProfiler.DiagnosticsAgent/Collectors/ValueBucketer.cs" Link="EventListeners/Sampling/ValueBucketer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- These are from the dependencies. Having them in header projects to voids package downgrade bug when the denpencies bump up
+      the package to a higher one while the header project has no knowledge of it until runtime. -->
+    <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.ApplicationInsights" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="System.ValueTuple" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj" />
+    <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
+    <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
+  </ItemGroup>
+</Project>

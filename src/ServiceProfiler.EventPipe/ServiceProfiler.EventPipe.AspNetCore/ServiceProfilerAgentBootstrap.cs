@@ -1,0 +1,110 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.ApplicationInsights.Profiler.Core;
+using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Orchestration;
+
+namespace Microsoft.ApplicationInsights.Profiler.AspNetCore;
+
+internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
+{
+    private readonly IServiceProfilerContext _serviceProfilerContext;
+    private readonly IOrchestrator _orchestrator;
+    private readonly UserConfiguration _userConfiguration;
+    private readonly ICompatibilityUtility _compatibilityUtility;
+    private readonly ISerializationProvider _serializer;
+    private readonly ILogger _logger;
+
+    public ServiceProfilerAgentBootstrap(
+        IServiceProfilerContext serviceProfilerContext,
+        IOrchestrator orchestrator,
+        IOptions<UserConfiguration> userConfiguration,
+        ICompatibilityUtility compatibilityUtility,
+        ISerializationProvider serializer,
+        ILogger<ServiceProfilerAgentBootstrap> logger)
+    {
+        _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+        _userConfiguration = userConfiguration?.Value ?? throw new System.ArgumentNullException(nameof(userConfiguration));
+
+        _compatibilityUtility = compatibilityUtility ?? throw new System.ArgumentNullException(nameof(compatibilityUtility));
+        _serializer = serializer ?? throw new System.ArgumentNullException(nameof(serializer));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new System.ArgumentNullException(nameof(serviceProfilerContext));
+        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+    }
+
+    public async Task ActivateAsync(CancellationToken cancellationToken)
+    {
+        string noIKeyMessage = "No instrumentation key is set. Application Insights Profiler won't start.";
+
+        bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string serializedUserConfiguration);
+        if (isUserConfigSerialized)
+        {
+            _logger.LogDebug("User Settings:" + Environment.NewLine + "{details}", serializedUserConfiguration);
+        }
+
+        if (_userConfiguration.IsDisabled)
+        {
+            _logger.LogInformation("Service Profiler is disabled by the configuration.");
+            return;
+        }
+
+        _logger.LogTrace("Starting service profiler from application builder.");
+        (bool compatible, string reason) = _userConfiguration.IsSkipCompatibilityTest ? (true, "Skipped the compatibility test by settings.") : _compatibilityUtility.IsCompatible();
+
+        if (!compatible)
+        {
+            _logger.LogError("Compatibility test failed. Reason: {reason}" + Environment.NewLine +
+                "Bypass the compatibility test by setting environment variable of ServiceProfiler__IsSkipCompatibilityTest to true.", reason);
+            return;
+        }
+
+        // Check if any of these diagnostic settings are disabled
+        // https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-environment-variables#dotnet_enablediagnostics
+        foreach (string item in DiagnosticsVariables.GetAllVariables())
+        {
+            if (Environment.GetEnvironmentVariable(item) == "0")
+            {
+                _logger.LogError("{variable} is set to 0. Profiler is disabled", item);
+                return;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(reason)) { _logger.LogDebug(reason); }
+
+        try
+        {
+            if (!_serviceProfilerContext.HasAppInsightsInstrumentationKey)
+            {
+                _logger.LogError(noIKeyMessage);
+                return;
+            }
+
+            _logger.LogInformation("Starting application insights profiler with instrumentation key: {iKey}", _serviceProfilerContext.AppInsightsInstrumentationKey);
+            await _orchestrator.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
+        {
+            // Terminated.
+            _logger.LogDebug("Profiler terminated by the user.");
+        }
+        catch (ArgumentNullException ex) when (string.Equals(ex.ParamName, "instrumentationKey", StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.Fail("You hit the safety net! How could it escape the instrumentation key check?");
+            _logger.LogError(noIKeyMessage);
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error.");
+            if (_userConfiguration.AllowsCrash)
+            {
+                throw;
+            }
+        }
+    }
+}
