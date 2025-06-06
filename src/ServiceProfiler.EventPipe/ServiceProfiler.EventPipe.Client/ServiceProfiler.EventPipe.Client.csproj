@@ -60,8 +60,9 @@
     <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContext.cs" Link="UploadContext.cs" />
     <Compile Include="../ServiceProfiler.EventPipe.Upload/IUploadContextValidator.cs" Link="IUploadContextValidator.cs" />
     <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContextValidator.cs" Link="UploadContextValidator.cs" />
-    <Compile Include="../../ServiceProfiler.DiagnosticsAgent/Collectors/ValueBucket.cs" Link="EventListeners/Sampling/ValueBucket.cs" />
-    <Compile Include="../../ServiceProfiler.DiagnosticsAgent/Collectors/ValueBucketer.cs" Link="EventListeners/Sampling/ValueBucketer.cs" />
+    
+    <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucket.cs" Link="EventListeners/Sampling/ValueBucket.cs" />
+    <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucketer.cs" Link="EventListeners/Sampling/ValueBucketer.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -73,8 +74,6 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
-    <PackageReference Include="Microsoft.ApplicationInsights" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="System.Text.Json" />
@@ -83,6 +82,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj" />
     <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />

@@ -9,6 +9,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.Core" />
     <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler" />
+    <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.Core" />
+    <InternalsVisibleTo Include="Microsoft.ServiceProfiler.EventPipe.Orchestration" />
   </ItemGroup>
   
   <ItemGroup>  

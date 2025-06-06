@@ -55,7 +55,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
 
         // Given this interval these are the number of possible segments for profiling
         var targetCount = (int)Math.Round(_scheduleInterval.TotalSeconds * _overhead / ProfilingDuration.TotalSeconds);
-        Logger.LogDebug("Overhead is set to {overhead:p}. {count} proifling sessions expected over the period of {totalRunning}, each session will run for: {duration}. More periods will be scheduled in the future",
+        Logger.LogDebug("Overhead is set to {overhead:p}. {count} profiling sessions expected over the period of {totalRunning}, each session will run for: {duration}. More periods will be scheduled in the future",
             _overhead, targetCount, _scheduleInterval, ProfilingDuration);
         // No segments needed. This will happen when overhead is set to 0.
         if (targetCount == 0)
