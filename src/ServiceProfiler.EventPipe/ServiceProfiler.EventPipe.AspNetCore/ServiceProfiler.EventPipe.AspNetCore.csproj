@@ -58,7 +58,6 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
         <ProjectReference Include="..\..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
-        <ProjectReference Include="..\ServiceProfiler.EventPipe.Orchestration\ServiceProfiler.EventPipe.Orchestration.csproj" />
         <ProjectReference Include="..\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
     </ItemGroup>
 </Project>
