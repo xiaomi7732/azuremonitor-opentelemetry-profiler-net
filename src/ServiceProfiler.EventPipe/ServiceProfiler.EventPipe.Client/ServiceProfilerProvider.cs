@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract;

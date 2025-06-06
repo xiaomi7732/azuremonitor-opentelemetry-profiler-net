@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -10,7 +10,6 @@ using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.IPC;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
-using Microsoft.ApplicationInsights.Profiler.Core.Orchestration.MetricsProviders;
 using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
@@ -160,65 +159,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             });
 
-            serviceCollection.AddSingleton<ProfilerSettings>();
-            serviceCollection.TryAddSingleton<IProfilerSettingsService>(p =>
-            {
-                UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
-                if (userConfiguration.StandaloneMode)
-                {
-                    return ActivatorUtilities.CreateInstance<LocalProfileSettingsService>(p);
-                }
-                else
-                {
-                    return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
-                }
-            });
-
-            serviceCollection.TryAddSingleton<SettingsParser>(p => SettingsParser.Instance);
-            serviceCollection.TryAddTransient<CpuTriggerSettings>();
-            serviceCollection.TryAddTransient<MemoryTriggerSettings>();
-
-            // Performance counters are not supported on non-Windows platforms.
-            if (isRunningOnWindows)
-            {
-                // Metrics provider for CPU
-                serviceCollection.TryAddSingleton<ProcessInfoCPUMetricsProvider>();
-
-                // Metrics provider for Memory usage rate
-                serviceCollection.TryAddTransient<WindowsMemoryMetricsProvider>();
-
-                // Metrics provider resolver
-                serviceCollection.TryAddTransient<IMetricsProviderResolver<MetricsProviderCategory>, WindowsMetricsProviderResolver>();
-            }
-            else
-            {
-                // Metrics Provider for CPU
-                serviceCollection.TryAddSingleton<ProcessInfoCPUMetricsProvider>();
-
-                // Metrics Provider for Memory
-                serviceCollection.TryAddTransient<MemInfoItemParser>();
-                serviceCollection.TryAddSingleton<IMemInfoReader, ProcMemInfoReader>();
-                serviceCollection.TryAddSingleton<MemInfoFileMemoryMetricsProvider>();
-
-                // Metrics provider resolver
-                serviceCollection.TryAddTransient<IMetricsProviderResolver<MetricsProviderCategory>, MetricsProviderResolver>();
-
-            }
-            // Metrics provider consumer, works both on Windows and Linux.
-            serviceCollection.TryAddSingleton<IResourceUsageSource, ResourceUsageSource>();
-
             serviceCollection.TryAddTransient<IRandomSource, DefaultRandomSource>();
             serviceCollection.TryAddTransient<IDelaySource, DefaultDelaySource>();
-
-            serviceCollection.TryAddTransient<IExpirationPolicy, ProcessExpirationPolicy>();
-
-            serviceCollection.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OneTimeSchedulingPolicy>());
-            serviceCollection.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, RandomSchedulingPolicy>());
-            serviceCollection.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, OnDemandSchedulingPolicy>());
-            serviceCollection.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, MemoryMonitoringSchedulingPolicy>());
-            serviceCollection.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, CPUMonitoringSchedulingPolicy>());
-
-            serviceCollection.TryAddSingleton<IOrchestrator, OrchestratorEventPipe>();
 
             serviceCollection.TryAddTransient<IUploadContextValidator, UploadContextValidator>();
 
