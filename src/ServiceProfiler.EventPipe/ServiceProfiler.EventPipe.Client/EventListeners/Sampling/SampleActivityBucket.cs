@@ -1,5 +1,5 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ServiceProfiler.Collectors;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ServiceProfiler.Contract.DataContract.Utilities;
 using System.Collections.Generic;
 
