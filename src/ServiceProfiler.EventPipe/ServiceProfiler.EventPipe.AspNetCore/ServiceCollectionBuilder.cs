@@ -7,7 +7,6 @@ using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
-using Microsoft.ApplicationInsights.Profiler.Core.IPC;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
@@ -100,14 +99,7 @@ namespace Microsoft.Extensions.DependencyInjection
             RegisterFrontendClient(serviceCollection);
 
             // Core components
-            serviceCollection.TryAddSingleton<IServiceProfilerProvider, ServiceProfilerProvider>();
-
             serviceCollection.TryAddSingleton<SampleActivityContainerFactory>();
-
-            serviceCollection.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByEnvironmentVariable>();
-            serviceCollection.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorInUserCache>();
-            serviceCollection.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByUnzipping>();
-            serviceCollection.TryAddTransient<IUploaderPathProvider, UploaderPathProvider>();
 
             serviceCollection.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
 
@@ -117,52 +109,10 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.TryAddSingleton<CustomEventsTracker>();
             serviceCollection.TryAddSingleton<ICustomEventsTracker>(p => p.GetRequiredService<CustomEventsTracker>());
             serviceCollection.TryAddSingleton<IRoleNameSource>(p => p.GetRequiredService<CustomEventsTracker>());
-            serviceCollection.TryAddSingleton<IOutOfProcCaller, OutOfProcCaller>();
-            serviceCollection.TryAddSingleton<IFile, SystemFile>();
-            serviceCollection.TryAddSingleton<IZipFile, SystemZipFile>();
-            serviceCollection.TryAddSingleton<IEnvironment, SystemEnvironment>();
-            serviceCollection.TryAddSingleton<IMetadataWriter, MetadataWriter>();
-
-            bool isRunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            if (isRunningOnWindows)
-            {
-                serviceCollection.TryAddSingleton<INetCoreAppVersion, WindowsNetCoreAppVersion>();
-            }
-            else
-            {
-                serviceCollection.TryAddSingleton<INetCoreAppVersion, LinuxNetCoreAppVersion>();
-            }
-
-            serviceCollection.TryAddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
-            serviceCollection.TryAddSingleton<ICompatibilityUtility, RuntimeCompatibilityUtility>();
-
-            serviceCollection.TryAddSingleton<IProfilerCoreAssemblyInfo>(p => ProfilerCoreAssemblyInfo.Instance);
-            serviceCollection.TryAddTransient<IUserCacheManager, UserCacheManager>();
-
-            // Named pipe client
-            serviceCollection.TryAddTransient<ISerializationProvider, HighPerfJsonSerializationProvider>();
-            serviceCollection.TryAddTransient<IPayloadSerializer, HighPerfJsonSerializationProvider>();
-            serviceCollection.TryAddTransient<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
-            serviceCollection.TryAddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
-
-            // Registration for orchestrator and it's dependencies
-            serviceCollection.TryAddSingleton<ITraceUploader>(p =>
-            {
-                UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
-                if (userConfiguration.StandaloneMode)
-                {
-                    return ActivatorUtilities.CreateInstance<TraceUploaderNoServer>(p);
-                }
-                else
-                {
-                    return ActivatorUtilities.CreateInstance<TraceUploaderProxy>(p);
-                }
-            });
 
             serviceCollection.TryAddTransient<IRandomSource, DefaultRandomSource>();
             serviceCollection.TryAddTransient<IDelaySource, DefaultDelaySource>();
 
-            serviceCollection.TryAddTransient<IUploadContextValidator, UploadContextValidator>();
 
             // Add Service Profiler Background Service
             if (!serviceCollection.Any(descriptor =>

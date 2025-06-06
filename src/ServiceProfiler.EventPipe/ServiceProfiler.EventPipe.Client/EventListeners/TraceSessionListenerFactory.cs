@@ -1,13 +1,13 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using System.Text.Json;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {

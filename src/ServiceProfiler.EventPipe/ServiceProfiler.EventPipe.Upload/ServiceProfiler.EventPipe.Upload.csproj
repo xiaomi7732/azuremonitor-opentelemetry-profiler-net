@@ -37,12 +37,8 @@
         <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\Contracts\UploadMode.cs" Link="UploadMode.cs" />
         <Compile Include="..\ServiceProfiler.EventPipe.Client\Contracts\SampleActivity.cs" Link="SampleActivity.cs" />
         <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\EnumerableUtilities.cs" Link="EnumerableUtilities.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ISerializationProvider.cs" Link="ISerializationProvider.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ISerializationOptionsProvider.cs" Link="ISerializationOptionsProvider.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\HighPerfJsonSerializationProvider.cs" Link="HighPerfJsonSerializationProvider.cs" />
         <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\HighPerfJsonStringConverter.cs" Link="HighPerfJsonStringConverter.cs" />
 
         <Compile Include="..\ServiceProfiler.EventPipe.Client\Utilities\ActivityIdUtilities.cs" Link="ActivityIdUtilities.cs" />
@@ -55,9 +51,6 @@
         <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeServerFactory.cs" Link="IPC\NamedPipeServerFactory.cs" />
         <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeOptions.cs" Link="IPC\NamedPipeOptions.cs" />
         <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\NamedPipeRole.cs" Link="IPC\NamedPipeRole.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\UnsupportedPayloadTypeException.cs" Link="UnsupportedPayloadTypeException.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\UnsupportedPayloadContentException.cs" Link="UnsupportedPayloadContentException.cs" />
-        <Compile Include="..\ServiceProfiler.EventPipe.Client\IPC\IPayloadSerializer.cs" Link="IPayloadSerializer.cs" />
 
     </ItemGroup>
 

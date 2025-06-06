@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using System.Text.Json;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {

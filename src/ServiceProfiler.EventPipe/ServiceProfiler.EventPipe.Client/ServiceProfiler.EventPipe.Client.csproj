@@ -57,9 +57,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContext.cs" Link="UploadContext.cs" />
-    <Compile Include="../ServiceProfiler.EventPipe.Upload/IUploadContextValidator.cs" Link="IUploadContextValidator.cs" />
-    <Compile Include="../ServiceProfiler.EventPipe.Upload/UploadContextValidator.cs" Link="UploadContextValidator.cs" />
     
     <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucket.cs" Link="EventListeners/Sampling/ValueBucket.cs" />
     <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucketer.cs" Link="EventListeners/Sampling/ValueBucketer.cs" />

@@ -6,7 +6,7 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners

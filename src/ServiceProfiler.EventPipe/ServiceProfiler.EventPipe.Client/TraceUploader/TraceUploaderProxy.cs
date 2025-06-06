@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
@@ -23,7 +23,7 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly ILogger _logger;
     private readonly IServiceProfilerContext _context;
     private readonly IFile _fileService;
-    private readonly IOutOfProcCaller _uploader;
+    private readonly IOutOfProcCallerFactory _uploaderCallerFactory;
     private readonly IUploadContextValidator _uploadContextValidator;
     private readonly IProfilerCoreAssemblyInfo _profilerVersion;
     private readonly UserConfiguration _userConfiguration;
@@ -34,7 +34,7 @@ internal class TraceUploaderProxy : ITraceUploader
         IUploaderPathProvider uploaderPathProvider,
         IProfilerFrontendClient profilerFrontendClient,
         IFile fileService,
-        IOutOfProcCaller uploader,
+        IOutOfProcCallerFactory uploaderCallerFactory,
         IServiceProfilerContext context,
         ILogger<TraceUploaderProxy> logger,
         IOptions<UserConfiguration> userConfiguration,
@@ -45,7 +45,7 @@ internal class TraceUploaderProxy : ITraceUploader
         _uploaderPathProvider = uploaderPathProvider ?? throw new ArgumentNullException(nameof(uploaderPathProvider));
         _profilerFrontendClient = profilerFrontendClient ?? throw new ArgumentNullException(nameof(profilerFrontendClient));
         _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
-        _uploader = uploader ?? throw new ArgumentNullException(nameof(uploader));
+        _uploaderCallerFactory = uploaderCallerFactory ?? throw new ArgumentNullException(nameof(uploaderCallerFactory));
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _userConfiguration = userConfiguration.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
         _uploadContextValidator = uploadContextValidator ?? throw new ArgumentNullException(nameof(uploadContextValidator));
@@ -170,9 +170,9 @@ internal class TraceUploaderProxy : ITraceUploader
             try
             {
                 // Assuming dotnet core SDK will always be installed.
-                _uploader.Setup(executableName, exePath + ' ' + args);
+                _uploaderCallerFactory.Setup(executableName, exePath + ' ' + args);
 
-                int exitCode = _uploader.ExecuteAndWait(ProcessPriorityClass.BelowNormal);
+                int exitCode = _uploaderCallerFactory.ExecuteAndWait(ProcessPriorityClass.BelowNormal);
 
                 _logger.LogInformation("{0} Exit code: {1}", TelemetryConstants.CallTraceUploaderFinished, exitCode);
                 return exitCode;

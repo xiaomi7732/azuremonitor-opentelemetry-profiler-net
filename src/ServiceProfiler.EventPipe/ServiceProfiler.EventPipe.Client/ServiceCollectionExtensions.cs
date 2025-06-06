@@ -1,7 +1,14 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceScavenger;
+using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
+using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -11,6 +18,7 @@ using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
 using System;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core;
 
@@ -29,6 +37,41 @@ internal static class ServiceCollectionExtensions
     /// <param name="services"></param>
     public static IServiceCollection AddProfilerCoreServices(this IServiceCollection services)
     {
+        // Utilities
+        services.TryAddSingleton<IFile, SystemFile>();
+        services.TryAddSingleton<IEnvironment, SystemEnvironment>();
+        services.TryAddSingleton<IZipFile, SystemZipFile>();
+
+        services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
+        services.AddTransient<IUserCacheManager, UserCacheManager>();
+
+        // Profiler
+        services.AddSingleton<IServiceProfilerProvider, ServiceProfilerProvider>();
+
+        // Named pipe client
+        services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
+        services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
+        services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
+
+        // Profiler context
+        services.TryAddSingleton<IMetadataWriter, MetadataWriter>();
+
+        services.TryAddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
+
+        // Compatibility test
+        bool isRunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        if (isRunningOnWindows)
+        {
+            services.AddTransient<INetCoreAppVersion, WindowsNetCoreAppVersion>();
+        }
+        else
+        {
+            services.AddTransient<INetCoreAppVersion, LinuxNetCoreAppVersion>();
+        }
+        services.AddTransient<IVersionProvider>(p => ActivatorUtilities.CreateInstance<VersionProvider>(p, RuntimeInformation.FrameworkDescription));
+        services.AddSingleton<ICompatibilityUtilityFactory, RuntimeCompatibilityUtilityFactory>();
+        // ~
+
         // Customizations
         services.AddSingleton<ProfilerSettings>();
         services.AddSingleton<IProfilerSettingsService>(p =>
@@ -70,7 +113,24 @@ internal static class ServiceCollectionExtensions
 
         return services
             .AddSchedulers()
+            .AddUploaderCallerServices()
             .AddTraceScavengerServices();
+    }
+
+    private static IServiceCollection AddUploaderCallerServices(this IServiceCollection services)
+    {
+        services.AddTransient<IUploadContextValidator, UploadContextValidator>();
+
+        services.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByEnvironmentVariable>();
+        services.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorInUserCache>();
+        services.AddTransient<IPrioritizedUploaderLocator, UploaderLocatorByUnzipping>();
+        services.AddTransient<IUploaderPathProvider, UploaderPathProvider>();
+
+        services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
+
+        services.AddTransient<ITraceUploader, TraceUploaderProxy>();
+
+        return services;
     }
 
     private static IServiceCollection AddTraceScavengerServices(this IServiceCollection services)
