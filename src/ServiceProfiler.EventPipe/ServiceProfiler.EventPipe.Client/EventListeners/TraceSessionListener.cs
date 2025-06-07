@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using System.Text.Json;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {
@@ -171,7 +171,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
                 {
                     targetRequest.OperationName = requestEventData.OperationName;
                     targetRequest.Duration = requestEventData.Duration;
-                    targetRequest.RoleInstance = Environment.MachineName;
 
                     AppendSampleActivity(targetRequest);
                 }

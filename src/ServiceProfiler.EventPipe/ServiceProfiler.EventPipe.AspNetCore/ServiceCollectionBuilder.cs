@@ -4,7 +4,6 @@
 
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core;
-using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
@@ -12,21 +11,14 @@ using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
 using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
-using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
-using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
 using ServiceProfiler.EventPipe.Logging;
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text.Json;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -95,7 +87,6 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.TryAddSingleton<DiagnosticsClientTraceConfiguration>();
 
             // Dependencies
-            RegisterAppInsightsAADAuthServices(serviceCollection);
             RegisterFrontendClient(serviceCollection);
 
             // Core components
@@ -133,13 +124,6 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.AddProfilerCoreServices();
 
             return serviceCollection;
-        }
-
-        // Register services related to Application Insights AAD Auth
-        private void RegisterAppInsightsAADAuthServices(IServiceCollection serviceCollection)
-        {
-            serviceCollection.TryAddSingleton<IAccessTokenFactory, AccessTokenFactory>();
-            serviceCollection.TryAddSingleton<IAuthTokenProvider, AuthTokenProvider>();
         }
 
         /// <summary>

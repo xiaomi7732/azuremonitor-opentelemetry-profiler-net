@@ -20,6 +20,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
     private readonly IPostStopProcessorFactory _postStopProcessorFactory;
     private readonly IServiceProfilerContext _serviceProfilerContext;
+    private readonly ITraceFileFormatDefinition _traceFileFormatDefinition;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
     private const string StartProfilerTriggered = "StartProfiler triggered.";
@@ -39,12 +40,14 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         TraceSessionListenerFactory traceSessionListenerFactory,
         IPostStopProcessorFactory postStopProcessorFactory,
         IServiceProfilerContext serviceProfilerContext,
+        ITraceFileFormatDefinition traceFileFormatDefinition,
         ILogger<OpenTelemetryProfilerProvider> logger)
     {
         _userCacheManager = userCacheManager ?? throw new ArgumentNullException(nameof(userCacheManager));
         _traceSessionListenerFactory = traceSessionListenerFactory ?? throw new ArgumentNullException(nameof(traceSessionListenerFactory));
         _postStopProcessorFactory = postStopProcessorFactory ?? throw new ArgumentNullException(nameof(postStopProcessorFactory));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
+        _traceFileFormatDefinition = traceFileFormatDefinition ?? throw new ArgumentNullException(nameof(traceFileFormatDefinition));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _traceControl = traceControl ?? throw new ArgumentNullException(nameof(traceControl));
     }
@@ -155,7 +158,8 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
                 currentSessionId.Value,
                 stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
                 sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                source), cancellationToken).ConfigureAwait(false);
+                source,
+                _traceFileFormatDefinition), cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(StopProfilerSucceeded);
 

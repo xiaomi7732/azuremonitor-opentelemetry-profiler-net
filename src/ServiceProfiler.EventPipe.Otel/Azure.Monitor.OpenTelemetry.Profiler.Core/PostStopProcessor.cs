@@ -53,12 +53,13 @@ internal class PostStopProcessor : IPostStopProcessor
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task PostStopProcessAsync(PostStopOptions e, CancellationToken cancellationToken)
+    public async Task<bool> PostStopProcessAsync(PostStopOptions e, CancellationToken cancellationToken)
     {
         _logger.LogTrace("Entering {name}", nameof(PostStopProcessAsync));
 
         // Execute the upload
-        await ExecuteUploadAsync(e, _serviceProfilerOptions.UploadMode, cancellationToken).ConfigureAwait(false);
+
+        bool succeeded = await ExecuteUploadAsync(e, _serviceProfilerOptions.UploadMode, cancellationToken).ConfigureAwait(false);
 
         // Delete trace unless set to preserve.
         _logger.LogDebug("{preserveTraceFile} is set to {value}.", nameof(_serviceProfilerOptions.PreserveTraceFile), _serviceProfilerOptions.PreserveTraceFile);
@@ -70,6 +71,8 @@ internal class PostStopProcessor : IPostStopProcessor
         {
             _logger.LogInformation("Trace is preserved locally at: {tracePath}", e.TraceFilePath);
         }
+
+        return succeeded;
     }
 
     private async Task<bool> ExecuteUploadAsync(PostStopOptions e, UploadMode uploadMode, CancellationToken cancellationToken)

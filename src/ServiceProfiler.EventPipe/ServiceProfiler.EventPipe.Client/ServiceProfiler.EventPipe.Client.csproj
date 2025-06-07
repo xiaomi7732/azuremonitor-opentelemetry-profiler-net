@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Microsoft.ApplicationInsights.Profiler.Core</AssemblyName>
+    <DefaultNamespace>Microsoft.ApplicationInsights.Profiler.Core</DefaultNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,12 +56,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-
-  <ItemGroup>
-    
-    <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucket.cs" Link="EventListeners/Sampling/ValueBucket.cs" />
-    <Compile Include="../../ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared/Samples/ValueBucketer.cs" Link="EventListeners/Sampling/ValueBucketer.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- These are from the dependencies. Having them in header projects to voids package downgrade bug when the denpencies bump up

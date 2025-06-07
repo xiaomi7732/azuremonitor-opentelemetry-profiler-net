@@ -37,6 +37,7 @@ internal static class ServiceCollectionExtensions
     {
         // Utilities
         services.AddSingleton<IConnectionStringParserFactory, ConnectionStringParserFactory>();
+        services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
 
         // Role name detectors and sources
         services.AddSingleton<OtelResourceDetector>();

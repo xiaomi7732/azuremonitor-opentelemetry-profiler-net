@@ -19,6 +19,7 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly IFile _fileService;
     private readonly IOutOfProcCallerFactory _uploaderCallerFactory;
     private readonly IUploadContextValidator _uploadContextValidator;
+    private readonly ITraceFileFormatDefinition _traceFileFormatDefinition;
     private readonly ServiceProfilerOptions _userConfiguration;
     private readonly IUploaderPathProvider _uploaderPathProvider;
 
@@ -29,7 +30,8 @@ internal class TraceUploaderProxy : ITraceUploader
         IServiceProfilerContext context,
         ILogger<TraceUploaderProxy> logger,
         IOptions<ServiceProfilerOptions> userConfiguration,
-        IUploadContextValidator uploadContextValidator)
+        IUploadContextValidator uploadContextValidator,
+        ITraceFileFormatDefinition traceFileFormatDefinition)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _uploaderPathProvider = uploaderPathProvider ?? throw new ArgumentNullException(nameof(uploaderPathProvider));
@@ -38,6 +40,7 @@ internal class TraceUploaderProxy : ITraceUploader
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _userConfiguration = userConfiguration.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
         _uploadContextValidator = uploadContextValidator ?? throw new ArgumentNullException(nameof(uploadContextValidator));
+        _traceFileFormatDefinition = traceFileFormatDefinition ?? throw new ArgumentNullException(nameof(traceFileFormatDefinition));
     }
 
     public async Task<UploadContextModel?> UploadAsync(
@@ -102,7 +105,7 @@ internal class TraceUploaderProxy : ITraceUploader
             RoleName = roleName,
             TriggerType = triggerType,
             Environment = _userConfiguration.UploaderEnvironment,
-            TraceFileFormat = TraceFileFormat.Nettrace,
+            TraceFileFormat = _traceFileFormatDefinition.TraceFileFormatName,
         };
 
         // Validation Failed

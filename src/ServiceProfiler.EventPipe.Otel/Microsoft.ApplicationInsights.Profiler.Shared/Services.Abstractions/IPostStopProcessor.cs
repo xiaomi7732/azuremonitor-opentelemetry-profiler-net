@@ -6,5 +6,5 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 internal interface IPostStopProcessor
 {
-    Task PostStopProcessAsync(PostStopOptions state, CancellationToken cancellationToken);
+    Task<bool> PostStopProcessAsync(PostStopOptions state, CancellationToken cancellationToken);
 }

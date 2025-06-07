@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -16,8 +16,7 @@ internal class PostStopOptions
         Uri stampFrontendHostUrl,
         IEnumerable<SampleActivity> samples,
         IProfilerSource profilerSource,
-        string? uploaderFullPath = null
-        )
+        string? uploaderFullPath = null)
     {
         if (string.IsNullOrEmpty(traceFilePath))
         {

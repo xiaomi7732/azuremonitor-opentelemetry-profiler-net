@@ -1,3 +1,4 @@
+using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
@@ -6,6 +7,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
@@ -113,8 +115,17 @@ internal static class ServiceCollectionExtensions
 
         return services
             .AddSchedulers()
+            .AddAppInsightsAADAuthServices()
             .AddUploaderCallerServices()
             .AddTraceScavengerServices();
+    }
+
+    // Register services related to Application Insights AAD Auth
+    private static IServiceCollection AddAppInsightsAADAuthServices(this IServiceCollection services)
+    {
+        services.TryAddSingleton<IAccessTokenFactory, AccessTokenFactory>();
+        services.TryAddSingleton<IAuthTokenProvider, AuthTokenProvider>();
+        return services;
     }
 
     private static IServiceCollection AddUploaderCallerServices(this IServiceCollection services)

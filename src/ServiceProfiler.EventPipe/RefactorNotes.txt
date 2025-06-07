@@ -19,3 +19,6 @@ Major refactor notes:
     [ ] Tests
 
 4. Redo the service profiler provider to leverage the new PostProfilerProcessor.
+
+5. The IAuthTokenProvider is reimplemented
+    [ ] Test when AAD auth is enforced.

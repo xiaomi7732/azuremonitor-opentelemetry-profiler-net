@@ -50,7 +50,7 @@ internal class UploadContextModel
 
     public string? TriggerType { get; init; }
 
-    public string TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Nettrace;
+    public string TraceFileFormat { get; set; }
 
     public override string ToString()
     {
