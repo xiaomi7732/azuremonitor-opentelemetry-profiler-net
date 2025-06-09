@@ -8,16 +8,19 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal abstract class ServiceProfilerContextBase : IServiceProfilerContext
 {
+    private readonly IConnectionStringParserFactory _connectionStringParserFactory;
     private readonly IEndpointProvider _endpointProvider;
     private readonly ILogger _logger;
 
     public ServiceProfilerContextBase(
+        IConnectionStringParserFactory connectionStringParserFactory,
         IEndpointProvider endpointProvider,
         ILogger<ServiceProfilerContextBase> logger
     )
     {
-        _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
+        _connectionStringParserFactory = connectionStringParserFactory ?? throw new ArgumentNullException(nameof(connectionStringParserFactory));
 
         StampFrontendEndpointUrl = _endpointProvider.GetEndpoint();
         if (StampFrontendEndpointUrl != new Uri(FrontendEndpoints.ProdGlobal, UriKind.Absolute))
@@ -30,6 +33,16 @@ internal abstract class ServiceProfilerContextBase : IServiceProfilerContext
 
     public Uri StampFrontendEndpointUrl { get; }
 
-    public abstract Guid AppInsightsInstrumentationKey { get; }
+    public Guid AppInsightsInstrumentationKey => ParseInstrumentationKey();
+    
     public abstract string ConnectionString { get; }
+
+    private Guid ParseInstrumentationKey()
+    {
+        if (_connectionStringParserFactory.Create(ConnectionString).TryGetValue(ConnectionStringParser.Keys.InstrumentationKey, out string? instrumentationKeyValue))
+        {
+            return Guid.Parse(instrumentationKeyValue);
+        }
+        throw new InvalidOperationException($"Instrumentation key not found in connection string: {ConnectionString}.");
+    }
 }
