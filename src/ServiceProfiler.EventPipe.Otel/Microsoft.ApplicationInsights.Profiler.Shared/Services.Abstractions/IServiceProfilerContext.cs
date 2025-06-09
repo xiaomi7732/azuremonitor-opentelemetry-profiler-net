@@ -13,16 +13,8 @@ internal interface IServiceProfilerContext
     string? ConnectionString { get; }
 
     Guid AppInsightsInstrumentationKey { get; }
-    bool HasAppInsightsInstrumentationKey { get; }
 
     string MachineName { get; }
-    // CancellationTokenSource ServiceProfilerCancellationTokenSource { get; }
+
     Uri StampFrontendEndpointUrl { get; }
-
-    // event EventHandler<AppIdFetchedEventArgs> AppIdFetched;
-
-    // Task<Guid> GetAppInsightsAppIdAsync();
-    // Task<Guid> GetAppInsightsAppIdAsync(CancellationToken cancellationToken);
-
-    // void OnAppIdFetched(Guid appId);
 }
