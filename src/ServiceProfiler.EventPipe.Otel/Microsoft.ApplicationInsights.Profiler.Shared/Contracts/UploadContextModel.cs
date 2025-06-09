@@ -50,7 +50,7 @@ internal class UploadContextModel
 
     public string? TriggerType { get; init; }
 
-    public string TraceFileFormat { get; set; }
+    public string TraceFileFormat { get; set; } = null!;
 
     public override string ToString()
     {

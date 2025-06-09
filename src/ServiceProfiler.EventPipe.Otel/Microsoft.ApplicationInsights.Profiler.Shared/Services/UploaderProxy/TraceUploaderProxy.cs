@@ -2,15 +2,17 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 
 internal class TraceUploaderProxy : ITraceUploader
 {
@@ -20,7 +22,7 @@ internal class TraceUploaderProxy : ITraceUploader
     private readonly IOutOfProcCallerFactory _uploaderCallerFactory;
     private readonly IUploadContextValidator _uploadContextValidator;
     private readonly ITraceFileFormatDefinition _traceFileFormatDefinition;
-    private readonly ServiceProfilerOptions _userConfiguration;
+    private readonly UserConfigurationBase _userConfiguration;
     private readonly IUploaderPathProvider _uploaderPathProvider;
 
     public TraceUploaderProxy(
@@ -29,7 +31,7 @@ internal class TraceUploaderProxy : ITraceUploader
         IOutOfProcCallerFactory uploaderCallerFactory,
         IServiceProfilerContext context,
         ILogger<TraceUploaderProxy> logger,
-        IOptions<ServiceProfilerOptions> userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         IUploadContextValidator uploadContextValidator,
         ITraceFileFormatDefinition traceFileFormatDefinition)
     {
