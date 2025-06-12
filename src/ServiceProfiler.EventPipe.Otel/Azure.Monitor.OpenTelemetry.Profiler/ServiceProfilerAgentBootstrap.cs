@@ -66,7 +66,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         try
         {
             // Connection string exists.
-            if (string.IsNullOrEmpty(_serviceProfilerContext.ConnectionString))
+            if (string.IsNullOrEmpty(_serviceProfilerContext.ConnectionString?.ToString()))
             {
                 _logger.LogError(noConnectionStringMessage);
                 return;

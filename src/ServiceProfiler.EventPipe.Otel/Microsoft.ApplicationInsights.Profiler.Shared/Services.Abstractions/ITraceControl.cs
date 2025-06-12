@@ -2,7 +2,11 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 internal interface ITraceControl
 {

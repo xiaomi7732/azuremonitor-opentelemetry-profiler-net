@@ -190,7 +190,7 @@ internal class PostStopProcessor : IPostStopProcessor
         string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
         => new()
         {
-            ConnectionString = _serviceProfilerContext.ConnectionString,
+            ConnectionString = _serviceProfilerContext.ConnectionString.ToString(),
             ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
             fileId: EnvironmentUtilities.CreateSessionId(),
             stampId: stampId,
