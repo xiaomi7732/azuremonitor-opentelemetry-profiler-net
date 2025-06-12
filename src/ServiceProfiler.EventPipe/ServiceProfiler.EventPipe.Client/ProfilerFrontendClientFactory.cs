@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Utilities;
+using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core;
 
@@ -50,7 +51,7 @@ internal class ProfilerFrontendClientFactory
             instrumentationKey: _serviceProfilerContext.AppInsightsInstrumentationKey,
             machineName: _serviceProfilerContext.MachineName,
             featureVersion: "1.0.0",
-            userAgent: System.FormattableString.Invariant($"ServiceProfilerEventPipeAgent/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
+            userAgent: FormattableString.Invariant($"ServiceProfilerEventPipeAgent/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
             tokenCredential: credential,
             skipCertificateValidation: _userConfiguration.SkipEndpointCertificateValidation);
     }

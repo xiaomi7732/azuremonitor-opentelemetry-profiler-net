@@ -1,5 +1,8 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Core.Logging;
+using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
+using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
@@ -13,11 +16,14 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
+using ServiceProfiler.Common.Utilities;
+using ServiceProfiler.EventPipe.Logging;
 using System;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -47,8 +53,46 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
         services.AddTransient<IUserCacheManager, UserCacheManager>();
 
+
+        // Telemetry - TODO:
+        // 1. Have a dedicated application insights resource
+        // 2. Use the connection string
+        // 3. Support multiple endpoints / multiple clouds
+
+        // AI for Microsoft depends on user settings.
+        services.AddSingleton<IAppInsightsLogger>(provider =>
+        {
+            UserConfiguration userConfiguration = provider.GetRequiredService<IOptions<UserConfiguration>>().Value;
+            ILogger logger = provider.GetRequiredService<ILogger<IAppInsightsLogger>>();
+
+            if (userConfiguration.ProvideAnonymousTelemetry)
+            {
+                logger.LogDebug("Sending anonymous telemetry data to Microsoft to make this product better.");
+                return new EventPipeAppInsightsLogger(
+                    TelemetryConstants.ServiceProfilerAgentIKey);
+            }
+            else
+            {
+                logger.LogDebug("No anonymous telemetry data is sent to Microsoft.");
+                return new NullAppInsightsLogger();
+            }
+        });
+        
+        // AI for the customer.
+        // TODO: Use connection string instead.
+        services.AddSingleton<IAppInsightsLogger>(p => 
+            ActivatorUtilities.CreateInstance<EventPipeAppInsightsLogger>(p, p.GetRequiredService<IServiceProfilerContext>().AppInsightsInstrumentationKey));
+
+        // Heartbeats
+        services.TryAddSingleton<IEventPipeTelemetryTracker, TelemetryTracker>();
+        services.AddHostedService<TelemetryTrackerBackgroundService>();
+
+        // Consume IEnumerable<IAppInsightsLogger> to form a sink.
+        services.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
+
         // Profiler
         services.AddSingleton<IServiceProfilerProvider, ServiceProfilerProvider>();
+        services.AddSingleton<DiagnosticsClientTraceConfiguration>();
 
         // Named pipe client
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
@@ -56,6 +100,15 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
 
         // Profiler context
+        services.AddSingleton(static p =>
+        {
+            ConnectionString connectionString = p.GetRequiredService<ConnectionString>();
+            IEndpointProvider endpointProvider = p.GetRequiredService<IEndpointProvider>();
+            return new AppInsightsProfileFetcher(breezeEndpoint: connectionString.ResolveIngestionEndpoint().AbsoluteUri);
+        });
+
+        services.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();
+
         services.AddSingleton<IMetadataWriter, MetadataWriter>();
         services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
 
@@ -115,6 +168,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
 
         return services
+            .AddFrontendClient()
             .AddSchedulers()
             .AddAppInsightsAADAuthServices()
             .AddUploaderCallerServices()
@@ -184,6 +238,12 @@ internal static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, MemoryMonitoringSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<SchedulingPolicy, CPUMonitoringSchedulingPolicy>());
 
+        return services;
+    }
+
+    private static IServiceCollection AddFrontendClient(this IServiceCollection services)
+    {
+        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
         return services;
     }
 }

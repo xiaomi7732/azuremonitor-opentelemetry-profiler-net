@@ -6,17 +6,11 @@ using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
-using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
-using Microsoft.ServiceProfiler.Utilities;
-using ServiceProfiler.Common.Utilities;
-using ServiceProfiler.EventPipe.Logging;
 using System;
 using System.Linq;
 using ProfilerFrontendClientFactory = Microsoft.ApplicationInsights.Profiler.Core.ProfilerFrontendClientFactory;
@@ -36,59 +30,6 @@ namespace Microsoft.Extensions.DependencyInjection
             // Reference: https://github.com/Microsoft/ApplicationInsights-aspnetcore/blob/3dcab5b92ebddc92e9010fc707cc7062d03f92e4/src/Microsoft.ApplicationInsights.AspNetCore/Extensions/ApplicationInsightsExtensions.cs
             serviceCollection.AddApplicationInsightsTelemetry();
 
-            // Telemetry
-
-            // AI for Microsoft depends on user settings.
-            serviceCollection.AddSingleton<IAppInsightsLogger>(provider =>
-            {
-                UserConfiguration userConfiguration = provider.GetRequiredService<IOptions<UserConfiguration>>().Value;
-                ILogger logger = provider.GetRequiredService<ILogger<IAppInsightsLogger>>();
-
-                if (userConfiguration.ProvideAnonymousTelemetry)
-                {
-                    logger.LogDebug("Sending anonymous telemetry data to Microsoft to make this product better.");
-                    return new EventPipeAppInsightsLogger(
-                        TelemetryConstants.ServiceProfilerAgentIKey);
-                }
-                else
-                {
-                    logger.LogDebug("No anonymous telemetry data is sent to Microsoft.");
-                    return new NullAppInsightsLogger();
-                }
-            });
-
-            // AI for the customer.
-            serviceCollection.AddSingleton<IAppInsightsLogger>(p =>
-            {
-                return new EventPipeAppInsightsLogger(
-                    p.GetRequiredService<IServiceProfilerContext>().AppInsightsInstrumentationKey);
-            });
-
-            // Consume IEnumerable<IAppInsightsLogger> to form a sink.
-            serviceCollection.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
-
-            // Specific trackers for customEvents in profiling.
-            // serviceCollection.TryAddSingleton<ICustomTelemetryClientFactory, CustomTelemetryClientFactory>();
-            serviceCollection.TryAddSingleton<IEventPipeTelemetryTracker, TelemetryTracker>();
-            serviceCollection.AddHostedService<TelemetryTrackerBackgroundService>();
-
-            // Configurations
-            serviceCollection.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();
-
-            serviceCollection.TryAddSingleton(static p =>
-            {
-                ConnectionString connectionString = p.GetRequiredService<ConnectionString>();
-                var endpointProvider = p.GetRequiredService<IEndpointProvider>();
-                var instance = new AppInsightsProfileFetcher(breezeEndpoint: connectionString.ResolveIngestionEndpoint().AbsoluteUri);
-                return instance;
-            });
-
-
-            // Register trace configuration
-            serviceCollection.TryAddSingleton<DiagnosticsClientTraceConfiguration>();
-
-            // Dependencies
-            RegisterFrontendClient(serviceCollection);
 
             // Core components
             serviceCollection.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
@@ -133,9 +74,6 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.TryAddSingleton<ITraceControl, DiagnosticsClientTraceControl>();
         }
 
-        private void RegisterFrontendClient(IServiceCollection serviceCollection)
-            => serviceCollection.AddSingleton(
-                p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient()
-            );
+
     }
 }
