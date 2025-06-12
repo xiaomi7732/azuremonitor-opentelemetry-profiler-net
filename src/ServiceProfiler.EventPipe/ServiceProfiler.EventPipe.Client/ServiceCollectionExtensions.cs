@@ -1,5 +1,6 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
@@ -25,6 +26,7 @@ using Microsoft.ServiceProfiler.Utilities;
 using ServiceProfiler.Common.Utilities;
 using ServiceProfiler.EventPipe.Logging;
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
@@ -49,6 +51,8 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
+        services.AddTransient<IRandomSource, DefaultRandomSource>();
+        services.AddTransient<IDelaySource, DefaultDelaySource>();
 
         services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
         services.AddTransient<IUserCacheManager, UserCacheManager>();
@@ -91,8 +95,12 @@ internal static class ServiceCollectionExtensions
         services.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
 
         // Profiler
+        services.AddSingleton<ITraceSessionListenerFactory, TraceSessionListenerFactory>();
+
         services.AddSingleton<IServiceProfilerProvider, ServiceProfilerProvider>();
         services.AddSingleton<DiagnosticsClientTraceConfiguration>();
+        
+        services.AddSingleton(_ => DiagnosticsClientProvider.Instance);
 
         // Named pipe client
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
@@ -172,7 +180,8 @@ internal static class ServiceCollectionExtensions
             .AddSchedulers()
             .AddAppInsightsAADAuthServices()
             .AddUploaderCallerServices()
-            .AddTraceScavengerServices();
+            .AddTraceScavengerServices()
+            .AddTraceControl();
     }
 
     // Register services related to Application Insights AAD Auth
@@ -244,6 +253,19 @@ internal static class ServiceCollectionExtensions
     private static IServiceCollection AddFrontendClient(this IServiceCollection services)
     {
         services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers services to control profile sessions.
+    /// </summary>
+    private static IServiceCollection AddTraceControl(this IServiceCollection services)
+    {
+        // Dependency
+        services.TryAddSingleton<IThreadUtilities>(p => ThreadUtilities.Instance.Value);
+        // Trace control
+        services.TryAddSingleton<ITraceControl, DiagnosticsClientTraceControl>();
+
         return services;
     }
 }

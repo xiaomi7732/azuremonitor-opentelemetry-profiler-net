@@ -5,48 +5,34 @@
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
-using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Linq;
-using ProfilerFrontendClientFactory = Microsoft.ApplicationInsights.Profiler.Core.ProfilerFrontendClientFactory;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
     internal class ServiceCollectionBuilder : IServiceCollectionBuilder
     {
-        public IServiceCollection Build(IServiceCollection serviceCollection)
+        public IServiceCollection Build(IServiceCollection services)
         {
-            if (serviceCollection is null)
+            if (services is null)
             {
-                throw new ArgumentNullException(nameof(serviceCollection));
+                throw new ArgumentNullException(nameof(services));
             }
 
             // In AppInsights code, there is a check to ensure not inject the service twice:
             // Reference: https://github.com/Microsoft/ApplicationInsights-aspnetcore/blob/3dcab5b92ebddc92e9010fc707cc7062d03f92e4/src/Microsoft.ApplicationInsights.AspNetCore/Extensions/ApplicationInsightsExtensions.cs
-            serviceCollection.AddApplicationInsightsTelemetry();
+            services.AddApplicationInsightsTelemetry();
 
-
-            // Core components
-            serviceCollection.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
-
-            RegisterTraceControls(serviceCollection);
-
-            serviceCollection.TryAddSingleton<ITraceSessionListenerFactory, TraceSessionListenerFactory>();
-
-            serviceCollection.TryAddTransient<IRandomSource, DefaultRandomSource>();
-            serviceCollection.TryAddTransient<IDelaySource, DefaultDelaySource>();
-
+            // Other core services.
+            services.AddProfilerCoreServices();
 
             // Add Service Profiler Background Service
-            if (!serviceCollection.Any(descriptor =>
+            if (!services.Any(descriptor =>
                 descriptor.ImplementationType == typeof(ServiceProfilerBackgroundService)))
             {
-                serviceCollection.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
+                services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
                 {
                     UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
                     // Choose one by configurations to register.
@@ -54,26 +40,10 @@ namespace Microsoft.Extensions.DependencyInjection
                         ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p) :
                         ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
                 });
-                serviceCollection.AddHostedService<ServiceProfilerBackgroundService>();
+                services.AddHostedService<ServiceProfilerBackgroundService>();
             }
 
-            // Other core services.
-            serviceCollection.AddProfilerCoreServices();
-
-            return serviceCollection;
+            return services;
         }
-
-        /// <summary>
-        /// Registers services to control profile sessions.
-        /// </summary>
-        private static void RegisterTraceControls(IServiceCollection serviceCollection)
-        {
-            // Dependency
-            serviceCollection.TryAddSingleton<IThreadUtilities>(p => ThreadUtilities.Instance.Value);
-            // Trace control
-            serviceCollection.TryAddSingleton<ITraceControl, DiagnosticsClientTraceControl>();
-        }
-
-
     }
 }
