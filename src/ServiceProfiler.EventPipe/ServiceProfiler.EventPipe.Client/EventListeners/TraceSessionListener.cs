@@ -11,10 +11,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
-using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using System.Text.Json;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {

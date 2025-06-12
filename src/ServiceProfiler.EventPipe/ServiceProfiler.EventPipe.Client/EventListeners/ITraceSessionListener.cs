@@ -1,10 +1,10 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using System;
 using System.Diagnostics.Tracing;
-using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {

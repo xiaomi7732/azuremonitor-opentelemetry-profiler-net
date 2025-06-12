@@ -1,8 +1,7 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.TraceScavenger;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
@@ -10,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,9 +40,9 @@ internal static class ServiceCollectionExtensions
     public static IServiceCollection AddProfilerCoreServices(this IServiceCollection services)
     {
         // Utilities
-        services.TryAddSingleton<IFile, SystemFile>();
-        services.TryAddSingleton<IEnvironment, SystemEnvironment>();
-        services.TryAddSingleton<IZipFile, SystemZipFile>();
+        services.AddSingleton<IFile, SystemFile>();
+        services.AddSingleton<IEnvironment, SystemEnvironment>();
+        services.AddSingleton<IZipFile, SystemZipFile>();
 
         services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
         services.AddTransient<IUserCacheManager, UserCacheManager>();
@@ -56,9 +56,10 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
 
         // Profiler context
-        services.TryAddSingleton<IMetadataWriter, MetadataWriter>();
+        services.AddSingleton<IMetadataWriter, MetadataWriter>();
+        services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
 
-        services.TryAddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
+        services.AddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
 
         // Compatibility test
         bool isRunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -160,11 +161,12 @@ internal static class ServiceCollectionExtensions
     {
         UserConfiguration configuration = serviceProvider.GetRequiredService<IOptions<UserConfiguration>>().Value;
         IUserCacheManager cacheManager = serviceProvider.GetRequiredService<IUserCacheManager>();
+        ITraceFileFormatDefinition traceFileFormatDefinition = serviceProvider.GetRequiredService<ITraceFileFormatDefinition>();
 
         return ActivatorUtilities.CreateInstance<FileScavenger>(serviceProvider,
             new FileScavengerOptions(cacheManager.TempTraceDirectory.FullName)
             {
-                DeletePattern = "*" + ServiceProfilerProvider.TraceFileExtension, // *.netperf
+                DeletePattern = "*" + traceFileFormatDefinition.FileExtension, // *.netperf
                 GracePeriod = configuration.TraceScavenger.GracePeriod,
             });
     }

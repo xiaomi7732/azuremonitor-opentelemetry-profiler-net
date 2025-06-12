@@ -8,17 +8,18 @@ using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
-using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
-using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
+using ServiceProfiler.Common.Utilities;
 using ServiceProfiler.EventPipe.Logging;
 using System;
 using System.Linq;
+using ProfilerFrontendClientFactory = Microsoft.ApplicationInsights.Profiler.Core.ProfilerFrontendClientFactory;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -67,21 +68,21 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
 
             // Specific trackers for customEvents in profiling.
-            serviceCollection.TryAddSingleton<ICustomTelemetryClientFactory, CustomTelemetryClientFactory>();
+            // serviceCollection.TryAddSingleton<ICustomTelemetryClientFactory, CustomTelemetryClientFactory>();
             serviceCollection.TryAddSingleton<IEventPipeTelemetryTracker, TelemetryTracker>();
             serviceCollection.AddHostedService<TelemetryTrackerBackgroundService>();
 
             // Configurations
             serviceCollection.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();
 
-            serviceCollection.TryAddSingleton<AppInsightsProfileFetcher>(p =>
+            serviceCollection.TryAddSingleton(static p =>
             {
+                ConnectionString connectionString = p.GetRequiredService<ConnectionString>();
                 var endpointProvider = p.GetRequiredService<IEndpointProvider>();
-                var instance = new AppInsightsProfileFetcher(breezeEndpoint: endpointProvider.GetEndpoint(EndpointName.IngestionEndpoint).AbsoluteUri);
+                var instance = new AppInsightsProfileFetcher(breezeEndpoint: connectionString.ResolveIngestionEndpoint().AbsoluteUri);
                 return instance;
             });
 
-            serviceCollection.TryAddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
 
             // Register trace configuration
             serviceCollection.TryAddSingleton<DiagnosticsClientTraceConfiguration>();
@@ -90,16 +91,11 @@ namespace Microsoft.Extensions.DependencyInjection
             RegisterFrontendClient(serviceCollection);
 
             // Core components
-            serviceCollection.TryAddSingleton<SampleActivityContainerFactory>();
-
             serviceCollection.TryAddSingleton(_ => DiagnosticsClientProvider.Instance);
 
             RegisterTraceControls(serviceCollection);
 
             serviceCollection.TryAddSingleton<ITraceSessionListenerFactory, TraceSessionListenerFactory>();
-            serviceCollection.TryAddSingleton<CustomEventsTracker>();
-            serviceCollection.TryAddSingleton<ICustomEventsTracker>(p => p.GetRequiredService<CustomEventsTracker>());
-            serviceCollection.TryAddSingleton<IRoleNameSource>(p => p.GetRequiredService<CustomEventsTracker>());
 
             serviceCollection.TryAddTransient<IRandomSource, DefaultRandomSource>();
             serviceCollection.TryAddTransient<IDelaySource, DefaultDelaySource>();
@@ -109,7 +105,7 @@ namespace Microsoft.Extensions.DependencyInjection
             if (!serviceCollection.Any(descriptor =>
                 descriptor.ImplementationType == typeof(ServiceProfilerBackgroundService)))
             {
-                serviceCollection.TryAddSingleton<IServiceProfilerAgentBootstrap>(p =>
+                serviceCollection.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
                 {
                     UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
                     // Choose one by configurations to register.

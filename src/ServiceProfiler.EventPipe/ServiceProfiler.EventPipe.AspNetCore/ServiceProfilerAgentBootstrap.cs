@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -28,18 +28,18 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         ISerializationProvider serializer,
         ILogger<ServiceProfilerAgentBootstrap> logger)
     {
-        _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
-        _userConfiguration = userConfiguration?.Value ?? throw new System.ArgumentNullException(nameof(userConfiguration));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
 
-        _compatibilityUtility = compatibilityUtility ?? throw new System.ArgumentNullException(nameof(compatibilityUtility));
-        _serializer = serializer ?? throw new System.ArgumentNullException(nameof(serializer));
-        _serviceProfilerContext = serviceProfilerContext ?? throw new System.ArgumentNullException(nameof(serviceProfilerContext));
+        _compatibilityUtility = compatibilityUtility ?? throw new ArgumentNullException(nameof(compatibilityUtility));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
     }
 
     public async Task ActivateAsync(CancellationToken cancellationToken)
     {
-        string noIKeyMessage = "No instrumentation key is set. Application Insights Profiler won't start.";
+        string noConnectionStringMessage = "No connection string is set. Application Insights Profiler won't start.";
 
         bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string serializedUserConfiguration);
         if (isUserConfigSerialized)
@@ -78,9 +78,17 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 
         try
         {
-            if (!_serviceProfilerContext.HasAppInsightsInstrumentationKey)
+            // Connection string exists.
+            if (string.IsNullOrEmpty(_serviceProfilerContext.ConnectionString?.ToString()))
             {
-                _logger.LogError(noIKeyMessage);
+                _logger.LogError(noConnectionStringMessage);
+                return;
+            }
+
+            // Instrumentation key is well-formed.
+            if (_serviceProfilerContext.AppInsightsInstrumentationKey == Guid.Empty)
+            {
+                _logger.LogError("Instrumentation key is not set or malformed in the connection string. Application Insights Profiler won't start.");
                 return;
             }
 
@@ -95,7 +103,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         catch (ArgumentNullException ex) when (string.Equals(ex.ParamName, "instrumentationKey", StringComparison.OrdinalIgnoreCase))
         {
             Debug.Fail("You hit the safety net! How could it escape the instrumentation key check?");
-            _logger.LogError(noIKeyMessage);
+            _logger.LogError(noConnectionStringMessage);
             return;
         }
         catch (Exception ex)

@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Options;
 using System;
 using System.Reflection;
@@ -18,8 +18,6 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
     /// </summary>
     internal class EndpointProviderMirror : IEndpointProvider
     {
-        private PropertyInfo _connectionStringProperty;
-        private MethodInfo _getInstrumentationKeyMethod;
         private MethodInfo _getEndpointMethod;
         private object _endpointProvider;
 
@@ -27,39 +25,11 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
         {
             Type endpointProviderType = Initialize();
             _endpointProvider = Activator.CreateInstance(endpointProviderType);
-
-            string customerConnectionString = customerTelemetryConfigurationOptions.Value?.ConnectionString;
-            if (!string.IsNullOrEmpty(customerConnectionString))
-            {
-                ConnectionString = customerConnectionString;
-            }
         }
 
-        public string ConnectionString
+        public Uri GetEndpoint()
         {
-            get
-            {
-                return (string)_connectionStringProperty.GetValue(_endpointProvider);
-            }
-            set
-            {
-                _connectionStringProperty.SetValue(_endpointProvider, value);
-            }
-        }
-
-        public string GetInstrumentationKey()
-        {
-            if (ConnectionString == null)
-            {
-                return null;
-            }
-
-            return (string)_getInstrumentationKeyMethod.Invoke(_endpointProvider, null);
-        }
-
-        public Uri GetEndpoint(EndpointName endpointName)
-        {
-            return (Uri)_getEndpointMethod.Invoke(_endpointProvider, new object[] { endpointName });
+            return (Uri)_getEndpointMethod.Invoke(_endpointProvider, new object[] { "Profiler" });
         }
 
         private Type Initialize()
@@ -71,8 +41,6 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
             }
 
             Type endpointProviderType = applicationInsights.GetType("Microsoft.ApplicationInsights.Extensibility.Implementation.Endpoints.EndpointProvider", throwOnError: true);
-            _connectionStringProperty = endpointProviderType.GetProperty(nameof(ConnectionString));
-            _getInstrumentationKeyMethod = endpointProviderType.GetMethod(nameof(GetInstrumentationKey));
             _getEndpointMethod = endpointProviderType.GetMethod(nameof(GetEndpoint));
 
             return endpointProviderType;

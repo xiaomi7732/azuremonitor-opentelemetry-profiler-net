@@ -21,4 +21,10 @@ Major refactor notes:
 4. Redo the service profiler provider to leverage the new PostProfilerProcessor.
 
 5. The IAuthTokenProvider is reimplemented
+    Note: The way to get the credntial object is different because they live in differnet objects between the otel and the app insights sdk implemenation.
     [ ] Test when AAD auth is enforced.
+
+6. Reuse the new PostProfilerProcessor to handle the post processing of the profiler data.
+    [ ] Making sure the metadata - espcially the file format metadata is correctly set.
+    [ ] Making sure the post processing is done correctly.
+    [ ] Tests

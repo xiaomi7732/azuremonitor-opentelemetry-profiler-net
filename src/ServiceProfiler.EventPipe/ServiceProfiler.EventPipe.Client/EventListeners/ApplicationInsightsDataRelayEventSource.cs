@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {
 
     [EventSource(Name = EventSourceName, Guid = EventSourceGuidString)]
-    public class ApplicationInsightsDataRelayEventSource : EventSource
+    internal class ApplicationInsightsDataRelayEventSource : EventSource
     {
         // Do NOT try to abstract event source. The Keywords, Tasks has to be nested classes. Otherwise, you will get 
         // Exceptions like 'Use of undefined keyword value 0x1 for event during runtime.'

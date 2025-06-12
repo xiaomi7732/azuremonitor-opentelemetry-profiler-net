@@ -1,5 +1,5 @@
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
 {
-    public class ConfigureUserConfiguration : IConfigureOptions<UserConfiguration>
+    internal class ConfigureUserConfiguration : IConfigureOptions<UserConfiguration>
     {
         private const string ServiceProfilerSectionName = "ServiceProfiler";
 

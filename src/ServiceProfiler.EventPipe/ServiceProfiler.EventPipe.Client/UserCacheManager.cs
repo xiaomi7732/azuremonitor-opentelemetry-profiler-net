@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Microsoft.Extensions.Options;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core
 {

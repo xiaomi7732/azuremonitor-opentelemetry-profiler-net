@@ -2,17 +2,15 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Agent.Exceptions;
 using Microsoft.ServiceProfiler.Orchestration;
+using Microsoft.ServiceProfiler.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,6 +29,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private const string StopProfilerSucceeded = "StopProfiler succeeded.";
     private const string StopProfilerFailed = "StopProfiler failed.";
 
+    private Guid _appId;
     private readonly ILogger _logger;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ITraceControl _traceControl;
@@ -45,6 +44,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private readonly IUserCacheManager _userCacheManager;
     private readonly IPostStopProcessorFactory _postStopProcessorFactory;
     private readonly ITraceFileFormatDefinition _traceFileFormatDefinition;
+    private readonly AppInsightsProfileFetcher _appInsightsProfileFetcher;
     private string _currentTraceFilePath;
 
     private SemaphoreSlim _singleProfilingSemaphore = new SemaphoreSlim(1, 1);
@@ -55,17 +55,11 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         ITraceControl traceControl,
         ITraceSessionListenerFactory traceSessionListenerFactory,
         IEventPipeTelemetryTracker telemetryTracker,
-        ICustomEventsTracker customEventsTracker,
-        ITraceUploader traceUploader,
-        IMetadataWriter metadataWriter,
-        IOptions<UserConfiguration> serviceProfilerConfiguration,
         IAppInsightsSinks appInsightsSinks,
-        INamedPipeClientFactory namedPipeClientFactory,
-        IUploaderPathProvider uploaderPathProvider,
-        ISerializationProvider serializer,
         IUserCacheManager userCacheManager,
         IPostStopProcessorFactory postStopProcessorFactory,
         ITraceFileFormatDefinition traceFileFormatDefinition,
+        AppInsightsProfileFetcher appInsightsProfileFetcher,
         ILogger<ServiceProfilerProvider> logger)
     {
         // Required
@@ -73,6 +67,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         _userCacheManager = userCacheManager ?? throw new ArgumentNullException(nameof(userCacheManager));
         _postStopProcessorFactory = postStopProcessorFactory ?? throw new ArgumentNullException(nameof(postStopProcessorFactory));
         _traceFileFormatDefinition = traceFileFormatDefinition ?? throw new ArgumentNullException(nameof(traceFileFormatDefinition));
+        _appInsightsProfileFetcher = appInsightsProfileFetcher ?? throw new ArgumentNullException(nameof(appInsightsProfileFetcher));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
 
 
@@ -113,7 +108,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
             string localCacheFolder = _userCacheManager.TempTraceDirectory.FullName;
             Directory.CreateDirectory(localCacheFolder);
 
-            _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), TraceFileExtension);
+            _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), _traceFileFormatDefinition.FileExtension);
             _logger.LogDebug("Trace File Path: {traceFilePath}", _currentTraceFilePath);
 
             try
@@ -130,7 +125,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
             _appInsightsSinks.LogInformation(StartProfilerSucceeded);
 
-            Guid authenticatedUserId = await _serviceProfilerContext.GetAppInsightsAppIdAsync().ConfigureAwait(false);
+            Guid authenticatedUserId = await GetAppIdOrEmptyAsync(cancellationToken).ConfigureAwait(false);
             _telemetryTracker.SetCustomerAppInfo(authenticatedUserId);
 
             _logger.LogDebug("Start to create trace session listener by its factory");
@@ -156,7 +151,6 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
         return profilerStarted;
     }
-
 
     /// <summary>
     /// Stops the current Service Profiler.
@@ -273,6 +267,30 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         {
             _logger.LogInformation("All session listeners failed to have valid samples. Profiling Session failed.");
         }
+    }
+
+    private async Task<Guid> GetAppIdOrEmptyAsync(CancellationToken cancellationToken)
+    {
+        if (_appId != Guid.Empty)
+        {
+            return _appId;
+        }
+
+        _logger.LogDebug("Fetching AppId from Application Insights using iKey: {iKey}", _serviceProfilerContext.AppInsightsInstrumentationKey);
+        try
+        {
+            AppInsightsProfile result = await _appInsightsProfileFetcher.FetchProfileAsync(_serviceProfilerContext.AppInsightsInstrumentationKey, retryCount: 5);
+            return _appId = result.AppId;
+        }
+        catch (InstrumentationKeyInvalidException ikie)
+        {
+            _logger.LogError(ikie, "Profiler Instrumentation Key is invalid.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error fetching app id.");
+        }
+        return Guid.Empty;
     }
 
     public void Dispose()
