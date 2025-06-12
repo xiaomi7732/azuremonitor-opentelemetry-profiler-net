@@ -14,7 +14,7 @@ internal interface ITraceControl
     /// Disables the current profiler session.
     /// </summary>
     /// <exception cref="System.TimeoutException">Throws when timed out fetching the semaphore of the operation.</exception>
-    Task DisableAsync(CancellationToken cancellationToken = default);
+    Task DisableAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Enables a profiler session.
@@ -22,7 +22,7 @@ internal interface ITraceControl
     /// <remark>
     /// Only 1 profiler session is supported at a time.
     /// </remark>
-    Task EnableAsync(string traceFilePath, CancellationToken cancellationToken = default);
+    Task EnableAsync(string traceFilePath, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the session start time

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             _threadUtilities = threadUtilities ?? throw new ArgumentNullException(nameof(threadUtilities));
         }
 
-        public DateTime SessionStartUTC { get; private set; }
+        public DateTime? SessionStartUTC { get; private set; }
 
         public async Task DisableAsync(CancellationToken cancellationToken)
         {
@@ -58,14 +59,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
         }
 
-        public void Disable()
-        {
-            throw new NotImplementedException("This method is deprecated and wasn't supposed to be called.");
-        }
 
-        public void Enable(string traceFilePath = "default.nettrace")
+        public Task EnableAsync(string traceFilePath, CancellationToken cancellationToken)
         {
-            _logger.LogTrace("Entering {typeName}.{methodName}()", _typeName, nameof(Enable));
+            _logger.LogTrace("Entering {typeName}.{methodName}()", _typeName, nameof(EnableAsync));
             if (_singleTraceSessionHandle.Wait(TimeSpan.FromSeconds(10)))
             {
                 try
@@ -85,11 +82,11 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                     catch (InvalidOperationException ex) when (!_userConfiguration.AllowsCrash)
                     {
                         _logger.LogError(ex, "Failed getting process id. Profiler won't start.");
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     _currentSession = _diagnosticsClientProvider.GetDiagnosticsClient().StartEventPipeSession(
-                        _configuration.Providers,
+                        _configuration.BuildEventPipeProviders(),
                         requestRundown: _configuration.RequestRundown,
                         circularBufferMB: _configuration.CircularBufferMB);
 
@@ -101,6 +98,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 {
                     _singleTraceSessionHandle.Release();
                 }
+                return Task.CompletedTask;
             }
             else
             {

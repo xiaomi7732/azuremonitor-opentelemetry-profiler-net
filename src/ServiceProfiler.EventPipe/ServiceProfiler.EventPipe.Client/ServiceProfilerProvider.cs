@@ -114,7 +114,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
             try
             {
                 _logger.LogDebug("Call TraceControl.Enable().");
-                _traceControl.Enable(_currentTraceFilePath);
+                await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
                 profilerStarted = true;
             }
             catch (Exception ex)
