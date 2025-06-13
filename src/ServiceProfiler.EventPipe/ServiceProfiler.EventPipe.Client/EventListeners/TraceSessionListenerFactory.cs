@@ -36,7 +36,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         public virtual ITraceSessionListener CreateTraceSessionListener()
         {
             // Refer to: https://docs.microsoft.com/en-us/dotnet/core/whats-new/dotnet-core-3-0#improved-net-core-version-apis
-            switch (_versionProvider.RuntimeVersion.Major)
+            switch (_versionProvider.RuntimeVersion?.Major)
             {
                 case 2:
                 case 4:

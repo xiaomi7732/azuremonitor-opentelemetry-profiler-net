@@ -21,16 +21,16 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
             ISerializationProvider serializer,
             ISerializationOptionsProvider<JsonSerializerOptions> serializationOptionsProvider)
         {
-            if (serializer.TrySerialize(eventData, out string serializedEventData))
+            if (serializer.TrySerialize(eventData, out string? serializedEventData))
             {
-                bool isTargetDeserialized = serializer.TryDeserialize<ApplicationInsightsRequestEvent>(serializedEventData, out ApplicationInsightsRequestEvent target);
+                bool isTargetDeserialized = serializer.TryDeserialize<ApplicationInsightsRequestEvent>(serializedEventData!, out ApplicationInsightsRequestEvent? target);
 
                 if (isTargetDeserialized)
                 {
                     Dictionary<string, string> properties = new Dictionary<string, string>();
-                    foreach (JsonElement item in ((JsonElement)target.Payload[1]).EnumerateArray())
+                    foreach (JsonElement item in ((JsonElement)target!.Payload[1]).EnumerateArray())
                     {
-                        properties.Add(item.GetProperty("Key").GetString(), item.GetProperty("Value").GetString());
+                        properties.Add(item.GetProperty("Key").GetString()!, item.GetProperty("Value").GetString()!);
                     }
 
                     target.Properties = properties;
@@ -46,13 +46,13 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 
         public static ApplicationInsightsOperationEvent ToAppInsightsOperationEvent(this EventWrittenEventArgs eventData, ISerializationProvider serializer)
         {
-            if (serializer.TrySerialize(eventData, out string serialized))
+            if (serializer.TrySerialize(eventData, out string? serialized))
             {
-                bool isDeserialized = serializer.TryDeserialize<ApplicationInsightsOperationEvent>(serialized, out ApplicationInsightsOperationEvent newEvent);
+                bool isDeserialized = serializer.TryDeserialize<ApplicationInsightsOperationEvent>(serialized!, out ApplicationInsightsOperationEvent? newEvent);
                 if (isDeserialized)
                 {
                     // Flatten properties for easier access
-                    newEvent.RequestId = newEvent.Payload[1].ToString();
+                    newEvent!.RequestId = newEvent.Payload[1].ToString();
                     // The actual operation name in the operation event data is always empty
                     Debug.Assert(string.IsNullOrEmpty(newEvent.OperationName), "Operation name is not empty. New chance for perf improvement!!!");
                     newEvent.OperationName = newEvent.Payload[2].ToString();

@@ -163,11 +163,18 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
             }
             else if (eventData.EventName.Equals(EventName.Request, StringComparison.Ordinal) && (eventData.Keywords.HasFlag(ApplicationInsightsDataRelayEventSource.Keywords.Request)))
             {
-                var requestEventData = eventData.ToAppInsightsRequestEvent(_serializer, _serializerOptionsProvider);
+                ApplicationInsightsRequestEvent requestEventData = eventData.ToAppInsightsRequestEvent(_serializer, _serializerOptionsProvider);
                 _logger.LogTrace("Request Activity. Request Id: {requestId}.", requestEventData.RequestId);
 
                 SampleActivity targetRequest;
-                if (_sampleActivityBuffer.TryRemove(requestEventData.RequestId, out targetRequest))
+
+                string? requestId = requestEventData.RequestId;
+                if (string.IsNullOrEmpty(requestId))
+                {
+                    return;
+                }
+
+                if (_sampleActivityBuffer.TryRemove(requestId!, out targetRequest))
                 {
                     targetRequest.OperationName = requestEventData.OperationName;
                     targetRequest.Duration = requestEventData.Duration;
@@ -177,7 +184,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
                 else
                 {
                     string message = "There is no matched start activity found for this request id: {0}. This could happen for the first few activities.";
-                    var requestId = requestEventData.RequestId;
                     if (!_hasActivityReported)
                     {
                         _logger.LogInformation(message, requestId);

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -11,10 +11,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
     internal class ApplicationInsightsRequestEvent : EventObjectBase
     {
         [JsonPropertyName("ActivityId")]
-        public string ActivityId { get; set; }
+        public string ActivityId { get; set; } = null!;
 
         [JsonPropertyName("RelatedActivityId")]
-        public string RelatedActivityId { get; set; }
+        public string? RelatedActivityId { get; set; }
 
         [JsonPropertyName("Keywords")]
         public int Keywords { get; set; }
@@ -23,24 +23,24 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         public DateTimeOffset TimeStamp { get; set; }
 
         [JsonIgnore]
-        public IDictionary<string, string> Properties { get; set; }
+        public IDictionary<string, string>? Properties { get; set; }
 
         [JsonIgnore]
-        public ApplicationInsightsDataRequestDataPayload RequestDataPayload { get; set; }
+        public ApplicationInsightsDataRequestDataPayload? RequestDataPayload { get; set; }
 
         [JsonIgnore]
-        public string MachineName => Properties?["ai.cloud.roleInstance"];
+        public string? MachineName => Properties?["ai.cloud.roleInstance"];
 
         [JsonIgnore]
         public TimeSpan Duration => RequestDataPayload != null ? RequestDataPayload.Duration : TimeSpan.Zero;
 
         [JsonIgnore]
-        public string RequestId => RequestDataPayload?.Id;
+        public string? RequestId => RequestDataPayload?.Id;
 
         [JsonIgnore]
-        public string OperationName => RequestDataPayload?.Name ?? Properties?["ai.operation.name"];
+        public string? OperationName => RequestDataPayload?.Name ?? Properties?["ai.operation.name"];
         
         [JsonIgnore]
-        public string OperationId => Properties?["ai.operation.id"];
+        public string? OperationId => Properties?["ai.operation.id"];
     }
 }

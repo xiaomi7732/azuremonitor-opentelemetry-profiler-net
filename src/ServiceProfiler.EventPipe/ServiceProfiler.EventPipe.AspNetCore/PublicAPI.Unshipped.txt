@@ -1,3 +1,4 @@
+#nullable enable
 Microsoft.AspNetCore.Hosting.ServiceProfilerInjection
-Microsoft.AspNetCore.Hosting.ServiceProfilerInjection.Configure(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder) -> void
+Microsoft.AspNetCore.Hosting.ServiceProfilerInjection.Configure(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
 Microsoft.AspNetCore.Hosting.ServiceProfilerInjection.ServiceProfilerInjection() -> void

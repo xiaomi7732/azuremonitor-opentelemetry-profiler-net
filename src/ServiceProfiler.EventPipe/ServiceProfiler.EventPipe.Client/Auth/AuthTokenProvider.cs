@@ -23,17 +23,17 @@ internal class AuthTokenProvider : IAuthTokenProvider
     /// <summary>
     /// Type info for CredentialEnvelope
     /// </summary>
-    private static readonly TypeInfo _credentialEnvelopeTypeInfo = _credentialEnvelopePropertyInfo?.PropertyType.GetTypeInfo();
+    private static readonly TypeInfo? _credentialEnvelopeTypeInfo = _credentialEnvelopePropertyInfo?.PropertyType.GetTypeInfo();
 
     /// <summary>
     /// Method info for the GetTokenAsync method on the CredentialEnvelope.
     /// </summary>
-    private static readonly MethodInfo _getTokenAsyncMethodInfo = _credentialEnvelopeTypeInfo?.GetDeclaredMethod(GetTokenAsyncMethodName);
+    private static readonly MethodInfo? _getTokenAsyncMethodInfo = _credentialEnvelopeTypeInfo?.GetDeclaredMethod(GetTokenAsyncMethodName);
 
     /// <summary>
     /// Property accessor for the Result property on <see cref="Task{object}"/>.
     /// </summary>
-    private static readonly PropertyInfo _getTokenAsyncTaskResultPropertyInfo = _getTokenAsyncMethodInfo?.ReturnType.GetTypeInfo().GetDeclaredProperty(nameof(Task<object>.Result));
+    private static readonly PropertyInfo? _getTokenAsyncTaskResultPropertyInfo = _getTokenAsyncMethodInfo?.ReturnType.GetTypeInfo().GetDeclaredProperty(nameof(Task<object>.Result));
 
     private readonly TelemetryConfiguration _telemetryConfiguration;
     private readonly IAccessTokenFactory _authTokenFactory;
@@ -60,24 +60,30 @@ internal class AuthTokenProvider : IAuthTokenProvider
             return default;
         }
 
-        object authTokenObject = await GetAuthTokenObjectAsync(cancellationToken).ConfigureAwait(false);
-        if (_authTokenFactory.TryCreateFrom(authTokenObject, out AccessToken authToken))
+        object? authTokenObject = await GetAuthTokenObjectAsync(cancellationToken).ConfigureAwait(false);
+
+        if (authTokenObject is null)
         {
-            return authToken;
+            return default;
         }
 
-        return default;
+        if (!_authTokenFactory.TryCreateFrom(authTokenObject, out AccessToken authToken))
+        {
+            return default;
+        }
+
+        return authToken;
     }
 
     /// <summary>
     /// Gets an access token object using credential envelope, when exists.
     /// </summary>
-    private async Task<object> GetAuthTokenObjectAsync(CancellationToken cancellationToken)
+    private async Task<object?> GetAuthTokenObjectAsync(CancellationToken cancellationToken)
     {
         Debug.Assert(IsAADAuthenticateEnabled, "This shall not be called if AAD Authentication is not on.");
         Task authTokenTask = InvokeGetTokenAsync(cancellationToken);
         await authTokenTask.ConfigureAwait(false);
-        return _getTokenAsyncTaskResultPropertyInfo.GetValue(authTokenTask);
+        return _getTokenAsyncTaskResultPropertyInfo?.GetValue(authTokenTask);
     }
 
     /// <summary>
@@ -85,6 +91,11 @@ internal class AuthTokenProvider : IAuthTokenProvider
     /// </summary>
     private Task InvokeGetTokenAsync(CancellationToken cancellationToken)
     {
+        if (_getTokenAsyncMethodInfo is null)
+        {
+            return Task.CompletedTask;
+        }
+
         return (Task)_getTokenAsyncMethodInfo.Invoke(CredentialEnvelope, new object[] { cancellationToken });
     }
 
@@ -92,5 +103,5 @@ internal class AuthTokenProvider : IAuthTokenProvider
     /// Gets the CredentialEnvelop of <see cref="TelemetryConfiguration" />.
     /// </summary>
     /// <returns>Returns the CredentialEnvelope object when exists. Otherwise, null.</returns>
-    private object CredentialEnvelope => _credentialEnvelopePropertyInfo?.GetValue(_telemetryConfiguration);
+    private object? CredentialEnvelope => _credentialEnvelopePropertyInfo?.GetValue(_telemetryConfiguration);
 }

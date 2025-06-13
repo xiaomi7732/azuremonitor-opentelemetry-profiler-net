@@ -12,9 +12,9 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore;
 /// </summary>
 internal class ServiceProfilerServices
 {
-    public event EventHandler<EventArgs> ServicesInitialized;
+    public event EventHandler<EventArgs>? ServicesInitialized;
 
-    public IServiceCollection Services
+    public IServiceCollection? Services
     {
         get { return _services; }
         internal set
@@ -27,5 +27,5 @@ internal class ServiceProfilerServices
         }
     }
 
-    private IServiceCollection _services;
+    private IServiceCollection? _services;
 }

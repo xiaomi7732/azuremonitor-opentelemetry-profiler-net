@@ -1,17 +1,15 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 using System;
 using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
 {
     internal class EventSourceSpec : IEquatable<EventSourceSpec>
     {
-        public EventSourceSpec() { }
         public EventSourceSpec(string name, Guid providerId, Int64 keyword, uint level)
         {
             if (string.IsNullOrEmpty(name))
