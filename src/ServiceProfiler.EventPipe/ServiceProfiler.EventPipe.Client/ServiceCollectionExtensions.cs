@@ -24,6 +24,7 @@ using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.Utilities;
 using ServiceProfiler.Common.Utilities;
+using ServiceProfiler.EventPipe.Client;
 using ServiceProfiler.EventPipe.Logging;
 using System;
 using System.Linq;
@@ -56,7 +57,7 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton<IProfilerCoreAssemblyInfo>(_ => ProfilerCoreAssemblyInfo.Instance);
         services.AddTransient<IUserCacheManager, UserCacheManager>();
-
+        services.AddSingleton<ITraceFileFormatDefinition>(_ => CurrentTraceFileFormat.Instance);
 
         // Telemetry - TODO:
         // 1. Have a dedicated application insights resource
@@ -81,10 +82,10 @@ internal static class ServiceCollectionExtensions
                 return new NullAppInsightsLogger();
             }
         });
-        
+
         // AI for the customer.
         // TODO: Use connection string instead.
-        services.AddSingleton<IAppInsightsLogger>(p => 
+        services.AddSingleton<IAppInsightsLogger>(p =>
             ActivatorUtilities.CreateInstance<EventPipeAppInsightsLogger>(p, p.GetRequiredService<IServiceProfilerContext>().AppInsightsInstrumentationKey));
 
         // Heartbeats
@@ -99,7 +100,7 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton<IServiceProfilerProvider, ServiceProfilerProvider>();
         services.AddSingleton<DiagnosticsClientTraceConfiguration>();
-        
+
         services.AddSingleton(_ => DiagnosticsClientProvider.Instance);
 
         // Named pipe client

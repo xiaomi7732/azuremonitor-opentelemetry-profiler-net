@@ -6,8 +6,13 @@ namespace ServiceProfiler.EventPipe.Client;
 /// <summary>
 /// A class representing the current trace file format definition.
 /// </summary>
-internal class CurrentTraceFileFormat : ITraceFileFormatDefinition
+internal sealed class CurrentTraceFileFormat : ITraceFileFormatDefinition
 {
+    private CurrentTraceFileFormat()
+    {
+    }
+    public static CurrentTraceFileFormat Instance { get; } = new CurrentTraceFileFormat();
+
     /// <inheritdoc />
     public string FileExtension => ".netperf";
 
