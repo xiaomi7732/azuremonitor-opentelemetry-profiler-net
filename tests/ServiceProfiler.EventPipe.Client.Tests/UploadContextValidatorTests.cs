@@ -208,7 +208,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             UploadContextModel context = new()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
-                HostUrl = null,
+                HostUrl = new Uri("https://endpoint"),
                 SessionId = DateTimeOffset.UtcNow,
                 StampId = "stampId",
                 TraceFilePath = @"c:\tracefilePath.etl.zip",
