@@ -22,8 +22,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
         private readonly IThreadUtilities _threadUtilities;
         private readonly UserConfiguration _userConfiguration;
         private readonly ILogger _logger;
-        private EventPipeSession _currentSession;
-        private Task _traceFileWritingTask;
+        private EventPipeSession? _currentSession;
+        private Task? _traceFileWritingTask;
         private const string TimeoutMessage = "Timed out waiting for semaphore.";
 
         public DiagnosticsClientTraceControl(
@@ -51,7 +51,15 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             try
             {
                 await StopProfilerSessionAsync(disposeEventSessionImmediately: false, cancellationToken).ConfigureAwait(false);
-                await _traceFileWritingTask.ConfigureAwait(false);
+
+                if (_traceFileWritingTask is not null)
+                {
+                    await _traceFileWritingTask.ConfigureAwait(false);
+                }
+                else
+                {
+                    _logger.LogError("Trace file writing task is null upon disabling tracing. This should not happen.");
+                }
             }
             finally
             {
@@ -169,7 +177,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             {
                 _ = CurrentProcessUtilities.TryGetId(out int? pid);
 
-                string eventPipeIPCFullPath = null;
+                string? eventPipeIPCFullPath = null;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     eventPipeIPCFullPath = FormattableString.Invariant($@"\\.pipe\dotnet-diagnostic-{pid}");

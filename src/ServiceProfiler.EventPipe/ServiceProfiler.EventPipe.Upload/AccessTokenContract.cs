@@ -8,7 +8,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
     /// </summary>
     internal class AccessTokenContract
     {
-        public string Token { get; set; }
+        public string Token { get; set; } = null!;
         public DateTimeOffset ExpiresOn { get; set; }
 
         public AccessToken ToAccessToken()

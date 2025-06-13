@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using System.Collections.Generic;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
 {
@@ -14,6 +14,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
         /// <summary>
         /// Extension point to plug in more validators
         /// </summary>
-        ITraceValidator Next { get; }
+        ITraceValidator? Next { get; }
     }
 }

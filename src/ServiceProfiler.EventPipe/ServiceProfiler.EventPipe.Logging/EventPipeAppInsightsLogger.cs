@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
 // -----------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
 {
     internal class EventPipeAppInsightsLogger : IAppInsightsLogger, IDisposable
     {
-        private ConnectionString _connectionString;
+        private ConnectionString? _connectionString;
         private readonly TelemetryClient _telemetryClient;
         private readonly TelemetryConfiguration _telemetryConfiguration;
         private bool _isDisposed = false;
@@ -52,7 +52,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
         /// <summary>
         /// Get and set the instrumentation key. By setting it to 'null' you can disable the logger.
         /// </summary>
-        public ConnectionString ConnectionString
+        public ConnectionString? ConnectionString
         {
             get
             {
@@ -106,7 +106,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             }
         }
 
-        public void TrackEvent(string eventName, IDictionary<string, string> properties = null, IDictionary<string, double> metrics = null, bool preventSampling = false)
+        public void TrackEvent(string eventName, IDictionary<string, string>? properties = null, IDictionary<string, double>? metrics = null, bool preventSampling = false)
         {
             if (!IsEnabled)
             {
@@ -125,7 +125,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             _telemetryClient.TrackEvent(eventTelemetry);
         }
 
-        public void TrackException(Exception exception, string operationName, IDictionary<string, string> properties = null, IDictionary<string, double> metrics = null)
+        public void TrackException(Exception exception, string operationName, IDictionary<string, string>? properties = null, IDictionary<string, double>? metrics = null)
         {
             if (!IsEnabled)
             {
@@ -145,7 +145,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             _telemetryClient.TrackException(exceptionTelemetry);
         }
 
-        public void TrackTrace(string message, SeverityLevel severityLevel, IDictionary<string, string> properties = null, bool preventSampling = false)
+        public void TrackTrace(string message, SeverityLevel severityLevel, IDictionary<string, string>? properties = null, bool preventSampling = false)
         {
             if (!IsEnabled)
             {
@@ -193,7 +193,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             _isDisposed = true;
         }
 
-        private static void MergeDictionaries<K, V>(IDictionary<K, V> target, IDictionary<K, V> dictionaryToMerge)
+        private static void MergeDictionaries<K, V>(IDictionary<K, V> target, IDictionary<K, V>? dictionaryToMerge)
         {
             if (dictionaryToMerge != null)
             {

@@ -2,19 +2,19 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Globalization;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
-using System.Text.Json;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
-using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 {
@@ -247,7 +247,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
                     {
                         if (_logger.IsEnabled(LogLevel.Debug))  // Perf: Avoid serialization when not debugging.
                         {
-                            bool isActivitySerialized = _serializer.TrySerialize(activity, out string serializedActivity);
+                            bool isActivitySerialized = _serializer.TrySerialize(activity, out string? serializedActivity);
                             if (isActivitySerialized)
                             {
                                 _logger.LogDebug("Sample is added: {0}", serializedActivity);
@@ -292,7 +292,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
             _isActivated = true;
         }
 
-        public event EventHandler<EventArgs> Poisoned;
+        public event EventHandler<EventArgs>? Poisoned;
 
         private void OnPoisoned()
         {
@@ -305,7 +305,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         private readonly ISerializationProvider _serializer;
         private readonly ISerializationOptionsProvider<JsonSerializerOptions> _serializerOptionsProvider;
         private readonly ILogger _logger;
-        private ManualResetEventSlim _ctorWaitHandle = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim _ctorWaitHandle = new ManualResetEventSlim(false);
 
         private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new ConcurrentDictionary<string, SampleActivity>();
 
@@ -328,11 +328,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 
             if (isDisposing)
             {
-                if (_ctorWaitHandle != null)
-                {
-                    _ctorWaitHandle.Dispose();
-                    _ctorWaitHandle = null;
-                }
+                _ctorWaitHandle?.Dispose();
             }
 
             _isDisposed = true;

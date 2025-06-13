@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
@@ -9,7 +9,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
     {
         public TraceValidatorBase(
             ILogger<TraceValidatorBase> logger,
-            ITraceValidator nextValidator)
+            ITraceValidator? nextValidator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Next = nextValidator;
@@ -32,7 +32,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
             return validSamples;
         }
 
-        public ITraceValidator Next { get; }
+        public ITraceValidator? Next { get; }
 
         protected abstract IEnumerable<SampleActivity> ValidateImp(IEnumerable<SampleActivity> samples);
 

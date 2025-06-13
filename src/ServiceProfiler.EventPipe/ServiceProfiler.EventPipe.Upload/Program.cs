@@ -1,12 +1,15 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 using CommandLine;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.IPC;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,7 +110,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
 
                 if (CurrentProcessUtilities.TryGetId(out int? pid))
                 {
-                    logger.SetCommonProperty(Constants.ProcessId, pid.Value.ToString(CultureInfo.InvariantCulture));
+                    logger.SetCommonProperty(Constants.ProcessId, pid!.Value.ToString(CultureInfo.InvariantCulture));
                 }
 
                 logger.SetCommonProperty(Constants.CloudRoleInstance, EnvironmentUtilities.HashedMachineNameWithoutSiteName);

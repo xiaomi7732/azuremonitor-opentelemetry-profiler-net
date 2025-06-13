@@ -7,9 +7,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
 {
     internal class NullAppInsightsLogger : IAppInsightsLogger
     {
-        public ConnectionString ConnectionString { get; set; }
+        public ConnectionString? ConnectionString { get; set; }
 
-        public Type TelemetryChannelType => null;
+        public Type? TelemetryChannelType => null;
 
         public void Flush()
         {
@@ -21,17 +21,17 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             // Do nothing
         }
 
-        public void TrackEvent(string eventName, IDictionary<string, string> properties = null, IDictionary<string, double> metrics = null, bool preventSampling = false)
+        public void TrackEvent(string eventName, IDictionary<string, string>? properties = null, IDictionary<string, double>? metrics = null, bool preventSampling = false)
         {
             // Do nothing
         }
 
-        public void TrackException(Exception exception, string operationName, IDictionary<string, string> properties = null, IDictionary<string, double> metrics = null)
+        public void TrackException(Exception exception, string operationName, IDictionary<string, string>? properties = null, IDictionary<string, double>? metrics = null)
         {
             // Do nothing
         }
 
-        public void TrackTrace(string message, SeverityLevel severityLevel, IDictionary<string, string> properties = null, bool preventSampling = false)
+        public void TrackTrace(string message, SeverityLevel severityLevel, IDictionary<string, string>? properties = null, bool preventSampling = false)
         {
             // Do nothing
         }

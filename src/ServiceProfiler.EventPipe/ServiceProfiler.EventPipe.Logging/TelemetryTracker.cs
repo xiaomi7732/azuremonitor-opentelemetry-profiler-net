@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging;
 internal sealed class TelemetryTracker : IEventPipeTelemetryTracker
 {
     private readonly IAppInsightsLogger _msAILogger;
-    private string _unhealthyReason;
+    private string? _unhealthyReason;
 #pragma warning disable IDE1006 // Naming Styles: nameof(HeartbeatInterval) has been used in telemetry.
     internal static readonly TimeSpan HeartbeatInterval = TimeSpan.FromMinutes(30);
 #pragma warning restore IDE1006 // Naming Styles
@@ -33,7 +33,7 @@ internal sealed class TelemetryTracker : IEventPipeTelemetryTracker
         _msAILogger.SetCommonProperty(Constants.ComponentVersion, componentVersion);
         if (CurrentProcessUtilities.TryGetId(out int? pid))
         {
-            _msAILogger.SetCommonProperty(Constants.ProcessId, pid.Value.ToString(InvariantCulture));
+            _msAILogger.SetCommonProperty(Constants.ProcessId, pid!.Value.ToString(InvariantCulture));
         }
         _msAILogger.SetCommonProperty(Constants.CloudRoleInstance, EnvironmentUtilities.HashedMachineNameWithoutSiteName);
     }

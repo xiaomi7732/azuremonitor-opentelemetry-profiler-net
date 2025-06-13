@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +14,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
         public ActivityListValidator(
             string traceFilePath,
             ILogger<ActivityListValidator> logger,
-            ITraceValidator nextValidator) : base(logger, nextValidator)
+            ITraceValidator? nextValidator) : base(logger, nextValidator)
         {
             if (string.IsNullOrEmpty(traceFilePath))
             {
@@ -74,7 +74,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
             {
                 string activityIdPath = traceEvent.ActivityID.GetActivityPath();
                 string key = traceEvent.Opcode + activityIdPath;
-                if (_sampleActivities.TryGetValue(key, out SampleActivityHolder sampleHolder))
+                if (_sampleActivities.TryGetValue(key, out SampleActivityHolder? sampleHolder))
                 {
                     if (traceEvent.Opcode == TraceEventOpcode.Start)
                     {
@@ -110,7 +110,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
         }
 
         private readonly string _traceFilePath;
-        private Action _stopProcessingHandler;
+        private Action? _stopProcessingHandler;
 
         // Samples to start with.
         private readonly ConcurrentDictionary<string, SampleActivityHolder> _sampleActivities;

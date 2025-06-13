@@ -10,30 +10,15 @@ using System.Reflection;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core;
 
-/// <summary>
-/// Reflects the EndpointProvider in AI SDK.
-/// This is used as the connection string parser to get instrumentation key
-/// and various endpoints.
-/// </summary>
+/// <inheritdoc />
 internal class EndpointProviderMirror : IEndpointProvider
 {
-    private MethodInfo _getEndpointMethod;
-    private object _endpointProvider;
+    private readonly MethodInfo _getEndpointMethod;
+    private readonly object _endpointProvider;
 
     public EndpointProviderMirror(IOptions<TelemetryConfiguration> customerTelemetryConfigurationOptions)
     {
-        Type endpointProviderType = Initialize();
-        _endpointProvider = Activator.CreateInstance(endpointProviderType);
-    }
-
-    public Uri GetEndpoint()
-    {
-        return (Uri)_getEndpointMethod.Invoke(_endpointProvider, new object[] { "Profiler" });
-    }
-
-    private Type Initialize()
-    {
-        Assembly applicationInsights = Assembly.GetAssembly(typeof(Microsoft.ApplicationInsights.TelemetryClient));
+        Assembly applicationInsights = Assembly.GetAssembly(typeof(TelemetryClient));
         if (applicationInsights == null)
         {
             throw new NullReferenceException("Can't find Microsoft.ApplicationInsights assembly");
@@ -42,6 +27,11 @@ internal class EndpointProviderMirror : IEndpointProvider
         Type endpointProviderType = applicationInsights.GetType("Microsoft.ApplicationInsights.Extensibility.Implementation.Endpoints.EndpointProvider", throwOnError: true);
         _getEndpointMethod = endpointProviderType.GetMethod(nameof(GetEndpoint));
 
-        return endpointProviderType;
+        _endpointProvider = Activator.CreateInstance(endpointProviderType);
+    }
+
+    public Uri GetEndpoint()
+    {
+        return (Uri)_getEndpointMethod.Invoke(_endpointProvider, ["Profiler"]);
     }
 }

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        public string ZipFile(string source, string zippedFileExtension = ".etl.zip", IEnumerable<string> additionalFiles = null)
+        public string ZipFile(string source, string zippedFileExtension = ".etl.zip", IEnumerable<string>? additionalFiles = null)
         {
             FileInfo sourceFileInfo = new FileInfo(source);
             if (!sourceFileInfo.Exists)
@@ -32,7 +32,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                 throw new FileNotFoundException($"File not found: {source}");
             }
 
-            DirectoryInfo baseDirectoryInfo = sourceFileInfo.Directory;
+            DirectoryInfo baseDirectoryInfo = sourceFileInfo.Directory ?? throw new InvalidOperationException("Source file must have a directory.");
             string workingDirectoryName = Path.GetRandomFileName();
             DirectoryInfo workingDirectoryInfo = baseDirectoryInfo.CreateSubdirectory(workingDirectoryName);
 

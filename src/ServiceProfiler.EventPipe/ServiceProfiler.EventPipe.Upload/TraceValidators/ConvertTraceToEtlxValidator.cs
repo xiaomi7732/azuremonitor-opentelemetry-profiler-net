@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Extensions.Logging;
 
@@ -27,21 +28,22 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
 
         protected override IEnumerable<SampleActivity> ValidateImp(IEnumerable<SampleActivity> samples)
         {
-            if (!File.Exists(_traceFilePath))
+            string traceFilePath = _traceFilePath ?? throw new InvalidCastException($"'{nameof(_traceFilePath)}' cannot be null or empty in {nameof(ConvertTraceToEtlxValidator)}");
+
+            if (!File.Exists(traceFilePath))
             {
-                string message = $"File {_traceFilePath} not found.";
+                string message = $"File {traceFilePath} not found.";
                 throw new ValidateFailedException(nameof(ConvertTraceToEtlxValidator), message, new FileNotFoundException(message), toStopUploading: true);
             }
 
-            string etlxPath = null;
+            string? etlxPath = null;
             try
             {
-                string workingDir = Path.GetDirectoryName(_traceFilePath);
+                string workingDir = Path.GetDirectoryName(traceFilePath) ?? throw new InvalidOperationException("Working folder path can't be null.");
+
                 etlxPath = Path.Combine(workingDir, Path.ChangeExtension(Path.GetRandomFileName(), ".etlx"));
-                using (TraceLog traceLog = new TraceLog(TraceLog.CreateFromEventPipeDataFile(_traceFilePath, etlxPath)))
-                {
-                    return samples;
-                }
+                using TraceLog traceLog = new TraceLog(TraceLog.CreateFromEventPipeDataFile(_traceFilePath, etlxPath));
+                return samples;
             }
             catch (Exception ex)
             {

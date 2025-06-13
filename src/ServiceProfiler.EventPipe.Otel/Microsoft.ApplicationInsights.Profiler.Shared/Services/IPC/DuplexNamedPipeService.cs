@@ -175,9 +175,14 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
         Task timeoutTask = Task.Delay(timeout, cancellationToken);
         Task<string> readlineTask = Task.Run(async () =>
         {
+            if (_pipeStream is null)
+            {
+                return string.Empty;
+            }
+
             using (StreamReader reader = new StreamReader(_pipeStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: -1, leaveOpen: true))
             {
-                return await reader.ReadLineAsync().ConfigureAwait(false);
+                return await reader.ReadLineAsync().ConfigureAwait(false) ?? string.Empty;
             }
         });
 
@@ -204,7 +209,12 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
         Task timeoutTask = Task.Delay(timeout, cancellationToken);
         Task writelineTask = Task.Run(async () =>
         {
-            using (StreamWriter writer = new StreamWriter(_pipeStream, encoding: Encoding.UTF8, bufferSize: -1, leaveOpen: true))
+            if (_pipeStream is null)
+            {
+                throw new InvalidOperationException("Pipe stream is not initialized. Please connect or wait for connection before sending messages.");
+            }
+
+            using (StreamWriter writer = new(_pipeStream, encoding: Encoding.UTF8, bufferSize: -1, leaveOpen: true))
             {
                 await writer.WriteLineAsync(message).ConfigureAwait(false);
             }

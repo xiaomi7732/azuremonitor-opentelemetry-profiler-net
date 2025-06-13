@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 namespace Microsoft.ApplicationInsights.Profiler.Uploader
 {

@@ -40,7 +40,7 @@ internal class ProfilerFrontendClientFactory
     public IProfilerFrontendClient CreateProfilerFrontendClient()
     {
 
-        TokenCredential credential = _authTokenProvider.IsAADAuthenticateEnabled ?
+        TokenCredential? credential = _authTokenProvider.IsAADAuthenticateEnabled ?
             new AADAuthTokenCredential(
                 _authTokenProvider,
                 _loggerFactory.CreateLogger<AADAuthTokenCredential>()) :

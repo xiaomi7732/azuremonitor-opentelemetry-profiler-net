@@ -1,5 +1,4 @@
 using System;
-using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Utilities;
@@ -10,7 +9,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
 {
     internal class ProfilerFrontendClientBuilder : IProfilerFrontendClientBuilder
     {
-        private UploadContextExtension _uploadContextExtension;
+        private UploadContextExtension? _uploadContextExtension;
 
         public IProfilerFrontendClient Build()
         {
@@ -35,13 +34,5 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
             _uploadContextExtension = uploadContext ?? throw new ArgumentNullException(nameof(uploadContext));
             return this;
         }
-
-#if EP_OTEL_PROFILER
-        [Obsolete("Stop using this. Use the credential provided by the agent directly.", error: true)]
-#endif
-        internal TokenCredential GetTokenCredential() =>
-            (_uploadContextExtension.AccessToken.HasValue) ?
-        new StaticAccessTokenCredential(_uploadContextExtension.AccessToken.Value) :
-        null;
     }
 }

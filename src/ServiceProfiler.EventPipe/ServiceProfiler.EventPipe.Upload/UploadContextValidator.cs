@@ -10,9 +10,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Utilities
         private readonly Func<string, bool> _fileExists;
 
         public UploadContextValidator(
-            Func<string, bool> fileExists = null)
+            Func<string, bool>? fileExists = null)
         {
-            this._fileExists = fileExists ?? ((filePath) => File.Exists(filePath));
+            _fileExists = fileExists ?? ((filePath) => File.Exists(filePath));
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Utilities
 
             if (errorMessageBuilder.Length == 0)
             {
-                return null;
+                return string.Empty;
             }
 
             return errorMessageBuilder.ToString();

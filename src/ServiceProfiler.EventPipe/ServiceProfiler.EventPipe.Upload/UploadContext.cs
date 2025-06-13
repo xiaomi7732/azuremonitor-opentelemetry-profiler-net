@@ -1,8 +1,9 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 using CommandLine;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using System;

@@ -31,7 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="serviceCollection">Service collection to inject service profiler services in.</param>
         /// <param name="options">Sets the options that contains the custom settings.</param>
         /// <returns>Returns the service collection.</returns>
-        public static IServiceCollection AddServiceProfiler(this IServiceCollection serviceCollection, Action<UserConfiguration> options)
+        public static IServiceCollection AddServiceProfiler(this IServiceCollection serviceCollection, Action<UserConfiguration>? options)
         {
             return AddServiceProfilerImp(serviceCollection, options, configuration: null, serviceCollectionBuilder: null);
         }
@@ -65,9 +65,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static IServiceCollection AddServiceProfilerImp(
             IServiceCollection serviceCollection,
-            Action<UserConfiguration> context,
-            IConfiguration configuration = null,
-            IServiceCollectionBuilder serviceCollectionBuilder = null)
+            Action<UserConfiguration>? context,
+            IConfiguration? configuration = null,
+            IServiceCollectionBuilder? serviceCollectionBuilder = null)
         {
             try
             {
@@ -96,8 +96,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static void BuildServiceBase(
             IServiceCollection serviceCollection,
-            Action<UserConfiguration> applyOptions,
-            IConfiguration configuration = null)
+            Action<UserConfiguration>? applyOptions,
+            IConfiguration? configuration = null)
         {
             serviceCollection.AddLogging();
             serviceCollection.AddOptions();

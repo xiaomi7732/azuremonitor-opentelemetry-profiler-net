@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -11,6 +11,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
         /// <summary>
         /// Zip the given file, return the zipped file path.
         /// </summary>
-        string ZipFile(string source, string zippedFileExtension = ".etl.zip", IEnumerable<string> additionalFiles = null);
+        string ZipFile(string source, string zippedFileExtension = ".etl.zip", IEnumerable<string>? additionalFiles = null);
     }
 }

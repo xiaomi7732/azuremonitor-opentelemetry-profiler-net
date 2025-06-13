@@ -2,14 +2,15 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using Azure.Identity;
 using Azure.Storage.Blobs;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
@@ -26,9 +27,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-#if EP_OTEL_PROFILER
-using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
-#endif
 
 namespace Microsoft.ApplicationInsights.Profiler.Uploader;
 
@@ -85,7 +83,7 @@ internal class TraceUploader : ITraceUploader
         UploadContext context = UploadContext;
 
         // Check samples;
-        UploadContextExtension extendedUploadContext = await UploadingAsync(context, cancellationToken).ConfigureAwait(false);
+        UploadContextExtension? extendedUploadContext = await UploadingAsync(context, cancellationToken).ConfigureAwait(false);
         if (extendedUploadContext == null)
         {
             Logger.LogTrace("Pre-check for uploading failed.");
@@ -98,13 +96,10 @@ internal class TraceUploader : ITraceUploader
         // Upload
         await UploadAsync(extendedUploadContext, zippedFilePath, cancellationToken).ConfigureAwait(false);
 
-#if EP_OTEL_PROFILER
         // Sending custom events
         SendCustomEvents(extendedUploadContext);
-#endif
     }
 
-#if EP_OTEL_PROFILER
     private void SendCustomEvents(UploadContextExtension context)
     {
         if (context is null)
@@ -119,7 +114,9 @@ internal class TraceUploader : ITraceUploader
 
         Logger.LogInformation("Sending customer events");
         using TelemetryConfiguration telemetryConfiguration = new();
-        telemetryConfiguration.ConnectionString = context.AdditionalData.ConnectionString;
+
+        string connectionString = context.AdditionalData?.ConnectionString?? throw new InvalidOperationException("Connection string is required in the upload context.");
+        telemetryConfiguration.ConnectionString = connectionString;
 
         // When access is specified, assumes that the AAD auth is enabled. Uses default azure credential to provide
         // necessary credential for the client to use to send App Insights custom events.
@@ -243,12 +240,11 @@ internal class TraceUploader : ITraceUploader
                 throw new ArgumentOutOfRangeException($"Unrecognized upload mode of: {UploadContext.UploadMode}. Please file an issue for investigation.");
         }
     }
-#endif
 
     private async Task UploadAsync(UploadContextExtension extendedContext, string zippedFilePath, CancellationToken cancellationToken)
     {
         UploadContext context = extendedContext.UploadContext;
-        IProfilerFrontendClient stampFrontendClient = null;
+        IProfilerFrontendClient? stampFrontendClient = null;
         try
         {
             stampFrontendClient = _stampFrontendClientBuilder.WithUploadContext(extendedContext).Build();
@@ -341,9 +337,9 @@ internal class TraceUploader : ITraceUploader
             [BlobMetadataConstants.TraceFileFormatMetaName] = context.TraceFileFormat,
         };
 
-        if (TryGetCloudRoleName(context, out string cloudRoleName))
+        if (TryGetCloudRoleName(context, out string? cloudRoleName))
         {
-            metadata.Add(BlobMetadataConstants.RoleName, cloudRoleName);
+            metadata.Add(BlobMetadataConstants.RoleName, cloudRoleName!);
         }
 
         if (!string.IsNullOrEmpty(context.TriggerType))
@@ -354,7 +350,7 @@ internal class TraceUploader : ITraceUploader
         return metadata;
     }
 
-    internal bool TryGetCloudRoleName(UploadContext context, out string cloudRoleName, int maxLength = 64)
+    internal bool TryGetCloudRoleName(UploadContext context, out string? cloudRoleName, int maxLength = 64)
     {
         Debug.Assert(maxLength >= 0, "Why set maxLength <= 0?");
 
@@ -379,7 +375,7 @@ internal class TraceUploader : ITraceUploader
     /// <summary>
     /// Process before upload.
     /// </summary>
-    internal protected virtual async Task<UploadContextExtension> UploadingAsync(UploadContext uploadContext, CancellationToken cancellation = default)
+    internal protected virtual async Task<UploadContextExtension?> UploadingAsync(UploadContext uploadContext, CancellationToken cancellation = default)
     {
         // Making sure upload context is valid;
         string details = UploadContextValidator.Validate(UploadContext);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +22,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators
 
         private ILogger<T> GetLogger<T>()
         {
-            return _serviceProvider.GetService<ILogger<T>>();
+            return _serviceProvider.GetRequiredService<ILogger<T>>();
         }
 
         private readonly IServiceProvider _serviceProvider;

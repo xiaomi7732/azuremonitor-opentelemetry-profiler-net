@@ -35,8 +35,8 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private readonly ITraceControl _traceControl;
     private readonly IEventPipeTelemetryTracker _telemetryTracker;
 
-    private IEnumerator<ITraceSessionListener> _sessionListeners;
-    internal ITraceSessionListener SessionListener { get; private set; }
+    private IEnumerator<ITraceSessionListener>? _sessionListeners;
+    internal ITraceSessionListener? SessionListener { get; private set; }
 
     private readonly ITraceSessionListenerFactory _traceSessionListenerFactory;
 
@@ -45,7 +45,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private readonly IPostStopProcessorFactory _postStopProcessorFactory;
     private readonly ITraceFileFormatDefinition _traceFileFormatDefinition;
     private readonly AppInsightsProfileFetcher _appInsightsProfileFetcher;
-    private string _currentTraceFilePath;
+    private string? _currentTraceFilePath;
 
     private SemaphoreSlim _singleProfilingSemaphore = new SemaphoreSlim(1, 1);
     public bool IsProfilerRunning => _singleProfilingSemaphore.CurrentCount == 0;
@@ -185,7 +185,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
             // Notice: Stop trace session listener has to be happen before calling ITraceControl.Disable().
             // Trace control disabling will take a while. We shall not gathering anything events when disable is happening.
             _logger.LogDebug("Disabling {sessionListener}", nameof(SessionListener));
-            List<SampleActivity> sampleActivities = SessionListener?.SampleActivities?.GetActivities()?.ToList();
+            List<SampleActivity>? sampleActivities = SessionListener?.SampleActivities?.GetActivities()?.ToList();
 
             SessionListener?.Dispose();
             SessionListener = null;
@@ -194,8 +194,10 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
             {
                 await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
 
+                string currentTraceFilePath = _currentTraceFilePath ?? throw new InvalidOperationException("Current trace file path is not set. This should not happen. Please contact the project owner.");
+
                 profilerStopped = await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
-                    _currentTraceFilePath,
+                    currentTraceFilePath,
                     currentSessionId.Value,
                     stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
                     sampleActivities ?? Enumerable.Empty<SampleActivity>(),
@@ -248,12 +250,18 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         }
     }
 
-    private void ActivateNext(object sender, EventArgs e)
+    private void ActivateNext(object sender, EventArgs? e)
     {
         if (SessionListener != null)
         {
             SessionListener.Poisoned -= ActivateNext;
             SessionListener.Dispose();
+        }
+
+        if (_sessionListeners is null)
+        {
+            _logger.LogInformation("There's no registered backup session listener.");
+            return;
         }
 
         if (_sessionListeners.MoveNext())
@@ -296,7 +304,6 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     public void Dispose()
     {
         _singleProfilingSemaphore?.Dispose();
-        _singleProfilingSemaphore = null;
 
         _sessionListeners?.Dispose();
         _sessionListeners = null;

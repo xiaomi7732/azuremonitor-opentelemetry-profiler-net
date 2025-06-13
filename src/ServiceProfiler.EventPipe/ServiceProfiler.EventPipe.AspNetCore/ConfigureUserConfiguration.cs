@@ -11,14 +11,14 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
     {
         private const string ServiceProfilerSectionName = "ServiceProfiler";
 
-        private readonly IConfiguration _configuration;
-        private readonly Action<UserConfiguration> _overwriter;
+        private readonly IConfiguration? _configuration;
+        private readonly Action<UserConfiguration>? _overwriter;
 
         private readonly ILogger _logger;
         private ISerializationProvider _serializer { get; }
         public ConfigureUserConfiguration(
-            IConfiguration configuration,
-            Action<UserConfiguration> overwriter,
+            IConfiguration? configuration,
+            Action<UserConfiguration>? overwriter,
             ISerializationProvider serializer,
             ILogger<ConfigureUserConfiguration> logger)
         {
@@ -43,7 +43,7 @@ namespace Microsoft.ApplicationInsights.Profiler.AspNetCore
 
             _overwriter?.Invoke(options);
 
-            if (_serializer.TrySerialize(options, out string serializedOptions))
+            if (_serializer.TrySerialize(options, out string? serializedOptions))
             {
                 _logger.LogTrace(serializedOptions);
             }
