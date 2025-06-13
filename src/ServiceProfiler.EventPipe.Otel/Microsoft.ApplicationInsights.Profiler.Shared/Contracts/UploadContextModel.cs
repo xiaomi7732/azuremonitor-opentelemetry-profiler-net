@@ -86,7 +86,7 @@ internal class UploadContextModel
 
         if (!string.IsNullOrEmpty(Environment))
         {
-            argumentLine += $@" --{EnvironmentKeyName} ""{Environment}"" ";
+            argumentLine += $@" --{EnvironmentKeyName} ""{Environment}""";
         }
 
         argumentLine += $@" --{TraceFileFormatKeyName} ""{TraceFileFormat}""";
