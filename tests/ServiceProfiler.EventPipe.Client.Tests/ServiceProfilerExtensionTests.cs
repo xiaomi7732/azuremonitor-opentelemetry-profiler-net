@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright(c) Microsoft Corporation.All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -9,11 +9,10 @@ using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
-using Microsoft.ApplicationInsights.Profiler.Core.Stubs;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -157,8 +156,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             ServiceDescriptor endpointProviderDescriptor = serviceCollection.FirstOrDefault(d => d.ServiceType is IEndpointProvider);
             serviceCollection.Remove(endpointProviderDescriptor);
             var endpointProviderMock = new Mock<IEndpointProvider>();
-            endpointProviderMock.Setup(e => e.GetInstrumentationKey()).Returns(customerIKey);
-            endpointProviderMock.Setup(e => e.GetEndpoint(It.IsAny<EndpointName>())).Returns(new Uri(_testAppInsightsProfileEndpoint));
+            endpointProviderMock.Setup(e => e.GetEndpoint()).Returns(new Uri(_testAppInsightsProfileEndpoint));
             serviceCollection.AddTransient<IEndpointProvider>(p => endpointProviderMock.Object);
 
             // Build service provider
@@ -223,7 +221,6 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 serviceCollection.AddTransient<IEndpointProvider>(p =>
                 {
                     var endpointProviderMock = new Mock<IEndpointProvider>();
-                    endpointProviderMock.Setup(m => m.GetInstrumentationKey()).Returns(isIKeyNull ? null : _testIKey.ToString());
                     return endpointProviderMock.Object;
                 });
 
@@ -257,7 +254,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 var traceControlMock = new Mock<ITraceControl>();
                 if (traceControlEnableCallback != null)
                 {
-                    traceControlMock.Setup(c => c.Enable(It.IsAny<string>())).Callback(traceControlEnableCallback);
+                    traceControlMock.Setup(c => c.EnableAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).Callback(traceControlEnableCallback);
                 }
 
                 if (traceControlDisableCallback != null)
@@ -267,7 +264,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
                 serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);
                 serviceCollection.AddSingleton<SampleActivityContainerFactory>();
-                serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
+                //serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
 
                 var uploaderMock = new Mock<IOutOfProcCaller>();
                 if (uploaderExecuteCallback != null)

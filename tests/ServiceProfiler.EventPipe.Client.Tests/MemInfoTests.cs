@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
-using Microsoft.ApplicationInsights.Profiler.Core.Orchestration.MetricsProviders;
-using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
+using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
 using Moq;
 using Xunit;
 

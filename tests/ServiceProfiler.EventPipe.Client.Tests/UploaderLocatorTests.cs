@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Microsoft.ApplicationInsights.Profiler.Core;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Moq;
 using Xunit;
 

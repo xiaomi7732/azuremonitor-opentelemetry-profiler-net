@@ -1,7 +1,8 @@
-using System;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
-using Xunit;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using System;
+using Xunit;
 
 namespace ServiceProfiler.EventPipe.Client.Tests
 {

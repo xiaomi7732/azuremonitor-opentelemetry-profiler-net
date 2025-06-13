@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
@@ -12,17 +12,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Core;
-using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
-using Microsoft.ApplicationInsights.Profiler.Core.IPC;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
-using Microsoft.ApplicationInsights.Profiler.Core.SampleTransfers;
-using Microsoft.ApplicationInsights.Profiler.Core.Sampling;
-using Microsoft.ApplicationInsights.Profiler.Core.Stubs;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +37,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 {
     public abstract class TestsBase
     {
-        protected AppInsightsProfileFetcher CreateTestAppInsightsProfileFetcher(ISerializationProvider serializer)
+        internal AppInsightsProfileFetcher CreateTestAppInsightsProfileFetcher(ISerializationProvider serializer)
         {
             var testProfile = new AppInsightsProfile { AppId = _testAppId, Location = "testlocation" };
             serializer.TrySerialize(testProfile, out string testProfileSerialized);
@@ -103,12 +103,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             serviceCollection.AddTransient<IServiceProfilerContext>(provider =>
             {
                 var serviceProfilerContext = new Mock<IServiceProfilerContext>();
-                serviceProfilerContext.Setup(ctx => ctx.AppInsightsAppId).Returns(_testAppId);
                 serviceProfilerContext.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(_testIKey);
                 serviceProfilerContext.Setup(ctx => ctx.MachineName).Returns("UnitTestMachineName");
-                serviceProfilerContext.Setup(ctx => ctx.ServiceProfilerCancellationTokenSource).Returns(new CancellationTokenSource());
                 serviceProfilerContext.Setup(ctx => ctx.StampFrontendEndpointUrl).Returns(new Uri(_testServiceProfilerFrontendEndpoint));
-                serviceProfilerContext.Setup(ctx => ctx.GetAppInsightsAppIdAsync()).Returns(() => Task.FromResult(_testAppId));
                 serviceProfilerContext.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(() => _testIKey);
                 return serviceProfilerContext.Object;
             });
@@ -141,7 +138,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
             serviceCollection.AddSingleton<SampleActivityContainerFactory>();
-            serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
+            //serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
 
             var uploaderMock = new Mock<IOutOfProcCaller>();
             uploaderMock.Setup(uploader => uploader.ExecuteAndWait(It.IsAny<ProcessPriorityClass>())).Returns(0);
@@ -163,12 +160,12 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             var telemetryTracker = new Mock<IEventPipeTelemetryTracker>();
             serviceCollection.AddTransient(provider => telemetryTracker.Object);
-            serviceCollection.AddTransient<ICustomEventsTracker, MockCustomerEventsTracker>();
+            //serviceCollection.AddTransient<ICustomEventsTracker, MockCustomerEventsTracker>();
 
-            serviceCollection.AddTransient<ICustomTelemetryClientFactory>(p => new CustomTelemetryClientStubFactory(_testIKey.ToString()));
+            //serviceCollection.AddTransient<ICustomTelemetryClientFactory>(p => new CustomTelemetryClientStubFactory(_testIKey.ToString()));
 
             _traceUploaderMock = new Mock<ITraceUploader>();
-            UploadContext uploadContext = new UploadContext()
+            UploadContextModel uploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = _testIKey,
                 HostUrl = new Uri(_testAppInsightsProfileEndpoint),
@@ -194,7 +191,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             // No validation error for uploadContext.
             Mock<IUploadContextValidator> uploadContextValidatorMock = new Mock<IUploadContextValidator>();
-            uploadContextValidatorMock.Setup(validator => validator.Validate(It.IsAny<UploadContext>())).Returns(() => null);
+            uploadContextValidatorMock.Setup(validator => validator.Validate(It.IsAny<UploadContextModel>())).Returns(() => null);
             serviceCollection.AddTransient<IUploadContextValidator>(p => uploadContextValidatorMock.Object);
 
             Mock<IProfilerCoreAssemblyInfo> profilerCoreAssemblyInfoMock = new Mock<IProfilerCoreAssemblyInfo>();
@@ -232,9 +229,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             return serviceCollection;
         }
 
-        internal UploadContext CreateUploadContext()
+        internal UploadContextModel CreateUploadContext()
         {
-            UploadContext uploadContext = new UploadContext()
+            UploadContextModel uploadContext = new ()
             {
                 AIInstrumentationKey = _testIKey,
                 HostUrl = new Uri(_testAppInsightsProfileEndpoint),
@@ -253,8 +250,8 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         protected static readonly DateTimeOffset _testSessionId = DateTimeOffset.UtcNow;
         protected const string _testTraceFilePath = "/mnt/d/temp/trace.etl.zip";
 
-        protected Mock<IProfilerFrontendClient> _stampFrontendClientMock;
-        protected Mock<IPrioritizedUploaderLocator> _uploaderLocatorMock;
+        internal Mock<IProfilerFrontendClient> _stampFrontendClientMock;
+        internal Mock<IPrioritizedUploaderLocator> _uploaderLocatorMock;
         internal Mock<ITraceUploader> _traceUploaderMock;
 
         private IServiceCollection BuildServiceCollection()

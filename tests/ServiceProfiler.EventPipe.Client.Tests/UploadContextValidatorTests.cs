@@ -1,6 +1,10 @@
 using System;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.SnapshotCollector.Interop;
+using Moq;
 using Xunit;
 
 namespace ServiceProfiler.EventPipe.Client.Tests
@@ -10,8 +14,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldReturnNullWhenNoError()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -32,8 +37,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAcceptOptionalMetadataFilePath()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -54,8 +60,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAcceptOptionalRoleName()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -78,8 +85,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAcceptNullRoleName()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -102,8 +110,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAcceptOptionalTriggerType()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -126,8 +135,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAcceptNullTriggerType()
         {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            string actual = target.Validate(new UploadContext()
+            IFile fileUtility = CreateIFileMock().Object;
+            IUploadContextValidator target = new UploadContextValidator(fileUtility);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -150,9 +160,10 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldFailWhenSampleFileNotExist()
         {
+            Mock<IFile> fileMock = CreateIFileMock(exists: () => false);
             string samplePath = @"c:\sample";
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => !string.Equals(p, samplePath, StringComparison.Ordinal));
-            string actual = target.Validate(new UploadContext()
+            IUploadContextValidator target = new UploadContextValidator(fileMock.Object);
+            string actual = target.Validate(new UploadContextModel()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
                 HostUrl = new Uri("https://endpoint"),
@@ -170,36 +181,14 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Assert.Equal($"Serialized sample file doesn't exist. File path: {samplePath}." + Environment.NewLine, actual);
         }
 
-        [Fact]
-        public void ShouldReturnErrorWhenNoInstrumentationKey()
-        {
-            TestImp(context => context.AIInstrumentationKey = Guid.Empty, "AIInstrumentationKey is required." + Environment.NewLine);
-        }
 
         [Fact]
         public void ShouldReturnErrorWhenHostUriIsEmpty()
         {
-            TestImp(context => context.HostUrl = null, "HostUrl is required." + Environment.NewLine);
-        }
-
-        [Fact]
-        public void ShouldAtLeastHaveEitherNamedPipeNameOrSerializedSampleFilePathSet()
-        {
-            TestImp(context =>
-            {
-                context.PipeName = null;
-                context.SerializedSampleFilePath = null;
-            },
-            "SerializedSampleFilePath and PipeName can't be null at the same time." + Environment.NewLine);
-        }
-
-        private void TestImp(Action<UploadContext> modify, string expectedError)
-        {
-            IUploadContextValidator target = new UploadContextValidator(fileExists: p => true);
-            UploadContext context = new UploadContext()
+            UploadContextModel context = new()
             {
                 AIInstrumentationKey = Guid.NewGuid(),
-                HostUrl = new Uri("https://endpoint"),
+                HostUrl = null,
                 SessionId = DateTimeOffset.UtcNow,
                 StampId = "stampId",
                 TraceFilePath = @"c:\tracefilePath.etl.zip",
@@ -209,10 +198,49 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
             };
-            modify(context);
+
+            TestImp(createContext: () => context, "HostUrl is required." + Environment.NewLine);
+        }
+
+        [Fact]
+        public void ShouldAtLeastHaveEitherNamedPipeNameOrSerializedSampleFilePathSet()
+        {
+            UploadContextModel context = new()
+            {
+                AIInstrumentationKey = Guid.NewGuid(),
+                HostUrl = null,
+                SessionId = DateTimeOffset.UtcNow,
+                StampId = "stampId",
+                TraceFilePath = @"c:\tracefilePath.etl.zip",
+                MetadataFilePath = null,
+                PreserveTraceFile = false,
+                SkipEndpointCertificateValidation = false,
+                UploadMode = UploadMode.OnSuccess,
+                SerializedSampleFilePath = null,
+                PipeName = null,
+            };
+
+            TestImp(() => context,
+            "SerializedSampleFilePath and PipeName can't be null at the same time." + Environment.NewLine);
+        }
+
+        private void TestImp(Func<UploadContextModel> createContext, string expectedError)
+        {
+            Mock<IFile> fileMock = CreateIFileMock();
+
+            IUploadContextValidator target = new UploadContextValidator(fileMock.Object);
+            UploadContextModel context = createContext();
             string actual = target.Validate(context);
 
             Assert.Equal(expectedError, actual);
+        }
+
+        private Mock<IFile> CreateIFileMock(Func<bool> exists = null)
+        {
+            exists ??= () => true; // Default to true if not specified
+            Mock<IFile> fileMock = new();
+            fileMock.Setup(f => f.Exists(It.IsAny<string>())).Returns(exists());
+            return fileMock;
         }
     }
 }

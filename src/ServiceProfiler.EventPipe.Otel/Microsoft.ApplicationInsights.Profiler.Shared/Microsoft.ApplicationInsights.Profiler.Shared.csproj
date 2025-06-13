@@ -12,6 +12,9 @@
     <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.AspNetCore" />
     <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.Core" />
     <InternalsVisibleTo Include="Microsoft.ServiceProfiler.EventPipe.Orchestration" />
+    
+    <!--Tests-->
+    <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests"/>
   </ItemGroup>
   
   <ItemGroup>  

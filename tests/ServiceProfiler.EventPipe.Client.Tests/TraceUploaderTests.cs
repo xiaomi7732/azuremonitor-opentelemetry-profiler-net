@@ -1,16 +1,15 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.UploaderProxy;
-using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Moq;
 using Xunit;
 
@@ -23,16 +22,15 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             IServiceProvider serviceProvider = GetRichServiceCollection().BuildServiceProvider();
             ITraceUploader target = new TraceUploaderProxy(serviceProvider.GetService<IUploaderPathProvider>(),
-               serviceProvider.GetService<IProfilerFrontendClient>(),
                serviceProvider.GetService<IFile>(),
-               serviceProvider.GetService<IOutOfProcCaller>(),
+               serviceProvider.GetService<IOutOfProcCallerFactory>(),
                serviceProvider.GetService<IServiceProfilerContext>(),
                GetLogger<TraceUploaderProxy>(),
                Options.Create(new UserConfiguration()),
                serviceProvider.GetService<IUploadContextValidator>(),
-               serviceProvider.GetService<IProfilerCoreAssemblyInfo>());
+               serviceProvider.GetService<ITraceFileFormatDefinition>());
 
-            UploadContext result = await target.UploadAsync(
+            UploadContextModel result = await target.UploadAsync(
                 _testSessionId,
                 _testTraceFilePath,
                 metadataFilePath: null,
@@ -56,19 +54,17 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             IServiceProvider serviceProvider = GetRichServiceCollection().BuildServiceProvider();
             Mock<IUploadContextValidator> contextValidator = new Mock<IUploadContextValidator>();
-            contextValidator.Setup(validator => validator.Validate(It.IsAny<UploadContext>())).Returns(() => "Validation failed.");
+            contextValidator.Setup(validator => validator.Validate(It.IsAny<UploadContextModel>())).Returns(() => "Validation failed.");
             ITraceUploader target = new TraceUploaderProxy(serviceProvider.GetService<IUploaderPathProvider>(),
-                serviceProvider.GetService<IProfilerFrontendClient>(),
                 serviceProvider.GetService<IFile>(),
-                serviceProvider.GetService<IOutOfProcCaller>(),
+                serviceProvider.GetService<IOutOfProcCallerFactory>(),
                 serviceProvider.GetService<IServiceProfilerContext>(),
                 GetLogger<TraceUploaderProxy>(),
                 Options.Create(new UserConfiguration()),
                 contextValidator.Object,
-                serviceProvider.GetService<IProfilerCoreAssemblyInfo>()
-                );
+               serviceProvider.GetService<ITraceFileFormatDefinition>());
 
-            UploadContext result = await target.UploadAsync(
+            UploadContextModel result = await target.UploadAsync(
                 _testSessionId,
                 _testTraceFilePath,
                 metadataFilePath: null,

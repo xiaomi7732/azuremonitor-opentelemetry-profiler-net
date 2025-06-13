@@ -20,7 +20,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             Assert.Equal(250, target.CircularBufferMB);
             Assert.True(target.RequestRundown);
-            Assert.NotNull(target.Providers);
+            Assert.NotNull(target.BuildEventPipeProviders());
 
             var expectedProviders = new List<EventPipeProvider>(){
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x4c14fccbd, null),
@@ -34,7 +34,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 new EventPipeProvider("Microsoft-ApplicationInsights-DataRelay", EventLevel.Verbose, keywords:0xffffffff, arguments: null),
             };
 
-            Assert.Collection(target.Providers,
+            Assert.Collection(target.BuildEventPipeProviders(),
                 item1 => item1.Equals(expectedProviders[0]),
                 item2 => item2.Equals(expectedProviders[1]),
                 item3 => item3.Equals(expectedProviders[2]),

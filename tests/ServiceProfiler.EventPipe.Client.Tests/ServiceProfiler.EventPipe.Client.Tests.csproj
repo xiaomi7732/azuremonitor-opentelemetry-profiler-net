@@ -39,6 +39,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
     <ProjectReference Include="..\..\src\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj" />
+    <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />

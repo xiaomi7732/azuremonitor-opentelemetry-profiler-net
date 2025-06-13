@@ -1,5 +1,5 @@
 using System;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
-            var validUploadContext = new UploadContext()
+            var validUploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -42,7 +42,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
-            var validUploadContext = new UploadContext()
+            var validUploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -69,7 +69,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
-            var validUploadContext = new UploadContext()
+            var validUploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -96,7 +96,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             const string roleName = "testRoleName";
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -123,7 +123,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -150,7 +150,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -178,7 +178,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             const string trigger = "HighCPU";
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -205,7 +205,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new UploadContextModel()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),
@@ -232,7 +232,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
             Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
-            UploadContext validUploadContext = new UploadContext()
+            UploadContextModel validUploadContext = new()
             {
                 AIInstrumentationKey = iKey,
                 HostUrl = new Uri("https://endpoint", UriKind.Absolute),

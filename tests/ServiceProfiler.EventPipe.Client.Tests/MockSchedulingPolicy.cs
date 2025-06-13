@@ -1,4 +1,4 @@
-﻿using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace ServiceProfiler.EventPipe.Client.Tests
 {
-    public class MockSchedulingPolicy : SchedulingPolicy
+    internal class MockSchedulingPolicy : SchedulingPolicy
     {
         public MockSchedulingPolicy(
             IOptions<UserConfiguration> userConfig,
