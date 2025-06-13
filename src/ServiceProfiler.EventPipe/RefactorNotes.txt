@@ -28,3 +28,6 @@ Major refactor notes:
     [ ] Making sure the metadata - espcially the file format metadata is correctly set.
     [ ] Making sure the post processing is done correctly.
     [ ] Tests
+
+7. "EP_OTEL_PROFILER" be removed.
+    [ ] This was there to workaround new files in share bleeding back to the ServiceProfiler repo. It is now not needed.
