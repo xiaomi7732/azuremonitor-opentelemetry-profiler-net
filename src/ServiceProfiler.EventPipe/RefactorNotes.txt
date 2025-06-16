@@ -31,3 +31,6 @@ Major refactor notes:
 
 7. "EP_OTEL_PROFILER" be removed.
     [ ] This was there to workaround new files in share bleeding back to the ServiceProfiler repo. It is now not needed.
+
+8. Use the new implemenation for fetching role name and role instance.
+    [ ] Tests

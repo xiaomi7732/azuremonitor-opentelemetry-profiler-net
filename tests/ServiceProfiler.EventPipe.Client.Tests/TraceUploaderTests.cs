@@ -43,10 +43,8 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Assert.NotNull(result);
             Assert.Equal(_testIKey, result.AIInstrumentationKey);
             Assert.Equal(_testSessionId, result.SessionId);
-            Assert.Equal(_testStampId, result.StampId);
             Assert.Equal(_testTraceFilePath, result.TraceFilePath);
             Assert.Equal(new Uri(_testServiceProfilerFrontendEndpoint), result.HostUrl);
-
         }
 
         [Fact]

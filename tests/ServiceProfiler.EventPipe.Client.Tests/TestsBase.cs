@@ -2,14 +2,6 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
@@ -32,6 +24,15 @@ using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
 using Moq;
+using ServiceProfiler.Common.Utilities;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ServiceProfiler.EventPipe.Client.Tests
 {
@@ -81,6 +82,16 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             ILogger<IServiceProfilerContext> profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
 
+            // Role name detectors and sources
+            Mock<IRoleNameSource> roleNameSourceMock = new();
+            roleNameSourceMock.Setup(role => role.CloudRoleName).Returns("testCloudRoleName");
+            serviceCollection.AddSingleton<IRoleNameSource>(_ => roleNameSourceMock.Object);
+
+            // Role instance detectors and sources
+            Mock<IRoleInstanceSource> roleInstanceSourceMock = new();
+            roleInstanceSourceMock.Setup(role => role.CloudRoleInstance).Returns("testCloudRoleInstance");
+            serviceCollection.AddSingleton<IRoleInstanceSource>(_ => roleInstanceSourceMock.Object);
+
             var delaySourceMock = new Mock<IDelaySource>();
             delaySourceMock.Setup(delay => delay.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
             serviceCollection.AddTransient<IDelaySource>(p => delaySourceMock.Object);
@@ -99,6 +110,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             resourceUsageSourceMock.Setup(usage => usage.GetAverageMemoryUsage()).Returns(memoryUsageAvg);
             serviceCollection.AddTransient<IResourceUsageSource>(p => resourceUsageSourceMock.Object);
             serviceCollection.AddTransient<IOptions<UserConfiguration>>(p => Options.Create(new UserConfiguration()));
+            serviceCollection.AddTransient<IOptions<UserConfigurationBase>>(p =>
+            {
+                UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
+                return Options.Create<UserConfigurationBase>(userConfiguration);
+            });
 
             serviceCollection.AddTransient<IServiceProfilerContext>(provider =>
             {
@@ -107,6 +123,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 serviceProfilerContext.Setup(ctx => ctx.MachineName).Returns("UnitTestMachineName");
                 serviceProfilerContext.Setup(ctx => ctx.StampFrontendEndpointUrl).Returns(new Uri(_testServiceProfilerFrontendEndpoint));
                 serviceProfilerContext.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(() => _testIKey);
+                serviceProfilerContext.Setup(ctx => ctx.ConnectionString).Returns(() =>
+                {
+                    ConnectionString.TryParse("InstrumentationKey=" + _testIKey, out ConnectionString connectionString);
+                    return connectionString;
+                });
                 return serviceProfilerContext.Object;
             });
 
@@ -136,11 +157,12 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             serviceCollection.AddTransient<ITraceFileFormatDefinition>(_ => CurrentTraceFileFormat.Instance);
 
             var traceControlMock = new Mock<ITraceControl>();
+            traceControlMock.Setup(tc => tc.SessionStartUTC).Returns(_testSessionId.UtcDateTime);
             serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);
 
             serviceCollection.AddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
             serviceCollection.AddSingleton<SampleActivityContainerFactory>();
-            //serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
+            serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
 
             var uploaderMock = new Mock<IOutOfProcCaller>();
             uploaderMock.Setup(uploader => uploader.ExecuteAndWait(It.IsAny<ProcessPriorityClass>())).Returns(0);
@@ -151,6 +173,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<IOutOfProcCaller>(provider => uploaderMock.Object);
             serviceCollection.AddTransient<IOutOfProcCallerFactory>(provider => outOfProcCallerFactoryMock.Object);
+
+            serviceCollection.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
+            serviceCollection.AddSingleton<IPostStopProcessorFactory, PostStopProcessorFactory>();
             serviceCollection.AddSingleton<ServiceProfilerProvider>();
 
             _uploaderLocatorMock = new Mock<IPrioritizedUploaderLocator>();
@@ -167,9 +192,6 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             var telemetryTracker = new Mock<IEventPipeTelemetryTracker>();
             serviceCollection.AddTransient(provider => telemetryTracker.Object);
-            //serviceCollection.AddTransient<ICustomEventsTracker, MockCustomerEventsTracker>();
-
-            //serviceCollection.AddTransient<ICustomTelemetryClientFactory>(p => new CustomTelemetryClientStubFactory(_testIKey.ToString()));
 
             _traceUploaderMock = new Mock<ITraceUploader>();
             UploadContextModel uploadContext = new UploadContextModel()
