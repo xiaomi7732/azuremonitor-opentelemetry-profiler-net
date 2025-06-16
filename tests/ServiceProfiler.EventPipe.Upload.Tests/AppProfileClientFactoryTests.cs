@@ -42,7 +42,7 @@ public class AppProfileClientFactoryTests : TestsBase
     }
 
     [Fact]
-    public void ShouldReturnIOptionsWithoutTokenCredentialByDefaultAccessToken()
+    public void ShouldReturnIOptionsWithTokenCredentialByDefaultAccessToken()
     {
         UploadContextExtension uploadContextExtension = CreateUploadContextExtension();
         uploadContextExtension.TokenCredential = new TokenCredentialStub(accessToken: default); // Default access token leads to ingestion client options without token credential
@@ -51,6 +51,6 @@ public class AppProfileClientFactoryTests : TestsBase
         IOptions<IngestionClientOptions> result = target.CustomizeIngestionClientOptions(uploadContextExtension);
 
         Assert.NotNull(result);
-        Assert.Null(result.Value.TokenCredential);
+        Assert.NotNull(result.Value.TokenCredential);
     }
 }
