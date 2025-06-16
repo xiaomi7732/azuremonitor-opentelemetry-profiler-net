@@ -116,13 +116,14 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             IConfiguration config = new ConfigurationBuilder().AddInMemoryCollection(
                 new Dictionary<string, string>(){
+                    { "APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=8e321e78-834f-4397-96fd-297fa844d140" },
                     {"a" , "b"}, // noise
                     {"ServiceProfiler:BufferSizeInMB", "100"},
                     {"ServiceProfiler:Duration", "00:01:15"},
                     {"ServiceProfiler:InitialDelay", "00:00:18"},
             }).Build();
 
-            IServiceCollection serviceCollection = CreateInitialServiceCollection();
+            IServiceCollection serviceCollection = CreateInitialServiceCollection(config);
             serviceCollection.AddSingleton(config);
 
             serviceCollection = serviceCollection.AddServiceProfiler();
@@ -176,9 +177,15 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         }
 
         #region Private
-        private ServiceCollection CreateInitialServiceCollection()
+        private ServiceCollection CreateInitialServiceCollection(IConfiguration customConfiguration = null)
         {
             ServiceCollection serviceCollection = new ServiceCollection();
+
+            IConfiguration config = customConfiguration ?? new ConfigurationBuilder().AddInMemoryCollection([
+                new("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=8e321e78-834f-4397-96fd-297fa844d140"),
+            ]).Build();
+
+            serviceCollection.AddSingleton<IConfiguration>(config);
             serviceCollection.AddSingleton<IHostingEnvironment>(p =>
             {
                 var hostingEnvironmentMock = new Mock<IHostingEnvironment>();

@@ -133,6 +133,8 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<AppInsightsProfileFetcher>(provider => CreateTestAppInsightsProfileFetcher(provider.GetRequiredService<ISerializationProvider>()));
 
+            serviceCollection.AddTransient<ITraceFileFormatDefinition>(_ => CurrentTraceFileFormat.Instance);
+
             var traceControlMock = new Mock<ITraceControl>();
             serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);
 
@@ -143,7 +145,12 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             var uploaderMock = new Mock<IOutOfProcCaller>();
             uploaderMock.Setup(uploader => uploader.ExecuteAndWait(It.IsAny<ProcessPriorityClass>())).Returns(0);
 
+            Mock<IOutOfProcCallerFactory> outOfProcCallerFactoryMock = new Mock<IOutOfProcCallerFactory>();
+            outOfProcCallerFactoryMock.Setup(factory => factory.Create(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(uploaderMock.Object);
+
             serviceCollection.AddTransient<IOutOfProcCaller>(provider => uploaderMock.Object);
+            serviceCollection.AddTransient<IOutOfProcCallerFactory>(provider => outOfProcCallerFactoryMock.Object);
             serviceCollection.AddSingleton<ServiceProfilerProvider>();
 
             _uploaderLocatorMock = new Mock<IPrioritizedUploaderLocator>();
@@ -231,7 +238,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
         internal UploadContextModel CreateUploadContext()
         {
-            UploadContextModel uploadContext = new ()
+            UploadContextModel uploadContext = new()
             {
                 AIInstrumentationKey = _testIKey,
                 HostUrl = new Uri(_testAppInsightsProfileEndpoint),
