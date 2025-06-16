@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -101,13 +102,20 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             serviceCollection.AddLogging();
             serviceCollection.AddOptions();
-            // Register IOptions<UserConfiguration>.
+
+            // Register IOptions<UserConfiguration> and IOptions<UserConfigurationBase>.
             serviceCollection.AddSingleton<IConfigureOptions<UserConfiguration>>(p =>
             {
                 return new ConfigureUserConfiguration(configuration ?? p.GetService<IConfiguration>(),
                     applyOptions,
                     p.GetRequiredService<ISerializationProvider>(),
                     p.GetRequiredService<ILogger<ConfigureUserConfiguration>>());
+            });
+
+            serviceCollection.AddSingleton(p =>
+            {
+                UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
+                return Options.Options.Create<UserConfigurationBase>(userConfiguration);
             });
         }
 

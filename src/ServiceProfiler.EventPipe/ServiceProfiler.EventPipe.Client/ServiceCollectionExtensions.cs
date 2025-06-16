@@ -1,3 +1,4 @@
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
@@ -27,7 +28,6 @@ using ServiceProfiler.Common.Utilities;
 using ServiceProfiler.EventPipe.Client;
 using ServiceProfiler.EventPipe.Logging;
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
@@ -48,6 +48,20 @@ internal static class ServiceCollectionExtensions
     /// <param name="services"></param>
     public static IServiceCollection AddProfilerCoreServices(this IServiceCollection services)
     {
+        // User Connection String
+        services.AddSingleton<ConnectionString>(p =>
+        {
+            TelemetryConfiguration telemetryConfiguration = p.GetRequiredService<TelemetryConfiguration>();
+            string connectionStringValue = telemetryConfiguration.ConnectionString;
+            if (!ConnectionString.TryParse(connectionStringValue, out ConnectionString instance))
+            {
+                ILogger logger = p.GetRequiredService<ILogger<ConnectionString>>();
+                logger.LogError("Connection string is not set or is invalid. Connection string provided: {connectionString}", connectionStringValue);
+            }
+
+            return instance;
+        });
+
         // Utilities
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();

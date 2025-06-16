@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Options;
 using System;
@@ -32,6 +33,6 @@ internal class EndpointProviderMirror : IEndpointProvider
 
     public Uri GetEndpoint()
     {
-        return (Uri)_getEndpointMethod.Invoke(_endpointProvider, ["Profiler"]);
+        return (Uri)_getEndpointMethod.Invoke(_endpointProvider, [EndpointName.ProfilerEndpoint]);
     }
 }
