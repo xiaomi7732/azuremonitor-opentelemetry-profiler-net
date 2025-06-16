@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
 // -----------------------------------------------------------------------------
 
@@ -10,9 +10,11 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Core.IPC;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Uploader;
 using Microsoft.ApplicationInsights.Profiler.Uploader.Stubs;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;

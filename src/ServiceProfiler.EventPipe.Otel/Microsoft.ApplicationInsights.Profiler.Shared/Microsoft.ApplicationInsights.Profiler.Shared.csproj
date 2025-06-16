@@ -16,7 +16,6 @@
     <!--Tests-->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
     <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests" Key="$(TestPublicKey)" />
-
   </ItemGroup>
 
   <ItemGroup>

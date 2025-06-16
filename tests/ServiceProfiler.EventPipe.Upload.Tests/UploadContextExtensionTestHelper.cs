@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
 // -----------------------------------------------------------------------------
 
 using System;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Uploader;
 
 namespace ServiceProfiler.EventPipe.Upload.Tests
