@@ -1,7 +1,8 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal class PostStopProcessorFactory(IServiceProvider serviceProvider) : IPostStopProcessorFactory
 {

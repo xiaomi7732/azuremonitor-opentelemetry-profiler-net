@@ -1,6 +1,5 @@
 using Azure.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
@@ -9,13 +8,19 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal class PostStopProcessor : IPostStopProcessor
 {
-    private readonly ServiceProfilerOptions _serviceProfilerOptions;
+    private readonly UserConfigurationBase _serviceProfilerOptions;
     private readonly IUploaderPathProvider _uploaderPathProvider;
     private readonly ITraceUploader _traceUploader;
     private readonly INamedPipeClientFactory _namedPipeClientFactory;
@@ -30,7 +35,7 @@ internal class PostStopProcessor : IPostStopProcessor
     public PostStopProcessor(
         IUploaderPathProvider uploaderPathProvider,
         ITraceUploader traceUploader,
-        IOptions<ServiceProfilerOptions> serviceProfilerOptions,
+        IOptions<UserConfigurationBase> serviceProfilerOptions,
         INamedPipeClientFactory namedPipeClientFactory,
         IAuthTokenProvider authTokenProvider,
         ISerializationProvider serializer,
