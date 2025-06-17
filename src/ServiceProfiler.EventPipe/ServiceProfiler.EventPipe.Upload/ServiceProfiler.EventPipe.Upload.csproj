@@ -52,10 +52,6 @@
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeServerService.cs" Link="IPC\INamedPipeServerService.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeClientFactory.cs" Link="IPC\INamedPipeClientFactory.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\*.cs" Link="IPC\*.cs" />
-    <!--<Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\NamedPipeRole.cs" Link="IPC\NamedPipeRole.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\DuplexNamedPipeService.cs" Link="IPC\DuplexNamedPipeService.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\NamedPipeServerFactory.cs" Link="IPC\NamedPipeServerFactory.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\NamedPipeClientFactory.cs" Link="IPC\NamedPipeClientFactory.cs" />-->
 
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\IPayloadSerializer.cs" Link="IPC\IPayloadSerializer.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\IPCAdditionalData.cs" />
@@ -68,7 +64,10 @@
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\EventPipeProviderItem.cs" Link="Contracts\EventPipeProviderItem.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\TraceScavengerOptions.cs" Link="Contracts\TraceScavengerOptions.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\CustomEvents\*.cs" />
-    
+
+    <!--<Compile Include="..\..\ServiceProfiler.Common.Utilities\ConnectionString.cs" Link="ConnectionString.cs" />-->
+    <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\TelemetryConfigurationBuilder.cs" Link="TelemetryConfigurationBuilder.cs" />
+    <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\PreventSamplingTelemetryInitializer.cs" Link="PreventSamplingTelemetryInitializer.cs" />
   </ItemGroup>
 
   <Target Name="PostPublishExtension" AfterTargets="Publish">

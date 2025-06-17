@@ -18,6 +18,7 @@ using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Utilities;
+using ServiceProfiler.EventPipe.Upload;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,6 +39,7 @@ internal class TraceUploader : ITraceUploader
     private readonly IOSPlatformProvider _osPlatformProvider;
     private readonly ITraceValidatorFactory _traceValidatorFactory;
     private readonly ISampleActivitySerializer _sampleActivitySerializer;
+    private readonly ICustomEventsSender _customEventsSender;
     private readonly IBlobClientFactory _blobClientFactory;
 
     protected IAppProfileClientFactory AppProfileClientFactory { get; }
@@ -56,6 +58,7 @@ internal class TraceUploader : ITraceUploader
         UploadContext uploadContext,
         IUploadContextValidator uploadContextValidator,
         IAppProfileClientFactory appProfileClientFactory,
+        ICustomEventsSender customEventsSender,
         ILogger<TraceUploader> logger)
     {
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -68,6 +71,7 @@ internal class TraceUploader : ITraceUploader
         UploadContext = uploadContext ?? throw new ArgumentNullException(nameof(uploadContext));
         UploadContextValidator = uploadContextValidator ?? throw new ArgumentNullException(nameof(uploadContextValidator));
         AppProfileClientFactory = appProfileClientFactory ?? throw new ArgumentNullException(nameof(appProfileClientFactory));
+        _customEventsSender = customEventsSender ?? throw new ArgumentNullException(nameof(customEventsSender));
         _blobClientFactory = blobClientFactory ?? throw new ArgumentNullException(nameof(blobClientFactory));
     }
 
@@ -97,148 +101,7 @@ internal class TraceUploader : ITraceUploader
         await UploadAsync(extendedUploadContext, zippedFilePath, cancellationToken).ConfigureAwait(false);
 
         // Sending custom events
-        SendCustomEvents(extendedUploadContext);
-    }
-
-    private void SendCustomEvents(UploadContextExtension context)
-    {
-        if (context is null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
-
-        if (!ShouldSendCustomEvents(context))
-        {
-            return;
-        }
-
-        Logger.LogInformation("Sending customer events");
-        using TelemetryConfiguration telemetryConfiguration = new();
-
-        string connectionString = context.AdditionalData?.ConnectionString?? throw new InvalidOperationException("Connection string is required in the upload context.");
-        telemetryConfiguration.ConnectionString = connectionString;
-
-        // When access is specified, assumes that the AAD auth is enabled. Uses default azure credential to provide
-        // necessary credential for the client to use to send App Insights custom events.
-        if (context.TokenCredential is not null)
-        {
-            Logger.LogInformation("AAD auth is enabled.");
-            telemetryConfiguration.SetAzureTokenCredential(context.TokenCredential);
-        }
-
-        TelemetryClient telemetryClient = new(telemetryConfiguration);
-
-        // Multiple samples
-        foreach (ServiceProfilerSample sample in context.AdditionalData.ServiceProfilerSamples)
-        {
-            ServiceProfilerSample sampleUpdate = sample with
-            {
-                ServiceProfilerContent = sample.ServiceProfilerContent.Replace("%StampId%", context.UploadContext.StampId)
-            };
-
-            try
-            {
-                SendServiceProfilerSamples(sampleUpdate, telemetryClient);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Failed to send custom event. Sample: {sample}", sampleUpdate);
-            }
-        }
-
-        // Single index
-        ServiceProfilerIndex index = context.AdditionalData.ServiceProfilerIndex with
-        {
-            StampId = context.UploadContext.StampId,
-        };
-
-        try
-        {
-            SendServiceProfilerIndex(index, telemetryClient);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to send custom event. Index: {index}", index);
-        }
-    }
-
-    private void SendServiceProfilerSamples(ServiceProfilerSample sample, TelemetryClient telemetryClient)
-    {
-        EventTelemetry eventTelemetry = new("ServiceProfilerSample")
-        {
-            Timestamp = sample.Timestamp
-        };
-        eventTelemetry.Properties.Add("ServiceProfilerContent", sample.ServiceProfilerContent);
-        eventTelemetry.Properties.Add("ServiceProfilerVersion", "v2");
-        eventTelemetry.Properties.Add("RequestId", sample.RequestId);
-
-        if (!string.IsNullOrEmpty(sample.RoleInstance))
-        {
-            eventTelemetry.Context.Cloud.RoleInstance = sample.RoleInstance;
-        }
-
-        if (!string.IsNullOrEmpty(sample.RoleName))
-        {
-            eventTelemetry.Context.Cloud.RoleName = sample.RoleName;
-        }
-
-        if (!string.IsNullOrEmpty(sample.OperationName))
-        {
-            eventTelemetry.Context.Operation.Name = sample.OperationName;
-        }
-
-        if (!string.IsNullOrEmpty(sample.OperationId))
-        {
-            eventTelemetry.Context.Operation.Id = sample.OperationId;
-        }
-
-        telemetryClient.TrackEvent(eventTelemetry);
-    }
-
-    private void SendServiceProfilerIndex(ServiceProfilerIndex index, TelemetryClient telemetryClient)
-    {
-        EventTelemetry eventTelemetry = new("ServiceProfilerIndex")
-        {
-            Timestamp = index.Timestamp
-        };
-
-        eventTelemetry.Properties["FileId"] = index.FileId;
-        eventTelemetry.Properties["StampId"] = index.StampId;
-        eventTelemetry.Properties["DataCube"] = index.DataCube;
-        eventTelemetry.Properties["EtlFileSessionId"] = index.EtlFileSessionId;
-        eventTelemetry.Properties["MachineName"] = index.MachineName;
-        eventTelemetry.Properties["ProcessId"] = index.ProcessId.ToString(CultureInfo.InvariantCulture);
-
-        // More info here.
-        eventTelemetry.Properties["Source"] = index.Source;
-        eventTelemetry.Properties["OperatingSystem"] = index.OperatingSystem;
-        eventTelemetry.Metrics["AverageCPUUsage"] = index.AverageCPUUsage;
-        eventTelemetry.Metrics["AverageMemoryUsage"] = index.AverageMemoryUsage;
-        eventTelemetry.Context.Cloud.RoleName ??= index.CloudRoleName;
-        eventTelemetry.Context.Cloud.RoleInstance ??= index.MachineName;
-
-        telemetryClient.TrackEvent(eventTelemetry);
-    }
-
-    private bool ShouldSendCustomEvents(UploadContextExtension context)
-    {
-        if (context is null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
-        switch (UploadContext.UploadMode)
-        {
-            case UploadMode.Always:
-                return true;
-            case UploadMode.OnSuccess:
-                return context.AdditionalData?.ServiceProfilerSamples?.Any() == true &&
-                       !string.IsNullOrEmpty(context.AdditionalData?.ConnectionString);
-            case UploadMode.Never:
-                Logger.LogWarning("Custom events are not sent. Set uploadMode to Always or OnSuccess to send custom events.");
-                return false;
-            default:
-                throw new ArgumentOutOfRangeException($"Unrecognized upload mode of: {UploadContext.UploadMode}. Please file an issue for investigation.");
-        }
+        _customEventsSender.Send(extendedUploadContext);
     }
 
     private async Task UploadAsync(UploadContextExtension extendedContext, string zippedFilePath, CancellationToken cancellationToken)

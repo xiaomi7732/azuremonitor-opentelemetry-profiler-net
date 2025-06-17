@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceProfiler.Agent;
 using Microsoft.ServiceProfiler.Utilities;
 using ServiceProfiler.Common.Utilities;
+using ServiceProfiler.EventPipe.Upload;
 using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -128,6 +129,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                 p.GetRequiredService<UploadContext>().UseNamedPipe ?
                     p.GetRequiredService<TraceUploaderByNamedPipe>() :
                     p.GetRequiredService<TraceUploader>());
+
+            services.AddTransient<ICustomEventsSender, CustomEventsSender>();
         }
     }
 }

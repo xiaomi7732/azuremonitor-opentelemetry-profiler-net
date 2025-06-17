@@ -5,6 +5,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
+using ServiceProfiler.EventPipe.Upload;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
         IUploadContextValidator uploadContextValidator,
         INamedPipeServerFactory namedPipeServerFactory,
         IAppProfileClientFactory appProfileClientFactory,
+        ICustomEventsSender customEventsSender,
         ILogger<TraceUploaderByNamedPipe> logger)
         : base(zipUtility,
             blobClientFactory,
@@ -40,6 +42,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
             uploadContext,
             uploadContextValidator,
             appProfileClientFactory,
+            customEventsSender,
             logger)
     {
         _namedPipeServerFactory = namedPipeServerFactory ?? throw new ArgumentNullException(nameof(namedPipeServerFactory));
