@@ -16,7 +16,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IOrchestrator _orchestrator;
     private readonly UserConfiguration _userConfiguration;
-    private readonly ICompatibilityUtility _compatibilityUtility;
+    private readonly ICompatibilityUtilityFactory _compatibilityUtilityFactory;
     private readonly ISerializationProvider _serializer;
     private readonly ILogger _logger;
 
@@ -24,14 +24,14 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         IServiceProfilerContext serviceProfilerContext,
         IOrchestrator orchestrator,
         IOptions<UserConfiguration> userConfiguration,
-        ICompatibilityUtility compatibilityUtility,
+        ICompatibilityUtilityFactory compatibilityUtilityFactory,
         ISerializationProvider serializer,
         ILogger<ServiceProfilerAgentBootstrap> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
 
-        _compatibilityUtility = compatibilityUtility ?? throw new ArgumentNullException(nameof(compatibilityUtility));
+        _compatibilityUtilityFactory = compatibilityUtilityFactory ?? throw new ArgumentNullException(nameof(compatibilityUtilityFactory));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
@@ -54,7 +54,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         }
 
         _logger.LogTrace("Starting service profiler from application builder.");
-        (bool compatible, string reason) = _userConfiguration.IsSkipCompatibilityTest ? (true, "Skipped the compatibility test by settings.") : _compatibilityUtility.IsCompatible();
+        (bool compatible, string reason) = _userConfiguration.IsSkipCompatibilityTest ? (true, "Skipped the compatibility test by settings.") : _compatibilityUtilityFactory.Create().IsCompatible();
 
         if (!compatible)
         {

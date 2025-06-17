@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
+using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
@@ -122,6 +123,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IRoleInstanceSource, AggregatedRoleInstanceSource>();
 
         // Profiler
+        services.AddSingleton<SampleActivityContainerFactory>();
         services.AddSingleton<ITraceSessionListenerFactory, TraceSessionListenerFactory>();
 
         services.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
@@ -141,7 +143,7 @@ internal static class ServiceCollectionExtensions
         {
             ConnectionString connectionString = p.GetRequiredService<ConnectionString>();
             IEndpointProvider endpointProvider = p.GetRequiredService<IEndpointProvider>();
-            return new AppInsightsProfileFetcher(breezeEndpoint: connectionString.ResolveIngestionEndpoint().AbsoluteUri);
+            return new AppInsightsProfileFetcher(breezeEndpoint: ConnectionStringFeatures.GetIngestionEndpoint(connectionString).AbsoluteUri);
         });
 
         services.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();

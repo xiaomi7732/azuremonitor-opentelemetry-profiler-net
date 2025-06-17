@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    internal static class ServiceProfilerExtensions
+    public static class ServiceProfilerExtensions
     {
         /// <summary>
         /// Enables the Service Profiler using default configurations.

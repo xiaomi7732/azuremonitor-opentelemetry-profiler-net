@@ -34,3 +34,5 @@ Major refactor notes:
 
 8. Use the new implemenation for fetching role name and role instance.
     [ ] Tests
+
+9. Dependencies for the NuGet packages has been largely changed. Correct the depdencies in the nuspec files.
