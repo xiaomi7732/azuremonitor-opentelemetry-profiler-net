@@ -5,7 +5,6 @@
 using CommandLine;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ServiceProfiler.Contract.Agent;
-using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
@@ -42,7 +41,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         public Guid AIInstrumentationKey { get; set; }
 
         [Option(EndpointKeyName, Required = true, HelpText = "Microsoft Application Insights Profiler endpoint.")]
-        public Uri HostUrl { get; set; }
+        public Uri HostUrl { get; set; } 
 
         [Option(SessionIdKeyName, Required = true, HelpText = "Trace session id.")]
         public DateTimeOffset SessionId { get; set; }

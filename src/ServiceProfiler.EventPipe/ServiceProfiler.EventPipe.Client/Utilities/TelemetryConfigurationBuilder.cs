@@ -22,25 +22,22 @@ internal sealed class TelemetryConfigurationBuilder
     private readonly TokenCredential? _tokenCredential;
     private readonly IEnumerable<ITelemetryInitializer> _telemetryInitializers;
     private readonly ILogger _logger;
-    private readonly Action<TelemetryConfiguration>? _onTelemetryConfigurationCreated;
 
     public TelemetryConfigurationBuilder(
         ConnectionString connectionString,
+        TokenCredential? tokenCredential,
         IEnumerable<ITelemetryInitializer> telemetryInitializers,
-        ILogger<TelemetryConfigurationBuilder> logger,
-        TokenCredential? tokenCredential = null,
-        Action<TelemetryConfiguration>? onTelemetryConfigurationCreated = null)
+        ILogger<TelemetryConfigurationBuilder> logger)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
 
         _tokenCredential = tokenCredential;
         _telemetryInitializers = telemetryInitializers ?? [];
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _onTelemetryConfigurationCreated = onTelemetryConfigurationCreated;
     }
 
     /// <summary>
-    /// Gets a <see cref="TelemetryConfiguration"/> with a lifespan that is the same as the factory.
+    /// Creates a <see cref="TelemetryConfiguration"/>.
     /// </summary>
     public TelemetryConfiguration Build()
     {
@@ -50,8 +47,6 @@ internal sealed class TelemetryConfigurationBuilder
             ConnectionString = _connectionString.ToString(),
             TelemetryChannel = telemetryChannel,
         };
-
-        _onTelemetryConfigurationCreated?.Invoke(telemetryConfiguration);
 
         if (_tokenCredential is not null)
         {
@@ -79,7 +74,7 @@ internal sealed class TelemetryConfigurationBuilder
         return telemetryConfiguration;
     }
 
-    private void OnTransmissionStatus(object sender, TransmissionStatusEventArgs e)
+    private void OnTransmissionStatus(object? sender, TransmissionStatusEventArgs e)
     {
         if (sender is Transmission senderTransmission)
         {

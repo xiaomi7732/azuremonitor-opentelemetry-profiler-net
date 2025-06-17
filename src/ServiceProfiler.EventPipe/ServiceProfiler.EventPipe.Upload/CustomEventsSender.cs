@@ -62,7 +62,7 @@ internal class CustomEventsSender : ICustomEventsSender
             }
         }
 
-        if(context.AdditionalData?.ServiceProfilerIndex is null)
+        if (context.AdditionalData?.ServiceProfilerIndex is null)
         {
             _logger.LogWarning("No ServiceProfilerIndex found in AdditionalData. Skipping index event sending.");
             return;
@@ -94,9 +94,9 @@ internal class CustomEventsSender : ICustomEventsSender
 
         TelemetryConfigurationBuilder telemetryConfigurationBuilder = new(
             connectionString,
+            context.TokenCredential,
             telemetryInitializers: [new PreventSamplingTelemetryInitializer()],
-            _loggerFactory.CreateLogger<TelemetryConfigurationBuilder>(),
-            tokenCredential: context.TokenCredential
+            _loggerFactory.CreateLogger<TelemetryConfigurationBuilder>()
             );
 
         TelemetryConfiguration telemetryConfiguration = telemetryConfigurationBuilder.Build();
