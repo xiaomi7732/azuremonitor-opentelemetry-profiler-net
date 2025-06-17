@@ -52,6 +52,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 serviceProvider.GetRequiredService<UploadContext>(),
                 serviceProvider.GetRequiredService<IUploadContextValidator>(),
                 serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
+                serviceProvider.GetRequiredService<ICustomEventsSender>(),
                 serviceProvider.GetService<ILogger<TraceUploader>>());
 
             Assert.False(isZipCalled);
@@ -83,6 +84,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 serviceProvider.GetRequiredService<UploadContext>(),
                 serviceProvider.GetRequiredService<IUploadContextValidator>(),
                 serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
+                serviceProvider.GetRequiredService<ICustomEventsSender>(),
                 serviceProvider.GetService<ILogger<TraceUploader>>());
 
             Assert.False(isBlobUploadCalled);
@@ -117,6 +119,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 serviceProvider.GetRequiredService<UploadContext>(),
                 serviceProvider.GetRequiredService<IUploadContextValidator>(),
                 serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
+                serviceProvider.GetRequiredService<ICustomEventsSender>(),
                 serviceProvider.GetService<ILogger<TraceUploader>>());
 
             Assert.False(isSetMetadataAsyncCalled);
@@ -143,6 +146,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 serviceProvider.GetRequiredService<UploadContext>(),
                 serviceProvider.GetRequiredService<IUploadContextValidator>(),
                 serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
+                serviceProvider.GetRequiredService<ICustomEventsSender>(),
                 serviceProvider.GetService<ILogger<TraceUploader>>());
 
             Assert.False(isReportEtlUploadFinishAsyncCalled);
@@ -160,7 +164,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             Mock<ITraceValidator> exceptionValidator = new Mock<ITraceValidator>();
             exceptionValidator.Setup(v => v.Validate(It.IsAny<IEnumerable<SampleActivity>>())).Throws(new ValidateFailedException(toStopUploading: true));
 
-            using (ServiceProvider provider = GetTestServiceProvider(traceValidatorFactory: ()=> exceptionValidator.Object))
+            using (ServiceProvider provider = GetTestServiceProvider(traceValidatorFactory: () => exceptionValidator.Object))
             {
                 TraceUploader target = ActivatorUtilities.CreateInstance<TraceUploader>(provider);
                 IEnumerable<SampleActivity> output = target.GetValidSamples("abc.etl.zip", input);
@@ -237,6 +241,9 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 factoryMock.Setup(f => f.Create(It.IsAny<UploadContextExtension>())).Returns(p.GetRequiredService<IAppProfileClient>());
                 return factoryMock.Object;
             });
+
+            Mock<ICustomEventsSender> customEventsSenderMock = new();
+            services.AddTransient<ICustomEventsSender>(_ => customEventsSenderMock.Object);
 
             return services.BuildServiceProvider();
         }
