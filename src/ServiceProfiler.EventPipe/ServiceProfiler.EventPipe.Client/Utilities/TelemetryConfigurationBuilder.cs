@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using Azure.Core;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel;
 using Microsoft.Extensions.Logging;
 using ServiceProfiler.Common.Utilities;
 
@@ -41,7 +40,7 @@ internal sealed class TelemetryConfigurationBuilder
     /// </summary>
     public TelemetryConfiguration Build()
     {
-        ServerTelemetryChannel telemetryChannel = new();
+        InMemoryChannel telemetryChannel = new();
         TelemetryConfiguration telemetryConfiguration = new()
         {
             ConnectionString = _connectionString.ToString(),
@@ -53,17 +52,10 @@ internal sealed class TelemetryConfigurationBuilder
             telemetryConfiguration.SetAzureTokenCredential(_tokenCredential);
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            telemetryChannel.TransmissionStatusEvent += OnTransmissionStatus;
-        }
-
         foreach (ITelemetryInitializer telemetryInitializer in _telemetryInitializers)
         {
             telemetryConfiguration.TelemetryInitializers.Add(telemetryInitializer);
         }
-
-        telemetryChannel.Initialize(telemetryConfiguration);
 
         _logger.LogDebug(
             "TelemetryConfiguration created. Connection string: {connectionString}, iKey: {iKey}, Channel Endpoint Address: {channelEndpoint}",
@@ -72,31 +64,5 @@ internal sealed class TelemetryConfigurationBuilder
             telemetryConfiguration.TelemetryChannel.EndpointAddress);
 
         return telemetryConfiguration;
-    }
-
-    private void OnTransmissionStatus(object? sender, TransmissionStatusEventArgs e)
-    {
-        if (sender is Transmission senderTransmission)
-        {
-            _logger.LogDebug("Transmission endpoint address: {transmissionEndpoint}", senderTransmission.EndpointAddress);
-        }
-        else
-        {
-            _logger.LogDebug("Sender is not of type Transmission.");
-        }
-
-        if (e.Response is not null)
-        {
-            _logger.LogDebug("Telemetry transmission duration: {duration}ms, status: {statusCode} - {statusDescription}, retry-after header: {retryAfterHeader}",
-                e.ResponseDurationInMs,
-                e.Response.StatusCode,
-                e.Response.StatusDescription,
-                e.Response.RetryAfterHeader);
-
-            if (e.Response.StatusCode < 200 || e.Response.StatusCode >= 400)
-            {
-                _logger.LogError("Transmission failed with status code {statusCode} and description {statusDescription}", e.Response.StatusCode, e.Response.StatusDescription);
-            }
-        }
     }
 }

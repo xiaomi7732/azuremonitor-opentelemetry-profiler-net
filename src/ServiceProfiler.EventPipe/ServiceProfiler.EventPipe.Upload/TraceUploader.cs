@@ -95,7 +95,7 @@ internal class TraceUploader : ITraceUploader
         }
 
         // Extract
-        string zippedFilePath = _zipUtility.ZipFile(context.TraceFilePath, additionalFiles: new List<string> { context.MetadataFilePath });
+        string zippedFilePath = _zipUtility.ZipFile(context.TraceFilePath, additionalFiles: [context.MetadataFilePath]);
 
         // Upload
         await UploadAsync(extendedUploadContext, zippedFilePath, cancellationToken).ConfigureAwait(false);
@@ -126,6 +126,7 @@ internal class TraceUploader : ITraceUploader
                 BlobAccessPass uploadPass = await stampFrontendClient.GetEtlUploadAccessAsync(
                     context.SessionId,
                     cancellationToken).ConfigureAwait(false);
+                
                 if (uploadPass == null)
                 {
                     throw new InvalidOperationException("Failed to get a pass to upload the trace file.");

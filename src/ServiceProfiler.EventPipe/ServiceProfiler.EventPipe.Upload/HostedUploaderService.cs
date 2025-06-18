@@ -3,24 +3,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ServiceProfiler.EventPipe.Upload;
 
 namespace Microsoft.ApplicationInsights.Profiler.Uploader
 {
     class HostedUploaderService : IHostedService
     {
         private int? _exitCode;
-        private readonly ITraceUploader _traceUploader;
+        private readonly TraceUploaderFactory _traceUploaderFactory;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger _logger;
 
         public HostedUploaderService(
-            ITraceUploader traceUploader,
+            TraceUploaderFactory traceUploaderFactory,
             IHostApplicationLifetime applicationLifetime,
             ILogger<HostedUploaderService> logger
             )
         {
             _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
-            _traceUploader = traceUploader ?? throw new System.ArgumentNullException(nameof(traceUploader));
+            _traceUploaderFactory = traceUploaderFactory ?? throw new System.ArgumentNullException(nameof(traceUploaderFactory));
             _applicationLifetime = applicationLifetime;
         }
 
@@ -33,7 +34,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                     try
                     {
                         _logger.LogTrace("Start uploader");
-                        await _traceUploader.UploadAsync(cancellationToken).ConfigureAwait(false);
+                        TraceUploader traceUploader = _traceUploaderFactory.Create();
+                        await traceUploader.UploadAsync(cancellationToken).ConfigureAwait(false);
                         _exitCode = 0;
                         _logger.LogTrace("Finish uploader");
                     }

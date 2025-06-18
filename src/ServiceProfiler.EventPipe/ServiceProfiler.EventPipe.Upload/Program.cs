@@ -51,9 +51,11 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                     if (context.HostingEnvironment.IsDevelopment())
                     {
                         Console.WriteLine("Uploader Hosting Environment is set to: Development.");
-                        logging.SetMinimumLevel(LogLevel.Trace);
-                        logging.AddConsole();
-                        logging.AddDebug();
+                        logging.AddSimpleConsole(configure =>
+                        {
+                            configure.SingleLine = true;
+                        }).SetMinimumLevel(LogLevel.Trace);
+                        logging.AddDebug().SetMinimumLevel(LogLevel.Trace);
                     }
                 })
                 .ConfigureServices((hostContext, services) =>
@@ -123,12 +125,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
             services.TryAddSingleton<IBlobClientFactory, BlobClientFactory>();
             services.TryAddSingleton<ITraceValidatorFactory, EventPipeTraceValidatorFactory>();
 
-            services.AddTransient<TraceUploader>();
-            services.AddTransient<TraceUploaderByNamedPipe>();
-            services.AddTransient<ITraceUploader>(p =>
-                p.GetRequiredService<UploadContext>().UseNamedPipe ?
-                    p.GetRequiredService<TraceUploaderByNamedPipe>() :
-                    p.GetRequiredService<TraceUploader>());
+            services.AddSingleton<TraceUploaderFactory>();
 
             services.AddTransient<ICustomEventsSender, CustomEventsSender>();
         }

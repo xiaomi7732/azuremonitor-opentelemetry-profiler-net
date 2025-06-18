@@ -82,6 +82,8 @@ internal class CustomEventsSender : ICustomEventsSender
         {
             _logger.LogError(ex, "Failed to send custom event. Index: {index}", index);
         }
+
+        telemetryConfiguration.TelemetryChannel.Flush();
     }
 
     private TelemetryConfiguration BuildTelemetryConfiguration(UploadContextExtension context)
