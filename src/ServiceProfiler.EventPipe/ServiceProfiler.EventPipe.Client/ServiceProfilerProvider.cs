@@ -208,7 +208,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fail to disable EventPipe profiling.");
+                _logger.LogDebug(ex, "Fail to disable EventPipe profiling.");
                 _appInsightsSinks.LogInformation(StopProfilerFailed);
                 throw;
             }
@@ -223,7 +223,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error happens on stopping service profiler tracing.");
+            _logger.LogDebug(ex, "Unexpected error happens on stopping service profiler tracing.");
             throw;
         }
         finally
