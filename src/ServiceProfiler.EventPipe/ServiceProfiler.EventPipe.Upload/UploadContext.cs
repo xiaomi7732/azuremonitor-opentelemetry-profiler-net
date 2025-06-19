@@ -41,19 +41,20 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         public Guid AIInstrumentationKey { get; set; }
 
         [Option(EndpointKeyName, Required = true, HelpText = "Microsoft Application Insights Profiler endpoint.")]
-        public Uri HostUrl { get; set; } 
+        public Uri HostUrl { get; set; } = null!;
 
         [Option(SessionIdKeyName, Required = true, HelpText = "Trace session id.")]
         public DateTimeOffset SessionId { get; set; }
 
         [Option(StampIdShortKeyName, StampIdKeyName, Required = true, HelpText = "StampId used to upload the trace file.")]
-        public string StampId { get; set; }
+        [Obsolete("Stamp id is not required because the negotiation with the frontend has been moved to the uploader. This will be removed in a future version.")]
+        public string StampId { get; set; } = null!;
 
         [Option(TraceFilePathShortKeyName, TraceFilePathKeyName, Required = true, HelpText = "File path to trace file.")]
-        public string TraceFilePath { get; set; }
+        public string TraceFilePath { get; set; } = null!;
 
         [Option(MetadataFilePathKeyName, Required = false, HelpText = "File path to the metadata file.")]
-        public string MetadataFilePath { get; set; }
+        public string MetadataFilePath { get; set; } = null!;
 
         [Option(PreserveTraceFileKeyName, Required = false, Default = false, HelpText = "Preserve the trace file locally.")]
         public bool PreserveTraceFile { get; set; }
@@ -65,22 +66,22 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         public UploadMode UploadMode { get; set; }
 
         [Option(SampleActivityFilePathKeyName, Required = true, HelpText = "Path to the file which contains all serialized activity samples.")]
-        public string SerializedSampleFilePath { get; set; }
+        public string SerializedSampleFilePath { get; set; } = null!;
 
         [Option(PipeNameShortKeyName, PipeNameKeyName, Required = false, HelpText = "Named pipe name for client and uploader communication. NamedPipe is preferred when the value is provided.")]
-        public string PipeName { get; set; }
+        public string? PipeName { get; set; }
 
         [Option(RoleNameShortKeyName, RoleNameKeyName, Required = false, HelpText = "Cloud role name of the customer app recorded in the telemetry.")]
-        public string RoleName { get; set; }
+        public string? RoleName { get; set; }
 
         [Option(EnvironmentShortKeyName, EnvironmentKeyName, Required = false, HelpText = "Environment for Uploader.", Default = "Production")]
-        public string Environment { get; set; }
+        public string? Environment { get; set; }
 
         [Option(TriggerTypeShortKeyName, TriggerTypeKeyName, Required = false, HelpText = "Type of trigger that caused the collection of the trace.")]
-        public string TriggerType { get; set; }
+        public string? TriggerType { get; set; }
 
         [Option(TraceFileFormatShortKeyName, TraceFileFormatKeyName, Required = false, HelpText = "The trace file format.", Default = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf)]
-        public string TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf;
+        public string? TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf;
 
         public override string ToString()
         {
