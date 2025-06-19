@@ -8,64 +8,51 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.EventPipe",
 		Profiler.EventPipe.CodeAnalysis.ruleset = Profiler.EventPipe.CodeAnalysis.ruleset
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{13080D25-01AE-412C-B2B2-2368A9C03DD4}"
-	ProjectSection(SolutionItems) = preProject
-		Directory.Packages.props = Directory.Packages.props
-		RefactorNotes.txt = RefactorNotes.txt
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{73E138A3-6EC8-4849-8FE7-A9BF4329A464}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Base", "Base", "{0FEB4B0D-3788-45B8-9155-615E940310F7}"
-	ProjectSection(SolutionItems) = preProject
-		..\CommonVersion.props = ..\CommonVersion.props
-		..\Directory.Build.props = ..\Directory.Build.props
-		..\Directory.Build.targets = ..\Directory.Build.targets
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Client", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj", "{FBB1C2DC-597E-4B2A-AFE9-D8436D43B50F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{73E138A3-6EC8-4849-8FE7-A9BF4329A464}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Client", "ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj", "{FBB1C2DC-597E-4B2A-AFE9-D8436D43B50F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.AspNetCore", "ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj", "{23B4D28F-81AD-4145-87F8-B1D50CA8C591}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.AspNetCore", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj", "{23B4D28F-81AD-4145-87F8-B1D50CA8C591}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{B09CB374-3D56-4B02-84B1-4A978D5930B1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.FrontendClient", "..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj", "{0B461729-320A-4343-89C7-9248A3AC4E67}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.FrontendClient", "ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj", "{0B461729-320A-4343-89C7-9248A3AC4E67}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.Utilities", "..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj", "{BCB67966-4176-4DDC-8DFE-6404F20DFEDB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.Utilities", "ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj", "{BCB67966-4176-4DDC-8DFE-6404F20DFEDB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{80AFCAF0-08D1-49C5-AF11-DF79D868011A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Client.Tests", "..\..\tests\ServiceProfiler.EventPipe.Client.Tests\ServiceProfiler.EventPipe.Client.Tests.csproj", "{37A57123-1E65-43F8-97FA-9471DF8E2499}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Client.Tests", "..\tests\ServiceProfiler.EventPipe.Client.Tests\ServiceProfiler.EventPipe.Client.Tests.csproj", "{37A57123-1E65-43F8-97FA-9471DF8E2499}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload.Tests", "..\..\tests\ServiceProfiler.EventPipe.Upload.Tests\ServiceProfiler.EventPipe.Upload.Tests.csproj", "{AB225ECB-AD75-4E24-AA80-1A96670C4627}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload.Tests", "..\tests\ServiceProfiler.EventPipe.Upload.Tests\ServiceProfiler.EventPipe.Upload.Tests.csproj", "{AB225ECB-AD75-4E24-AA80-1A96670C4627}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Logging", "ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj", "{4F20D435-2D9F-4861-9662-4E66BDB8291E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Logging", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj", "{4F20D435-2D9F-4861-9662-4E66BDB8291E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.NuGetSigning", "ServiceProfiler.EventPipe.NuGetSigning\ServiceProfiler.EventPipe.NuGetSigning.csproj", "{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.NuGetSigning", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.NuGetSigning\ServiceProfiler.EventPipe.NuGetSigning.csproj", "{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Orchestration", "..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj", "{87AD25F3-90CE-4F68-9713-9063F592C42E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Orchestration", "Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj", "{87AD25F3-90CE-4F68-9713-9063F592C42E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.ProcessMonitor", "..\ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj", "{5D015D8A-2CE7-4178-BB9E-54A1700403A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.ProcessMonitor", "ServiceProfiler.ProcessMonitor\ServiceProfiler.ProcessMonitor.csproj", "{5D015D8A-2CE7-4178-BB9E-54A1700403A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.AspNetCore.HostingStartup30", "ServiceProfiler.EventPipe.AspNetCore.HostingStartup30\ServiceProfiler.EventPipe.AspNetCore.HostingStartup30.csproj", "{1914A8A0-F740-423B-9DDC-0FF67034A5E2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.AspNetCore.HostingStartup30", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore.HostingStartup30\ServiceProfiler.EventPipe.AspNetCore.HostingStartup30.csproj", "{1914A8A0-F740-423B-9DDC-0FF67034A5E2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.Common.Utilities", "..\ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj", "{FFE656E0-FF8F-49EA-87A2-00AA493B43D7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.Common.Utilities", "ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj", "{FFE656E0-FF8F-49EA-87A2-00AA493B43D7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.Ingestion", "..\Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj", "{7615464D-FB22-4BD3-9DAF-580718CC3749}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.Ingestion", "Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj", "{7615464D-FB22-4BD3-9DAF-580718CC3749}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Agent", "..\ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj", "{D98115B0-1B71-4124-99DE-C5672E916CAC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Agent", "ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj", "{D98115B0-1B71-4124-99DE-C5672E916CAC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Http", "..\ServiceProfiler.Contract.Http\Microsoft.ServiceProfiler.Contract.Http.csproj", "{65EC7AE8-B038-4CCD-9F1E-929B6D26071A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Http", "ServiceProfiler.Contract.Http\Microsoft.ServiceProfiler.Contract.Http.csproj", "{65EC7AE8-B038-4CCD-9F1E-929B6D26071A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.HttpPipeline", "..\Microsoft.ServiceProfiler.HttpPipeline\Microsoft.ServiceProfiler.HttpPipeline.csproj", "{1F7B6490-B56E-4D6C-B23D-9A46A99B3674}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.HttpPipeline", "Microsoft.ServiceProfiler.HttpPipeline\Microsoft.ServiceProfiler.HttpPipeline.csproj", "{1F7B6490-B56E-4D6C-B23D-9A46A99B3674}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Agent.Profiler", "..\ServiceProfiler.Contract.Agent.Profiler\Microsoft.ServiceProfiler.Contract.Agent.Profiler.csproj", "{53737007-272E-489A-9CAE-694C13A5654F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Contract.Agent.Profiler", "ServiceProfiler.Contract.Agent.Profiler\Microsoft.ServiceProfiler.Contract.Agent.Profiler.csproj", "{53737007-272E-489A-9CAE-694C13A5654F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler", "..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj", "{BB3CD94F-77C9-4780-8A4A-1A3050C4CBB8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler", "ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj", "{BB3CD94F-77C9-4780-8A4A-1A3050C4CBB8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.Exceptions", "..\Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj", "{3EE3364B-73DD-44C3-ACC4-471F020AC61F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.Exceptions", "Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj", "{3EE3364B-73DD-44C3-ACC4-471F020AC61F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{A299C47E-43AE-2CE9-27E5-02C146B6A270}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{A299C47E-43AE-2CE9-27E5-02C146B6A270}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
