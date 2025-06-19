@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj" />
+    <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj" />
   </ItemGroup>
 
   <ItemGroup>

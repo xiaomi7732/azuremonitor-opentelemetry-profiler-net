@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.ProcessMoni
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.EventPipe", "ServiceProfiler.EventPipe", "{705959A0-0B89-43EB-B36A-430B806B0D39}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{DA13DAFB-6764-44A3-AB9C-D632984841BC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{DA13DAFB-6764-44A3-AB9C-D632984841BC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Agent.Ingestion", "Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj", "{93969473-24D2-47EB-B854-AD23B15BCF8A}"
 EndProject

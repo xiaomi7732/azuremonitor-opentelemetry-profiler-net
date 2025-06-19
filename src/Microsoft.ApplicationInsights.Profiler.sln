@@ -8,7 +8,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.EventPipe",
 		Profiler.EventPipe.CodeAnalysis.ruleset = Profiler.EventPipe.CodeAnalysis.ruleset
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{73E138A3-6EC8-4849-8FE7-A9BF4329A464}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload", "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj", "{73E138A3-6EC8-4849-8FE7-A9BF4329A464}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Client", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj", "{FBB1C2DC-597E-4B2A-AFE9-D8436D43B50F}"
 EndProject

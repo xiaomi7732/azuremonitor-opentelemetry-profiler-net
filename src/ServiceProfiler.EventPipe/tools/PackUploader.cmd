@@ -12,14 +12,15 @@ ECHO Output Folder: %TEMP_OUT%
 
 pushd %~dp0
 
+SET UPLOADER_FOLDER=%~dp0..\..\ServiceProfiler.EventPipe.Upload
 IF '%REBUILD%' == 'TRUE' (
-    dotnet restore %~dp0..\ServiceProfiler.EventPipe.Upload
-    dotnet build -c %CONFIG% --no-restore %~dp0..\ServiceProfiler.EventPipe.Upload
-    dotnet publish --no-restore --no-build %~dp0..\ServiceProfiler.EventPipe.Upload -c %CONFIG% -f net8.0
+    dotnet restore "%UPLOADER_FOLDER%"
+    dotnet build -c %CONFIG% --no-restore "%UPLOADER_FOLDER%"
+    dotnet publish --no-restore --no-build "%UPLOADER_FOLDER%" -c %CONFIG% -f net8.0
 )
 
 del %TEMP_OUT%\TraceUpload*.zip /Q
-7za a -tzip %TEMP_OUT%\TraceUpload30.zip ..\ServiceProfiler.EventPipe.Upload\bin\%CONFIG%\net8.0\publish\*
+7za a -tzip %TEMP_OUT%\TraceUpload30.zip "%UPLOADER_FOLDER%\bin\%CONFIG%\net8.0\publish\*"
 dir %TEMP_OUT%\TraceUpload*.zip
 popd
 
