@@ -37,35 +37,33 @@
     <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\SampleActivity.cs" Link="SampleActivity.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\EnumerableUtilities.cs" Link="EnumerableUtilities.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\HighPerfJsonStringConverter.cs" Link="HighPerfJsonStringConverter.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\HighPerfJsonSerializationProvider.cs" Link="HighPerfJsonSerializationProvider.cs" />
+  <ItemGroup>    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\SampleActivity.cs" Link="SampleActivity.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services\EnumerableUtilities.cs" Link="EnumerableUtilities.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services\HighPerfJsonStringConverter.cs" Link="HighPerfJsonStringConverter.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services\HighPerfJsonSerializationProvider.cs" Link="HighPerfJsonSerializationProvider.cs" />
 
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\ActivityIdUtilities.cs" Link="ActivityIdUtilities.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services\ActivityIdUtilities.cs" Link="ActivityIdUtilities.cs" />
 
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel/Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions/IPC/INamedPipeOperations.cs" Link="IPC/INamedPipeOperations.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\NamedPipeOptions.cs" Link="IPC\NamedPipeOptions.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeClientService.cs" Link="IPC\INamedPipeClientService.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeServerFactory.cs" Link="IPC\INamedPipeServerFactory.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeServerService.cs" Link="IPC\INamedPipeServerService.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeClientFactory.cs" Link="IPC\INamedPipeClientFactory.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\*.cs" Link="IPC\*.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeOperations.cs" Link="IPC\INamedPipeOperations.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\NamedPipeOptions.cs" Link="IPC\NamedPipeOptions.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeClientService.cs" Link="IPC\INamedPipeClientService.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeServerFactory.cs" Link="IPC\INamedPipeServerFactory.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeServerService.cs" Link="IPC\INamedPipeServerService.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\INamedPipeClientFactory.cs" Link="IPC\INamedPipeClientFactory.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services\IPC\*.cs" Link="IPC\*.cs" />
 
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\IPayloadSerializer.cs" Link="IPC\IPayloadSerializer.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\IPCAdditionalData.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\UploadMode.cs"/>
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\IPC\IPayloadSerializer.cs" Link="IPC\IPayloadSerializer.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\IPCAdditionalData.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\UploadMode.cs"/>
 
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\ISerializationProvider.cs" Link="Services.Abstractions\ISerializationProvider.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\ISerializationOptionsProvider.cs" Link="Services.Abstractions\ISerializationOptionsProvider.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\ISerializationProvider.cs" Link="Services.Abstractions\ISerializationProvider.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Services.Abstractions\ISerializationOptionsProvider.cs" Link="Services.Abstractions\ISerializationOptionsProvider.cs" />
 
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\UserConfigurationBase.cs" Link="Contracts\UserConfigurationBase.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\EventPipeProviderItem.cs" Link="Contracts\EventPipeProviderItem.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\TraceScavengerOptions.cs" Link="Contracts\TraceScavengerOptions.cs" />
-    <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\CustomEvents\*.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\UserConfigurationBase.cs" Link="Contracts\UserConfigurationBase.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\EventPipeProviderItem.cs" Link="Contracts\EventPipeProviderItem.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\TraceScavengerOptions.cs" Link="Contracts\TraceScavengerOptions.cs" />
+    <Compile Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\CustomEvents\*.cs" />
 
-    <!--<Compile Include="..\..\ServiceProfiler.Common.Utilities\ConnectionString.cs" Link="ConnectionString.cs" />-->
     <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\TelemetryConfigurationBuilder.cs" Link="TelemetryConfigurationBuilder.cs" />
     <Compile Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\PreventSamplingTelemetryInitializer.cs" Link="PreventSamplingTelemetryInitializer.cs" />
   </ItemGroup>

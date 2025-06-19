@@ -66,7 +66,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
         {
             // Start namedpipe server for connecting in:
             Logger.LogTrace("Starting namedpipe by name: {pipeName}", UploadContext.PipeName);
-            await namedPipeServer.WaitForConnectionAsync(UploadContext.PipeName, cancellationToken).ConfigureAwait(false);
+            await namedPipeServer.WaitForConnectionAsync(UploadContext.PipeName!, cancellationToken).ConfigureAwait(false);
             Logger.LogTrace("Connection established.");
 
             IEnumerable<SampleActivity> samples = Enumerable.Empty<SampleActivity>();

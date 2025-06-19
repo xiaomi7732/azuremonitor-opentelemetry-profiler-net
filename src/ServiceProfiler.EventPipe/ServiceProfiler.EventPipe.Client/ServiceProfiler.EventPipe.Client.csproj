@@ -58,7 +58,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- These are from the dependencies. Having them in header projects to voids package downgrade bug when the denpencies bump up
+    <!-- These are from the dependencies. Having them in header projects to voids package downgrade bug when the dependencies bump up
       the package to a higher one while the header project has no knowledge of it until runtime. -->
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="Azure.Identity" />
@@ -73,7 +73,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
+    <ProjectReference Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj" />
     <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
     <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />

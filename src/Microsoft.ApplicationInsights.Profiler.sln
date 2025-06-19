@@ -52,7 +52,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Agent.Exceptions", "Microsoft.ServiceProfiler.Agent.Exceptions\Microsoft.ServiceProfiler.Agent.Exceptions.csproj", "{3EE3364B-73DD-44C3-ACC4-471F020AC61F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{A299C47E-43AE-2CE9-27E5-02C146B6A270}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{A299C47E-43AE-2CE9-27E5-02C146B6A270}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -321,7 +321,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0FEB4B0D-3788-45B8-9155-615E940310F7} = {13080D25-01AE-412C-B2B2-2368A9C03DD4}
 		{73E138A3-6EC8-4849-8FE7-A9BF4329A464} = {948A1291-3A47-4E7B-9491-874DFDBF377A}
 		{FBB1C2DC-597E-4B2A-AFE9-D8436D43B50F} = {948A1291-3A47-4E7B-9491-874DFDBF377A}
 		{23B4D28F-81AD-4145-87F8-B1D50CA8C591} = {948A1291-3A47-4E7B-9491-874DFDBF377A}

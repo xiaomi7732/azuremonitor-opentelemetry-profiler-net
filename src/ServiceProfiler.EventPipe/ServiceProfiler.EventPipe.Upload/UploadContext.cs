@@ -47,7 +47,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         public DateTimeOffset SessionId { get; set; }
 
         [Option(StampIdShortKeyName, StampIdKeyName, Required = true, HelpText = "StampId used to upload the trace file.")]
-        [Obsolete("Stamp id is not required because the negotiation with the frontend has been moved to the uploader. This will be removed in a future version.")]
         public string StampId { get; set; } = null!;
 
         [Option(TraceFilePathShortKeyName, TraceFilePathKeyName, Required = true, HelpText = "File path to trace file.")]
@@ -80,8 +79,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         [Option(TriggerTypeShortKeyName, TriggerTypeKeyName, Required = false, HelpText = "Type of trigger that caused the collection of the trace.")]
         public string? TriggerType { get; set; }
 
-        [Option(TraceFileFormatShortKeyName, TraceFileFormatKeyName, Required = false, HelpText = "The trace file format.", Default = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf)]
-        public string? TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf;
+        [Option(TraceFileFormatShortKeyName, TraceFileFormatKeyName, Required = true, HelpText = "The trace file format.", Default = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf)]
+        public string TraceFileFormat { get; set; } = ServiceProfiler.Contract.Agent.Profiler.TraceFileFormat.Netperf;
 
         public override string ToString()
         {

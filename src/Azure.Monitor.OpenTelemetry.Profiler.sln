@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Monitor.OpenTelemetry
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Monitor.OpenTelemetry.Profiler.Core", "ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj", "{1C9A3F25-9286-41A2-98A9-20CE8BFF3B61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "ServiceProfiler.EventPipe.Otel\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{2346FCD9-3CD3-494B-8B24-1D4D3FFF7AD3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ApplicationInsights.Profiler.Shared", "Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj", "{2346FCD9-3CD3-494B-8B24-1D4D3FFF7AD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.Contract.Agent", "ServiceProfiler.Contract.Agent\Microsoft.ServiceProfiler.Contract.Agent.csproj", "{E5EAA721-2356-49F9-A71A-2589E44CC339}"
 EndProject
