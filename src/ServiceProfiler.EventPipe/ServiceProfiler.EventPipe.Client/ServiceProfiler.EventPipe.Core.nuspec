@@ -7,7 +7,7 @@
     <description>$description$</description>
     <authors>$authors$</authors>
 
-    <!--Optional meatadata-->
+    <!--Optional metadata-->
     <owners>$owners$</owners>
     <projectUrl>$projectUrl$</projectUrl>
     <license type="file">$licenseFileName$</license>
@@ -18,19 +18,22 @@
     <tags>$packageTags$</tags>
 
     <dependencies>
-      <group targetFramework=".NETStandard2.0">
-        <dependency id="Azure.Core" version="$AzureCoreVersion$" exclude="Build,Analyzers" />
+      <group targetFramework="$targetFramework$">
         <dependency id="Azure.Identity" version="$AzureIdentityVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="$MicrosoftBclAsyncInterfacesVersion$" exclude="Build,Analyzers" />
-
         <dependency id="CommandLineParser" version="$CommandLineParserVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.ApplicationInsights" version="$MicrosoftApplicationInsightsVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ApplicationInsights.AspNetCore" version="$MicrosoftApplicationInsightsAspNetCoreVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.AspNetCore.Hosting" version="$MicrosoftAspNetCoreHostingVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Diagnostics.NETCore.Client" version="$MicrosoftDiagnosticsNETCoreClientVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Caching.Memory" version="$MicrosoftExtensionsCachingMemoryVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Configuration.EnvironmentVariables" version="$MicrosoftExtensionsConfigurationEnvironmentVariablesVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Configuration.Json" version="$MicrosoftExtensionsConfigurationJsonVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Hosting.Abstractions" version="$MicrosoftExtensionsHostingAbstractionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Debug" version="$MicrosoftExtensionsLoggingDebugVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.Options" version="$MicrosoftExtensionsOptionsVersion$" exclude="Build,Analyzers" />
+        <dependency id="System.Diagnostics.DiagnosticSource" version="$SystemDiagnosticsDiagnosticSourceVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Diagnostics.PerformanceCounter" version="$SystemDiagnosticsPerformanceCounterVersion$" exclude="Build,Analyzers" />
         <dependency id="System.IdentityModel.Tokens.Jwt" version="$SystemIdentityModelTokensJwtVersion$" exclude="Build,Analyzers" />
-        <dependency id="System.Text.Json" version="$SystemTextJsonVersion$"  exclude="Build,Analyzers" />
+        <dependency id="System.Memory.Data" version="$SystemMemoryDataVersion$" exclude="Build,Analyzers" />
+        <dependency id="System.Security.Cryptography.ProtectedData" version="$SystemSecurityCryptographyProtectedDataVersion$" exclude="Build,Analyzers" />
         <dependency id="System.ValueTuple" version="$SystemValueTupleVersion$" exclude="Build,Analyzers" />
       </group>
     </dependencies>
@@ -40,19 +43,8 @@
     <file src="..\ReleaseReousrces\$licenseFileName$" target="" />
     <file src="..\ReleaseReousrces\$iconFileName$" target="images\" />
 
-    <!--Assemblies-->
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ApplicationInsights.Profiler.Core.dll" target="lib\netstandard2.0"></file>
-    <!--Dependencies-->
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ApplicationInsights.Profiler.Logging.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Agent.Exceptions.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Agent.FrontendClient.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Common.Utilities.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Contract.Agent.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Contract.Agent.Profiler.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Contract.Http.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.HttpPipeline.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Orchestration.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Utilities.dll" target="lib\netstandard2.0"></file>
+    <!-- All files and symbols -->
+    <file src="bin\$configuration$\$targetFramework$\*.dll" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\*.pdb" target="lib/$targetFramework$"></file>
   </files>
 </package>

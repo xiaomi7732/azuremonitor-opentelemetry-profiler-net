@@ -27,25 +27,34 @@
     <PackageId>Microsoft.ApplicationInsights.Profiler.Core</PackageId>
     <Description>Core Library for Microsoft Application Insights Profiler.</Description>
     <PackageTags>Microsoft Azure ServiceProfiler Linux</PackageTags>
-    <NuspecProperties>
-      configuration=$(Configuration);
-      id=$(PackageId);
-      version=$(Version);
-      description=$(Description);
-      packageTags=$(PackageTags);
-      AzureCoreVersion=$(_AzureCoreVersion);
-      AzureIdentityVersion=$(_AzureIdentityVersion);
-      CommandLineParserVersion=$(_CommandLineParserVersion);
-      MicrosoftApplicationInsightsVersion=$(_MicrosoftApplicationInsightsSdkVersion);
-      MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
-      MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
-      MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsLoggingDebugVersion);
-      MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsOptionsVersion);
-      SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
-      SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
-      SystemTextJsonVersion=$(_SystemTextJsonVersion);
-      SystemValueTupleVersion=$(_SystemValueTupleVersion);
-      $(NuspecProperties)
+    <NuspecProperties><![CDATA[
+AzureIdentityVersion=$(_AzureIdentityVersion);
+CommandLineParserVersion=$(_CommandLineParserVersion);
+configuration=$(Configuration);
+description=$(Description);
+id=$(PackageId);
+MicrosoftApplicationInsightsAspNetCoreVersion=$(_MicrosoftApplicationInsightsSdkVersion);
+MicrosoftApplicationInsightsVersion=$(_MicrosoftApplicationInsightsSdkVersion);
+MicrosoftAspNetCoreHostingVersion=$(_MicrosoftAspNetCoreVersion);
+MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
+MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
+MicrosoftExtensionsConfigurationEnvironmentVariablesVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsConfigurationJsonVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsHostingAbstractionsVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsVersion);
+packageTags=$(PackageTags);
+SystemDiagnosticsDiagnosticSourceVersion=$(_SystemDiagnosticsDiagnosticSourceVersion);
+SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
+SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
+SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);
+SystemTextJsonVersion=$(_SystemTextJsonVersion);
+SystemValueTupleVersion=$(_SystemValueTupleVersion);
+targetFramework=$(TargetFramework);
+version=$(Version);
+$(NuspecProperties)]]>
     </NuspecProperties>
   </PropertyGroup>
 
