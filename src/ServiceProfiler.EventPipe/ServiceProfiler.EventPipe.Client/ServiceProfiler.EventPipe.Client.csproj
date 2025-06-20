@@ -28,23 +28,26 @@
     <Description>Core Library for Microsoft Application Insights Profiler.</Description>
     <PackageTags>Microsoft Azure ServiceProfiler Linux</PackageTags>
     <NuspecProperties><![CDATA[
-AzureIdentityVersion=$(_AzureIdentityVersion);
-CommandLineParserVersion=$(_CommandLineParserVersion);
 configuration=$(Configuration);
 description=$(Description);
 id=$(PackageId);
+packageTags=$(PackageTags);
+targetFramework=$(TargetFramework);
+version=$(Version);
+AzureIdentityVersion=$(_AzureIdentityVersion);
+CommandLineParserVersion=$(_CommandLineParserVersion);
 MicrosoftApplicationInsightsAspNetCoreVersion=$(_MicrosoftApplicationInsightsSdkVersion);
 MicrosoftApplicationInsightsVersion=$(_MicrosoftApplicationInsightsSdkVersion);
 MicrosoftAspNetCoreHostingVersion=$(_MicrosoftAspNetCoreVersion);
 MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
 MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
+MicrosoftExtensionsCachingMemoryVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsConfigurationEnvironmentVariablesVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsConfigurationJsonVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsHostingAbstractionsVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsVersion);
-packageTags=$(PackageTags);
 SystemDiagnosticsDiagnosticSourceVersion=$(_SystemDiagnosticsDiagnosticSourceVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
 SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
@@ -52,8 +55,6 @@ SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
 SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);
 SystemTextJsonVersion=$(_SystemTextJsonVersion);
 SystemValueTupleVersion=$(_SystemValueTupleVersion);
-targetFramework=$(TargetFramework);
-version=$(Version);
 $(NuspecProperties)]]>
     </NuspecProperties>
   </PropertyGroup>

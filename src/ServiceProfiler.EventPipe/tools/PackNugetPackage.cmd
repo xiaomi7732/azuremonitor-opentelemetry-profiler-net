@@ -23,7 +23,7 @@ ECHO Version:%CURRENT_DATE_TIME%
 ECHO Assembly Version: %ASSEMBLY_VERSION%
 
 SET BASE_DIR=%~dp0..
-SET SLN_DIR=%BASE_DIR%
+SET SLN_DIR=%BASE_DIR%\..\
 SET TEMP_OUT=%BASE_DIR%\Out
 
 ECHO Prepare output folder: %TEMP_OUT%
@@ -39,12 +39,12 @@ DEL %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg /Q > NU
 
 ECHO Restore nuget packages
 
-ECHO dotnet restore %SLN_DIR%\ServiceProfilerEventPipe.sln
-dotnet restore %SLN_DIR%\ServiceProfilerEventPipe.sln
+ECHO dotnet restore %SLN_DIR%\Microsoft.ApplicationInsights.Profiler.sln
+dotnet restore %SLN_DIR%\Microsoft.ApplicationInsights.Profiler.sln
 
 IF '%REBUILD%' == 'TRUE' (
     ECHO Rebuild is set to 'TRUE'
-    dotnet build --no-restore %SLN_DIR%\ServiceProfilerEventPipe.sln /p:Configuration=%CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
+    dotnet build --no-restore %SLN_DIR%\Microsoft.ApplicationInsights.Profiler.sln /p:Configuration=%CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
 )
 
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
