@@ -19,6 +19,7 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+    <PackageReference Include="System.Memory.Data" />
     <!--
             Without explicit reference to System.Text.Json we are relying on dependency versions brought in by the CLR.
             This can introduce mismatched assembly errors depending on which version of .net the users project is relying on.
