@@ -22,24 +22,15 @@
         <PackageId>Microsoft.ApplicationInsights.Profiler.AspNetCore</PackageId>
         <Description>Microsoft Application Insights Profiler for ASP.NET Core.</Description>
         <PackageTags>Microsoft Azure Service Profiler AspNet AspNetCore Linux Windows Performance Stack Trace Docker ServiceProfiler LinuxProfiler LinuxPerformance AspNetCoreProfiler AspNetCorePerformance DockerProfiler</PackageTags>
-        <NuspecProperties>
-      configuration=$(Configuration);
-      id=$(PackageId);
-      version=$(Version);
-      description=$(Description);
-      packageTags=$(PackageTags);
-      MicrosoftApplicationInsightsAspNetCoreVersion=$(_MicrosoftApplicationInsightsSdkVersion);
-      MicrosoftAspNetCoreHostingAbstractionsVersion=$(_MicrosoftAspNetCoreVersion);
-      MicrosoftAspNetCoreHttpAbstractionsVersion=$(_MicrosoftAspNetCoreVersion);
-      MicrosoftAspNetCoreHttpVersion=$(_MicrosoftAspNetCoreVersion);
-      MicrosoftExtensionsConfigurationBinderVersion=$(_MicrosoftExtensionsConfigurationBinderVersion);
-      MicrosoftExtensionsConfigurationEnvironmentVariablesVersion=$(_MicrosoftExtensionsConfigurationEnvironmentVariablesVersion);
-      MicrosoftExtensionsConfigurationJsonVersion=$(_MicrosoftExtensionsConfigurationJsonVersion);
-      MicrosoftExtensionsDependencyInjectionVersion=$(_MicrosoftExtensionsDependencyInjectionVersion);
-      MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsOptionsConfigurationExtensionsVersion);
-      MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsOptionsVersion);
-      SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
-      $(NuspecProperties)
+        <NuspecProperties><![CDATA[
+configuration=$(Configuration);
+id=$(PackageId);
+version=$(Version);
+description=$(Description);
+packageTags=$(PackageTags);
+targetFramework=$(TargetFramework);
+MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsOptionsConfigurationExtensionsVersion);
+$(NuspecProperties)]]>
     </NuspecProperties>
     </PropertyGroup>
     <ItemGroup>

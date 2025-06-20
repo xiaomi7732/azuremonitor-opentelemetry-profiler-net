@@ -18,22 +18,11 @@
     <tags>$packageTags$</tags>
 
     <dependencies>
-      <group targetFramework=".NETStandard2.0">
+      <group targetFramework="$targetFramework$">
         <!-- Core package -->
         <dependency id="Microsoft.ApplicationInsights.Profiler.Core" version="$version$" exclude="Build,Analyzers" />
         <!-- External Dependencies -->
-        <dependency id="Microsoft.ApplicationInsights.AspNetCore" version="$MicrosoftApplicationInsightsAspNetCoreVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.AspNetCore.Hosting.Abstractions" version="$MicrosoftAspNetCoreHostingAbstractionsVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="$MicrosoftAspNetCoreHttpAbstractionsVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.Configuration.Binder" version="$MicrosoftExtensionsConfigurationBinderVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.Configuration.EnvironmentVariables" version="$MicrosoftExtensionsConfigurationEnvironmentVariablesVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.Configuration.Json" version="$MicrosoftExtensionsConfigurationJsonVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.DependencyInjection" version="$MicrosoftExtensionsDependencyInjectionVersion$" exclude="Build,Analyzers" />
-        <dependency id="Microsoft.Extensions.Options" version="$MicrosoftExtensionsOptionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Options.ConfigurationExtensions" version="$MicrosoftExtensionsOptionsConfigurationExtensionsVersion$" exclude="Build,Analyzers" />
-        <dependency id="System.Diagnostics.PerformanceCounter" version="$SystemDiagnosticsPerformanceCounterVersion$" exclude="Build,Analyzers" />
-        <!-- For compliance -->
-        <dependency id="Microsoft.AspNetCore.Http" version="$MicrosoftAspNetCoreHttpVersion$" exclude="Build,Analyzers" />
       </group>
     </dependencies>
     <contentFiles>
@@ -45,13 +34,10 @@
     <!-- License and Icon -->
     <file src="..\ReleaseReousrces\$licenseFileName$" target="" />
     <file src="..\ReleaseReousrces\$iconFileName$" target="images\" />
+
     <!--Assemblies-->
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ApplicationInsights.Profiler.AspNetCore.dll" target="lib\netstandard2.0"></file>
-    <!-- Dependencies -->
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.EventPipe.Orchestration.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.ProcessMonitor.dll" target="lib\netstandard2.0"></file>
-    <file src="bin\$configuration$\netstandard2.0\Microsoft.ServiceProfiler.Logging.dll" target="lib\netstandard2.0"></file>
-    <file src="..\ServiceProfiler.EventPipe.AspNetCore.HostingStartup30\bin\$configuration$\netstandard2.0\Microsoft.ApplicationInsights.Profiler.HostingStartup30.dll" target="lib\netstandard2.0"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.dll" target="lib\$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.pdb" target="lib\$targetFramework$"></file>
 
     <!--Uploader-->
     <file src="..\Out\TraceUpload30.zip" target="contentFiles\any\netstandard2.1\ServiceProfiler\TraceUpload.zip"></file>
