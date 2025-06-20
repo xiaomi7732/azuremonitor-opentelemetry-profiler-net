@@ -34,8 +34,24 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 },
                 timeout: TimeSpan.FromSeconds(2));
             await task;
-            
+
             Assert.True(task.IsCompleted);
+        }
+        
+        [Fact]
+        public async Task ShouldNotSwallowExceptions()
+        {
+            Exception ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            {
+                await ThreadUtilities.Instance.Value.CallWithTimeoutAsync(
+                    action: () =>
+                    {
+                        throw new InvalidOperationException("Test exception");
+                    },
+                    timeout: TimeSpan.FromSeconds(2));
+            });
+
+            Assert.Equal("Test exception", ex.Message);
         }
     }
 }

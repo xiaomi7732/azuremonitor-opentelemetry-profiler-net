@@ -14,9 +14,19 @@ internal sealed class ThreadUtilities : IThreadUtilities
         Task timeoutTask = Task.Delay(timeout);
         Task wrapper = Task.Run(action);
 
+        if (timeout == default)
+        {
+            timeoutTask = Task.CompletedTask; // No timeout, just wait for the action to complete
+        }
+
         Task completed = await Task.WhenAny(timeoutTask, wrapper).ConfigureAwait(false);
 
-        if (!wrapper.IsCompleted)
+        // After Task.WhenAny, if the wrapper task has completed with an exception,
+        // we need to await it to propagate the errors.
+        // Otherwise exceptions from the action will be swallowed or unobserved.
+        await completed.ConfigureAwait(false);
+
+        if (completed == timeoutTask)
         {
             throw new TimeoutException("Call didn't finish in time.");
         }
