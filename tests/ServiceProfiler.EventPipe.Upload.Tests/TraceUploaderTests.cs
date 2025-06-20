@@ -35,7 +35,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         public async Task ShouldZipTheTraceFileAsync()
         {
             bool isZipCalled = false;
-            _zipUtilityMock.Setup(u => u.ZipFile(_traceFilePath, It.IsAny<string>(), It.IsAny<List<string>>())).Callback(() =>
+            _zipUtilityMock.Setup(u => u.ZipFile(_traceFilePath, It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Callback(() =>
             {
                 isZipCalled = true;
             });
@@ -65,7 +65,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         {
             bool isBlobUploadCalled = false;
             const string zippedFilePath = "test_zipped.file";
-            _zipUtilityMock.Setup(u => u.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).Returns(zippedFilePath);
+            _zipUtilityMock.Setup(u => u.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(zippedFilePath);
 
             IServiceProvider serviceProvider = GetTestServiceProvider(null, (path, cancellationToken) =>
             {
@@ -215,7 +215,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             sampleActivitySerializerMock.Setup(s => s.SerializeToFileAsync(It.IsAny<IEnumerable<SampleActivity>>(), It.IsAny<string>())).Returns(Task.CompletedTask);
             services.AddTransient<ISampleActivitySerializer>(p => sampleActivitySerializerMock.Object);
 
-            uploadContextFactory = uploadContextFactory ?? CreateTestUploadContext;
+            uploadContextFactory ??= CreateTestUploadContext;
             services.AddTransient<UploadContext>(p =>
             {
                 return uploadContextFactory();
