@@ -53,14 +53,21 @@ dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --include-symbols --no-b
 dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
 
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg %TEMP_OUT%\NugetNoSymbols\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg %TEMP_OUT%\NugetNoSymbols\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 DEL %TEMP_OUT%\NugetNoSymbols\*.symbols.nupkg /Q > NUL
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
 mkdir %TEMP_OUT%\Nuget.publish
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget.publish\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget.publish\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
