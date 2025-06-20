@@ -1,3 +1,4 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31407.382
@@ -27,8 +28,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Upload.Tests", "..\tests\ServiceProfiler.EventPipe.Upload.Tests\ServiceProfiler.EventPipe.Upload.Tests.csproj", "{AB225ECB-AD75-4E24-AA80-1A96670C4627}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.Logging", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj", "{4F20D435-2D9F-4861-9662-4E66BDB8291E}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceProfiler.EventPipe.NuGetSigning", "ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.NuGetSigning\ServiceProfiler.EventPipe.NuGetSigning.csproj", "{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ServiceProfiler.Orchestration", "Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj", "{87AD25F3-90CE-4F68-9713-9063F592C42E}"
 EndProject
@@ -160,18 +159,6 @@ Global
 		{4F20D435-2D9F-4861-9662-4E66BDB8291E}.Release|x64.Build.0 = Release|Any CPU
 		{4F20D435-2D9F-4861-9662-4E66BDB8291E}.Release|x86.ActiveCfg = Release|Any CPU
 		{4F20D435-2D9F-4861-9662-4E66BDB8291E}.Release|x86.Build.0 = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|x64.Build.0 = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Debug|x86.Build.0 = Debug|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|x64.ActiveCfg = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|x64.Build.0 = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|x86.ActiveCfg = Release|Any CPU
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904}.Release|x86.Build.0 = Release|Any CPU
 		{87AD25F3-90CE-4F68-9713-9063F592C42E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{87AD25F3-90CE-4F68-9713-9063F592C42E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87AD25F3-90CE-4F68-9713-9063F592C42E}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -329,7 +316,6 @@ Global
 		{37A57123-1E65-43F8-97FA-9471DF8E2499} = {80AFCAF0-08D1-49C5-AF11-DF79D868011A}
 		{AB225ECB-AD75-4E24-AA80-1A96670C4627} = {80AFCAF0-08D1-49C5-AF11-DF79D868011A}
 		{4F20D435-2D9F-4861-9662-4E66BDB8291E} = {948A1291-3A47-4E7B-9491-874DFDBF377A}
-		{3A1D4D5E-6947-4A98-8D72-AC0B0B5ED904} = {948A1291-3A47-4E7B-9491-874DFDBF377A}
 		{87AD25F3-90CE-4F68-9713-9063F592C42E} = {B09CB374-3D56-4B02-84B1-4A978D5930B1}
 		{5D015D8A-2CE7-4178-BB9E-54A1700403A3} = {B09CB374-3D56-4B02-84B1-4A978D5930B1}
 		{1914A8A0-F740-423B-9DDC-0FF67034A5E2} = {948A1291-3A47-4E7B-9491-874DFDBF377A}
