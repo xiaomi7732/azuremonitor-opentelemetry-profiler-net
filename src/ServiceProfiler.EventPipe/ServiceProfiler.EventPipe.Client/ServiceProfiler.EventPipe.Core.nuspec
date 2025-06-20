@@ -40,8 +40,8 @@
   </metadata>
   <files>
     <!-- License and Icon -->
-    <file src="..\ReleaseReousrces\$licenseFileName$" target="" />
-    <file src="..\ReleaseReousrces\$iconFileName$" target="images\" />
+    <file src="..\ReleaseResources\$licenseFileName$" target="" />
+    <file src="..\ReleaseResources\$iconFileName$" target="images\" />
 
     <!-- All files and symbols -->
     <file src="bin\$configuration$\$targetFramework$\*.dll" target="lib/$targetFramework$"></file>
