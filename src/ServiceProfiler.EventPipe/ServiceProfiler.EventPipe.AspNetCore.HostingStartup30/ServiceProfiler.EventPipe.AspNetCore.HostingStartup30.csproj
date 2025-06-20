@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Microsoft.ApplicationInsights.Profiler.HostingStartup30</AssemblyName>
   </PropertyGroup>
 
@@ -12,8 +12,4 @@
     <PackageReference Include="Microsoft.ApplicationInsights" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
 </Project>
