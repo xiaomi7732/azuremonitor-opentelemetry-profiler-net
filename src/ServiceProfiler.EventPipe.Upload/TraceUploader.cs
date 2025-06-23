@@ -112,51 +112,53 @@ internal class TraceUploader : ITraceUploader
         {
             stampFrontendClient = _stampFrontendClientBuilder.WithUploadContext(extendedContext).Build();
             string actualStampId = await stampFrontendClient.GetStampIdAsync(cancellationToken).ConfigureAwait(false);
-            if (
-                // Actual stamp id can't be null
-                string.IsNullOrEmpty(actualStampId) ||
-                // Or the context.StampId is null, which doesn't require match
-                string.IsNullOrEmpty(context.StampId) ||
-                // Or they do match
-                string.Equals(actualStampId, context.StampId, StringComparison.OrdinalIgnoreCase))
+
+            // The actual stamp id can not be null
+            if (string.IsNullOrEmpty(actualStampId))
             {
-                // Write back the actual stamp id.
-                extendedContext.UploadContext.StampId = actualStampId;
+                throw new InvalidOperationException(FormattableString.Invariant($"Stamp ID is null. This should not happen. Expected: {context.StampId}"));
+            }
 
-                BlobAccessPass uploadPass = await stampFrontendClient.GetEtlUploadAccessAsync(
-                    context.SessionId,
-                    cancellationToken).ConfigureAwait(false);
-                
-                if (uploadPass == null)
-                {
-                    throw new InvalidOperationException("Failed to get a pass to upload the trace file.");
-                }
+            // If the context.StampId is null, we will set it to the actual stamp id, so that it will not fail the comparison later.
+            if (string.IsNullOrEmpty(context.StampId))
+            {
+                context.StampId = actualStampId;
+            }
 
-                Logger.LogDebug("Uri with SAS Token: {uploadPassValue}", uploadPass.GetUriWithSASToken().AbsoluteUri);
-                BlobClient blob = _blobClientFactory.CreateBlobClient(uploadPass.GetUriWithSASToken());
-                await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
+            // Compare the actual stamp id with the expected one.
+            if (!string.Equals(actualStampId, context.StampId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(FormattableString.Invariant($"Actual stamp-id of {actualStampId} is different than expected stamp-id: {context.StampId}"));
+            }
 
-                // Update the blob metadata.
-                Dictionary<string, string> metadata = CreateMetadata(extendedContext);
-                await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
+            BlobAccessPass uploadPass = await stampFrontendClient.GetEtlUploadAccessAsync(
+                context.SessionId,
+                cancellationToken).ConfigureAwait(false);
 
-                if (await stampFrontendClient.ReportEtlUploadFinishAsync(uploadPass, cancellationToken).ConfigureAwait(false))
-                {
-                    Logger.LogDebug("Blob upload finished @ {blobPath}.", blob?.BlobContainerName + '/' + blob?.Name);
-                    Logger.LogInformation(TelemetryConstants.TraceUploaded);
-                }
-                else
-                {
-                    throw new InvalidOperationException("Failed to commit the uploaded etl file.");
-                }
+            if (uploadPass == null)
+            {
+                throw new InvalidOperationException("Failed to get a pass to upload the trace file.");
+            }
 
-                _telemetryLogger.Flush();
+            Logger.LogDebug("Uri with SAS Token: {uploadPassValue}", uploadPass.GetUriWithSASToken().AbsoluteUri);
+            BlobClient blob = _blobClientFactory.CreateBlobClient(uploadPass.GetUriWithSASToken());
+            await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
+
+            // Update the blob metadata.
+            Dictionary<string, string> metadata = CreateMetadata(extendedContext);
+            await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (await stampFrontendClient.ReportEtlUploadFinishAsync(uploadPass, cancellationToken).ConfigureAwait(false))
+            {
+                Logger.LogDebug("Blob upload finished @ {blobPath}.", blob?.BlobContainerName + '/' + blob?.Name);
+                Logger.LogInformation(TelemetryConstants.TraceUploaded);
             }
             else
             {
-                string message = string.Format(CultureInfo.InvariantCulture, "Actual stamp-id of {0} is different than expected stamp-id: {1}", actualStampId, context.StampId);
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException("Failed to commit the uploaded etl file.");
             }
+
+            _telemetryLogger.Flush();
         }
         catch (InstrumentationKeyInvalidException ikie)
         {
@@ -185,6 +187,7 @@ internal class TraceUploader : ITraceUploader
             }
         }
     }
+
 
     private Dictionary<string, string> CreateMetadata(UploadContextExtension extendedContext)
     {
