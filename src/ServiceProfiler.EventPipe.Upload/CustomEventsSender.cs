@@ -39,7 +39,7 @@ internal class CustomEventsSender : ICustomEventsSender
             return;
         }
 
-        _logger.LogInformation("Sending customer events");
+        _logger.LogInformation("Sending custom events");
         using TelemetryConfiguration telemetryConfiguration = BuildTelemetryConfiguration(context);
 
         TelemetryClient telemetryClient = new(telemetryConfiguration);
