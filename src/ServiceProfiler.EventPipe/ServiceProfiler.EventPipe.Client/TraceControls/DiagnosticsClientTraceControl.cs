@@ -67,11 +67,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
         }
 
-
-        public Task EnableAsync(string traceFilePath, CancellationToken cancellationToken)
+        public async Task EnableAsync(string traceFilePath, CancellationToken cancellationToken)
         {
             _logger.LogTrace("Entering {typeName}.{methodName}()", _typeName, nameof(EnableAsync));
-            if (_singleTraceSessionHandle.Wait(TimeSpan.FromSeconds(10)))
+            if (await _singleTraceSessionHandle.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false))
             {
                 try
                 {
@@ -90,7 +89,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                     catch (InvalidOperationException ex) when (!_userConfiguration.AllowsCrash)
                     {
                         _logger.LogError(ex, "Failed getting process id. Profiler won't start.");
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     _currentSession = _diagnosticsClientProvider.GetDiagnosticsClient().StartEventPipeSession(
@@ -106,7 +105,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 {
                     _singleTraceSessionHandle.Release();
                 }
-                return Task.CompletedTask;
+                return;
             }
             else
             {
