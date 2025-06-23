@@ -75,10 +75,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                 config.Endpoint = options.HostUrl;
                 config.UserAgent = "EventPipeProfilerUploader";
                 config.AllowInsecureSslConnection = options.SkipEndpointCertificateValidation;
-
-                // Check again after 2/20/2023
-                // TODO: Bump this up when the FE is deployed to support 2023-01-10.
-                config.ApiVersion = "2022-06-10";
+                config.ApiVersion = "2023-01-10";
             });
 
             // Utilities
