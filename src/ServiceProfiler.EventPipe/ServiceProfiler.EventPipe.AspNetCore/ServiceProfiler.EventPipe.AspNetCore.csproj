@@ -10,11 +10,6 @@
         <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests" Key="$(TestPublicKey)" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
     </ItemGroup>
-    <PropertyGroup Condition=" '$(IsSpOfficialBuild)' == 'true' ">
-        <!--Only generate nuget packages on server build-->
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <IncludeSymbols>false</IncludeSymbols>
-    </PropertyGroup>
     <!--NuGet package properties-->
     <PropertyGroup>
         <Version Condition=" '$(Version)' == '' ">1.0.0</Version>

@@ -7,7 +7,7 @@
     <description>$description$</description>
     <authors>$authors$</authors>
 
-    <!--Optional meatadata-->
+    <!--Optional metadata-->
     <owners>$owners$</owners>
     <projectUrl>$projectUrl$</projectUrl>
     <license type="file">$licenseFileName$</license>
@@ -26,7 +26,7 @@
       </group>
     </dependencies>
     <contentFiles>
-      <files include="any\netstandard2.1\ServiceProfiler\TraceUpload.zip" buildAction="None" copyToOutput="true" flatten="true" />
+      <files include="any\$targetFramework$\ServiceProfiler\TraceUpload.zip" buildAction="None" copyToOutput="true" flatten="true" />
     </contentFiles>
   </metadata>
 
@@ -40,6 +40,6 @@
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.pdb" target="lib\$targetFramework$"></file>
 
     <!--Uploader-->
-    <file src="..\Out\TraceUpload30.zip" target="contentFiles\any\netstandard2.1\ServiceProfiler\TraceUpload.zip"></file>
+    <file src="obj\$configuration$\Uploader\Uploader.zip" target="contentFiles\any\net8.0\ServiceProfiler\TraceUpload.zip"></file>
   </files>
 </package>
