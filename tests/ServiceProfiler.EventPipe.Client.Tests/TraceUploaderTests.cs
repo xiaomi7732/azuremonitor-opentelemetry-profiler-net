@@ -4,13 +4,13 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
+using ServiceProfiler.EventPipe.Client.Tests.Stubs;
 using Xunit;
 
 namespace ServiceProfiler.EventPipe.Client.Tests
@@ -26,7 +26,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                serviceProvider.GetService<IOutOfProcCallerFactory>(),
                serviceProvider.GetService<IServiceProfilerContext>(),
                GetLogger<TraceUploaderProxy>(),
-               Options.Create(new UserConfiguration()),
+               Options.Create(new UserConfigurationStub()),
                serviceProvider.GetService<IUploadContextValidator>(),
                serviceProvider.GetService<ITraceFileFormatDefinition>());
 
@@ -58,7 +58,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 serviceProvider.GetService<IOutOfProcCallerFactory>(),
                 serviceProvider.GetService<IServiceProfilerContext>(),
                 GetLogger<TraceUploaderProxy>(),
-                Options.Create(new UserConfiguration()),
+                Options.Create(new UserConfigurationStub()),
                 contextValidator.Object,
                serviceProvider.GetService<ITraceFileFormatDefinition>());
 

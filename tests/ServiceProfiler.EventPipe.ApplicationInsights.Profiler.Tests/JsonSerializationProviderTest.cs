@@ -16,7 +16,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 StringValue = "Hello XUniT!"
             };
             ISerializationProvider target = CreateTestTarget();
-            bool canSerialize = target.TrySerialize(payload, out string actual);
+            bool canSerialize = target.TrySerialize(payload, out string? actual);
             Assert.True(canSerialize);
 
             // Expectations:
@@ -33,7 +33,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             string serialized = @"{""STRINGVALUE"":""Hello XUniT!"",""dataType"":""Unknown""}";
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
 
             Assert.Equal("Hello XUniT!", actual.StringValue);
@@ -44,7 +44,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             string serialized = @"{""stringValue"":""Hello XUniT!"",""dataType"":""Type1""}";
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
 
             Assert.Equal(JsonSerializationTestDataType.Type1, actual.DataType);
@@ -55,7 +55,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             string serialized = @"{""stringValue"":""Hello XUniT!"",""dataType"":""type1""}";
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
 
             Assert.Equal(JsonSerializationTestDataType.Type1, actual.DataType);
@@ -66,7 +66,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         {
             string serialized = null;
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.False(canDeserialize);
             Assert.Null(actual);
         }
@@ -74,9 +74,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotSerializeNull()
         {
-            JsonSerializationTestDataContract payload = null;
+            JsonSerializationTestDataContract? payload = null;
             ISerializationProvider target = CreateTestTarget();
-            bool canSerialize = target.TrySerialize<JsonSerializationTestDataContract>(payload, out string actual);
+            bool canSerialize = target.TrySerialize<JsonSerializationTestDataContract>(payload!, out string? actual);
             Assert.False(canSerialize);
             Assert.Null(actual);
         }
@@ -89,7 +89,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             DateTimeOffset testOffset = new DateTimeOffset(startingDate);
 
             ISerializationProvider target = CreateTestTarget();
-            bool canSerialize = target.TrySerialize<DateTimeOffset>(testOffset, out string actual);
+            bool canSerialize = target.TrySerialize<DateTimeOffset>(testOffset, out string? actual);
 
             Assert.True(canSerialize);
             Assert.Equal(actual, compare);

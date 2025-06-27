@@ -154,8 +154,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             serviceCollection.AddSingleton<TelemetryConfiguration>(telemetryConfiguration);
 
             // Mock endpoint provider
-            ServiceDescriptor endpointProviderDescriptor = serviceCollection.FirstOrDefault(d => d.ServiceType is IEndpointProvider);
-            serviceCollection.Remove(endpointProviderDescriptor);
+            ServiceDescriptor? endpointProviderDescriptor = serviceCollection.FirstOrDefault(d => d.ServiceType is IEndpointProvider);
+            if (endpointProviderDescriptor is not null)
+            {
+                serviceCollection.Remove(endpointProviderDescriptor);
+            }
             var endpointProviderMock = new Mock<IEndpointProvider>();
             endpointProviderMock.Setup(e => e.GetEndpoint()).Returns(new Uri(_testAppInsightsProfileEndpoint));
             serviceCollection.AddTransient<IEndpointProvider>(p => endpointProviderMock.Object);

@@ -6,7 +6,8 @@
     </PropertyGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="Microsoft.ApplicationInsights.Profiler.HostingStartup30" />
-      
+
+        <InternalsVisibleTo Include="ServiceProfiler.EventPipe.ApplicationInsights.Profiler.Tests" Key="$(TestPublicKey)"/>
         <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Client.Tests" Key="$(TestPublicKey)" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
     </ItemGroup>

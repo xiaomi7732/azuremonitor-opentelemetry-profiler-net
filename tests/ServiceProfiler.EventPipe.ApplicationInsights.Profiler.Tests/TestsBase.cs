@@ -3,6 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using Azure.Core;
+using Microsoft.ApplicationInsights.Profiler.Core;
+using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
+using Microsoft.ApplicationInsights.Profiler.Core.Logging;
+using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
@@ -10,6 +15,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,7 +25,6 @@ using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
 using Moq;
 using ServiceProfiler.Common.Utilities;
-using ServiceProfiler.EventPipe.Client.Tests.Stubs;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -66,6 +71,15 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection = serviceCollection ?? BuildServiceCollection();
 
+            serviceCollection.AddSingleton<IHostingEnvironment>(p =>
+            {
+                var hostingEnvironmentMock = new Mock<IHostingEnvironment>();
+                hostingEnvironmentMock
+                    .Setup(m => m.EnvironmentName)
+                    .Returns("Hosting:UnitTestEnvironment");
+                return hostingEnvironmentMock.Object;
+            });
+
             ILogger<IServiceProfilerContext> profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
 
             // Role name detectors and sources
@@ -88,32 +102,36 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<SchedulingPolicy, MockSchedulingPolicy>();
 
+            var aiSinksMock = new Mock<IAppInsightsSinks>();
+            serviceCollection.AddSingleton<IAppInsightsSinks>(aiSinksMock.Object);
 
             var resourceUsageSourceMock = new Mock<IResourceUsageSource>();
             resourceUsageSourceMock.Setup(usage => usage.GetAverageCPUUsage()).Returns(cpuUsageAvg);
             resourceUsageSourceMock.Setup(usage => usage.GetAverageMemoryUsage()).Returns(memoryUsageAvg);
             serviceCollection.AddTransient<IResourceUsageSource>(p => resourceUsageSourceMock.Object);
+            serviceCollection.AddTransient<IOptions<UserConfiguration>>(p => Options.Create(new UserConfiguration()));
             serviceCollection.AddTransient<IOptions<UserConfigurationBase>>(p =>
             {
-                UserConfigurationStub userConfiguration = new UserConfigurationStub();
+                UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
                 return Options.Create<UserConfigurationBase>(userConfiguration);
             });
 
             serviceCollection.AddTransient<IServiceProfilerContext>(provider =>
             {
-                var serviceProfilerContext = new Mock<IServiceProfilerContext>();
-                serviceProfilerContext.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(_testIKey);
-                serviceProfilerContext.Setup(ctx => ctx.MachineName).Returns("UnitTestMachineName");
-                serviceProfilerContext.Setup(ctx => ctx.StampFrontendEndpointUrl).Returns(new Uri(_testServiceProfilerFrontendEndpoint));
-                serviceProfilerContext.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(() => _testIKey);
-                serviceProfilerContext.Setup(ctx => ctx.ConnectionString).Returns(() =>
+                var serviceProfilerContextMock = new Mock<IServiceProfilerContext>();
+                serviceProfilerContextMock.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(_testIKey);
+                serviceProfilerContextMock.Setup(ctx => ctx.MachineName).Returns("UnitTestMachineName");
+                serviceProfilerContextMock.Setup(ctx => ctx.StampFrontendEndpointUrl).Returns(new Uri(_testServiceProfilerFrontendEndpoint));
+                serviceProfilerContextMock.Setup(ctx => ctx.AppInsightsInstrumentationKey).Returns(() => _testIKey);
+                serviceProfilerContextMock.Setup(ctx => ctx.ConnectionString).Returns(() =>
                 {
                     ConnectionString.TryParse("InstrumentationKey=" + _testIKey, out ConnectionString connectionString);
                     return connectionString;
                 });
-                return serviceProfilerContext.Object;
+                return serviceProfilerContextMock.Object;
             });
 
+            serviceCollection.AddSingleton<DiagnosticsClientTraceConfiguration>();
             IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
             // HttpClientHandler that  by passes certificate validation for SSL for test purpose.
@@ -136,10 +154,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<AppInsightsProfileFetcher>(provider => CreateTestAppInsightsProfileFetcher(provider.GetRequiredService<ISerializationProvider>()));
 
-            Mock<ITraceFileFormatDefinition> traceFileFormatDefinitionMock = new();
-            traceFileFormatDefinitionMock.Setup(format => format.TraceFileFormatName).Returns("TestTraceFileFormatName");
-            traceFileFormatDefinitionMock.Setup(format => format.FileExtension).Returns(".testtrace");
-            serviceCollection.AddTransient<ITraceFileFormatDefinition>(_ => traceFileFormatDefinitionMock.Object);
+            serviceCollection.AddTransient<ITraceFileFormatDefinition>(_ => CurrentTraceFileFormat.Instance);
 
             var traceControlMock = new Mock<ITraceControl>();
             traceControlMock.Setup(tc => tc.SessionStartUTC).Returns(_testSessionId.UtcDateTime);
@@ -147,6 +162,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
             serviceCollection.AddSingleton<SampleActivityContainerFactory>();
+            serviceCollection.AddTransient<ITraceSessionListenerFactory, TraceSessionListenerStubFactory>();
 
             var uploaderMock = new Mock<IOutOfProcCaller>();
             uploaderMock.Setup(uploader => uploader.ExecuteAndWait(It.IsAny<ProcessPriorityClass>())).Returns(0);
@@ -160,6 +176,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
             serviceCollection.AddSingleton<IPostStopProcessorFactory, PostStopProcessorFactory>();
+            serviceCollection.AddSingleton<ServiceProfilerProvider>();
 
             _uploaderLocatorMock = new Mock<IPrioritizedUploaderLocator>();
             _uploaderLocatorMock.Setup(locater => locater.Locate()).Returns(@"C:\temp\Uploader.exe");
@@ -172,6 +189,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             var metadataWriterMock = new Mock<IMetadataWriter>();
             serviceCollection.AddTransient<IMetadataWriter>(provider => metadataWriterMock.Object);
+
+            var telemetryTracker = new Mock<IEventPipeTelemetryTracker>();
+            serviceCollection.AddTransient(provider => telemetryTracker.Object);
 
             _traceUploaderMock = new Mock<ITraceUploader>();
             UploadContextModel uploadContext = new UploadContextModel()
@@ -266,7 +286,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         private IServiceCollection BuildServiceCollection()
         {
             ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
+            serviceCollection.AddLogging(config => config.AddDebug().SetMinimumLevel(LogLevel.Debug));
             return serviceCollection;
         }
     }
