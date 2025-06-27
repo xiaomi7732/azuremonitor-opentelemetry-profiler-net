@@ -27,7 +27,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 SkipEndpointCertificateValidation = false,
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -55,7 +55,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 SkipEndpointCertificateValidation = false,
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -83,7 +83,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 SkipEndpointCertificateValidation = true,
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -112,7 +112,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 RoleName = roleName,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -140,7 +140,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 RoleName = null,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -168,7 +168,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 RoleName = string.Empty,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -197,7 +197,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 TriggerType = trigger,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -225,7 +225,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 TriggerType = null,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 
@@ -253,7 +253,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 UploadMode = UploadMode.OnSuccess,
                 SerializedSampleFilePath = @"c:\sample",
                 TriggerType = string.Empty,
-                TraceFileFormat = CurrentTraceFileFormat.Instance.TraceFileFormatName,
+                TraceFileFormat = "Netperf",
             };
             string commandLine = validUploadContext.ToString();
 

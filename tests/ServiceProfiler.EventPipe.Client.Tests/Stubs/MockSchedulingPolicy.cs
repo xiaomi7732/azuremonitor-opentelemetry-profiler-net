@@ -1,16 +1,16 @@
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
 
-namespace ServiceProfiler.EventPipe.Client.Tests
+namespace ServiceProfiler.EventPipe.Client.Tests.Stubs
 {
     internal class MockSchedulingPolicy : SchedulingPolicy
     {
         public MockSchedulingPolicy(
-            IOptions<UserConfiguration> userConfig,
+            IOptions<UserConfigurationBase> userConfig,
             IDelaySource delaySource,
             IExpirationPolicy expirationPolicy,
             ILogger<SchedulingPolicy> logger) :

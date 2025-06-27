@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Castle.Core.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.ServiceProfiler.Orchestration;
 using Moq;
 using System;
@@ -29,7 +31,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                     testSchedulingPolicy.PollingInterval,
                     serviceProvider.GetRequiredService<IDelaySource>(),
                     serviceProvider.GetRequiredService<IExpirationPolicy>(),
-                    serviceProvider.GetRequiredService<ILogger<SchedulingPolicy>>());
+                    NullLogger<SchedulingPolicy>.Instance);
 
                 await Assert.ThrowsAsync<InvalidOperationException>(() => target.StartPolicyAsync(cts.Token));
             }

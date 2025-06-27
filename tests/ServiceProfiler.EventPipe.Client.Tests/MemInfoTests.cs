@@ -1,12 +1,13 @@
+using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using System.IO;
 using System.Text;
-using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
-using Moq;
 using Xunit;
 
 namespace ServiceProfiler.EventPipe.Client.Tests;
 
-public class MemInfoTests : TestsBase
+public class MemInfoTests 
 {
     [Fact]
     public void ShouldGetMemoryMetrics()
@@ -18,7 +19,7 @@ MemAvailable:               5771344 kB
 ");
         Mock<IMemInfoReader> memInfoReader = PrepareMemInfoReaderMock(lines);
 
-        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, GetLogger<MemInfoFileMemoryMetricsProvider>());
+        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, NullLogger<MemInfoFileMemoryMetricsProvider>.Instance);
 
         (float total, float free) = target.GetMetrics();
 
@@ -38,7 +39,7 @@ MemAvailable:            10 kB
 
         Mock<IMemInfoReader> memInfoReader = PrepareMemInfoReaderMock(lines);
 
-        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, GetLogger<MemInfoFileMemoryMetricsProvider>());
+        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, NullLogger<MemInfoFileMemoryMetricsProvider>.Instance);
 
         float rate = target.GetNextValue();
 
@@ -55,7 +56,7 @@ MemAvailable:            10 kB
 
         Mock<IMemInfoReader> memInfoReader = PrepareMemInfoReaderMock(lines);
 
-        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, GetLogger<MemInfoFileMemoryMetricsProvider>());
+        MemInfoFileMemoryMetricsProvider target = new MemInfoFileMemoryMetricsProvider(new MemInfoItemParser(), memInfoReader.Object, NullLogger<MemInfoFileMemoryMetricsProvider>.Instance);
         float rate = target.GetNextValue();
 
         Assert.Equal(0, rate);

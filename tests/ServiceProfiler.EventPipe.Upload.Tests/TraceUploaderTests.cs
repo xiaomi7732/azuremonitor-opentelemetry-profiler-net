@@ -184,6 +184,8 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             ServiceCollection services = new ServiceCollection();
             services.AddLogging();
             services.AddTransient<IZipUtility>(p => _zipUtilityMock.Object);
+            _stampFrontendClientMock.Setup(s => s.GetStampIdAsync(It.IsAny<CancellationToken>()))
+                .Returns(() => Task.FromResult("test-stamp-id"));
             _stampFrontendClientMock.Setup(s => s.GetEtlUploadAccessAsync(It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
                 .Returns(() => Task.FromResult(_testBlobAccessPass));
             _stampFrontendClientMock.Setup(s => s.ReportEtlUploadFinishAsync(It.IsAny<StampBlobUri>(), It.IsAny<CancellationToken>()))

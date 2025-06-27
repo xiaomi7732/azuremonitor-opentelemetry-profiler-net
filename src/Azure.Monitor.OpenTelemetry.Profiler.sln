@@ -39,8 +39,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ServiceProfiler.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.Common.Utilities", "ServiceProfiler.Common.Utilities\ServiceProfiler.Common.Utilities.csproj", "{F4113A80-9D83-4A49-8BB7-DBC27A628E07}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.Client.Tests", "..\tests\ServiceProfiler.EventPipe.Client.Tests\ServiceProfiler.EventPipe.Client.Tests.csproj", "{45EF7386-0C3D-4B9E-854B-AC1389906E4A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceProfiler.EventPipe.Upload.Tests", "..\tests\ServiceProfiler.EventPipe.Upload.Tests\ServiceProfiler.EventPipe.Upload.Tests.csproj", "{18CC49D6-B935-4995-BD65-2259328409D8}"
 EndProject
 Global
@@ -257,18 +255,6 @@ Global
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Release|x64.Build.0 = Release|Any CPU
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Release|x86.ActiveCfg = Release|Any CPU
 		{F4113A80-9D83-4A49-8BB7-DBC27A628E07}.Release|x86.Build.0 = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|x64.Build.0 = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Debug|x86.Build.0 = Debug|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|x64.ActiveCfg = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|x64.Build.0 = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|x86.ActiveCfg = Release|Any CPU
-		{45EF7386-0C3D-4B9E-854B-AC1389906E4A}.Release|x86.Build.0 = Release|Any CPU
 		{18CC49D6-B935-4995-BD65-2259328409D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{18CC49D6-B935-4995-BD65-2259328409D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18CC49D6-B935-4995-BD65-2259328409D8}.Debug|x64.ActiveCfg = Debug|Any CPU
