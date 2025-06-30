@@ -54,7 +54,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         private IServiceProvider CreateServiceProvider(
             TimeSpan duration,
             TimeSpan initialDelay,
-            Action uploaderExecuteCallback = null,
+            Action? uploaderExecuteCallback = null,
             bool isIKeyNull = false)
         {
             IServiceCollection services = GetRichServiceCollection(duration, initialDelay);

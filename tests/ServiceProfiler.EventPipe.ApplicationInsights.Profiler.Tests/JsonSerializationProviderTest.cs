@@ -35,6 +35,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             ISerializationProvider target = CreateTestTarget();
             bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
+            Assert.NotNull(actual);
 
             Assert.Equal("Hello XUniT!", actual.StringValue);
         }
@@ -46,6 +47,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             ISerializationProvider target = CreateTestTarget();
             bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
+            Assert.NotNull(actual);
 
             Assert.Equal(JsonSerializationTestDataType.Type1, actual.DataType);
         }
@@ -57,6 +59,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             ISerializationProvider target = CreateTestTarget();
             bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
+            Assert.NotNull(actual);
 
             Assert.Equal(JsonSerializationTestDataType.Type1, actual.DataType);
         }
@@ -64,7 +67,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotDeserializeNull()
         {
-            string serialized = null;
+            string serialized = null!;
             ISerializationProvider target = CreateTestTarget();
             bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.False(canDeserialize);
@@ -102,13 +105,13 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             ISerializationProvider target = CreateTestTarget();
 
             // Generate object from string
-            target.TryDeserialize<object[]>("[{\"SomeData\":\"SomeDataHere\",\"BooleanData\":false}]", out object[] payload);
+            target.TryDeserialize<object[]>("[{\"SomeData\":\"SomeDataHere\",\"BooleanData\":false}]", out object[]? payload);
             // FakePayload payload = new FakePayload();
             ApplicationInsightsOperationEvent classWithIgnore = new ApplicationInsightsOperationEvent();
             classWithIgnore.EventName = "FakeEvent";
-            classWithIgnore.Payload = payload;
+            classWithIgnore.Payload = payload!;
 
-            bool canSerialize = target.TrySerialize<ApplicationInsightsOperationEvent>(classWithIgnore, out string actual);
+            bool canSerialize = target.TrySerialize<ApplicationInsightsOperationEvent>(classWithIgnore, out string? actual);
 
             Assert.True(canSerialize);
             Assert.Equal(actual, compare);
@@ -120,17 +123,17 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         public void ShouldAllowDeserializeCompatibleConverts(string serialized)
         {
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.True(canDeserialize);
         }
 
         [Theory]
         [InlineData("abc")] // Not a json
-        [InlineData(@"{""stringValue"":""Hello XUniT!""")] // Malformat json
+        [InlineData(@"{""stringValue"":""Hello XUniT!""")] // Malformed json
         public void ShouldNotThrowDeserializing(string serialized)
         {
             ISerializationProvider target = CreateTestTarget();
-            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract actual);
+            bool canDeserialize = target.TryDeserialize<JsonSerializationTestDataContract>(serialized, out JsonSerializationTestDataContract? actual);
             Assert.False(canDeserialize);
         }
 

@@ -41,7 +41,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         internal AppInsightsProfileFetcher CreateTestAppInsightsProfileFetcher(ISerializationProvider serializer)
         {
             var testProfile = new AppInsightsProfile { AppId = _testAppId, Location = "testlocation" };
-            serializer.TrySerialize(testProfile, out string testProfileSerialized);
+            serializer.TrySerialize(testProfile, out string? testProfileSerialized);
 #pragma warning disable CA2000 // The delegate handler will be disposed alone with the AppInsightsProfileFetcher
             var mockHttpMessageHandler = new MockHttpMessageHandler();
 #pragma warning restore CA2000 // The delegate handler will be disposed alone with the AppInsightsProfileFetcher.
@@ -49,7 +49,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 $"{_testAppInsightsProfileEndpoint}/api/profiles/{_testIKey:D}",
                 new HttpResponseMessage(System.Net.HttpStatusCode.OK)
                 {
-                    Content = new StringContent(testProfileSerialized)
+                    Content = new StringContent(testProfileSerialized!)
                 }
             );
             return new AppInsightsProfileFetcher(_testAppInsightsProfileEndpoint, mockHttpMessageHandler);
@@ -61,7 +61,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         protected IServiceCollection GetRichServiceCollection(
             TimeSpan? duration = null,
             TimeSpan? initialDelay = null,
-            IServiceCollection serviceCollection = null,
+            IServiceCollection? serviceCollection = null,
             bool isFileExistResult = true,
             float cpuUsageAvg = 80,
             float memoryUsageAvg = 80)
@@ -80,7 +80,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 return hostingEnvironmentMock.Object;
             });
 
-            ILogger<IServiceProfilerContext> profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
+            ILogger<IServiceProfilerContext>? profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
 
             // Role name detectors and sources
             Mock<IRoleNameSource> roleNameSourceMock = new();
@@ -212,7 +212,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<string>()))
-                .Returns(() => Task.FromResult(uploadContext));
+                .Returns(() => Task.FromResult<UploadContextModel?>(uploadContext));
             serviceCollection.AddTransient<ITraceUploader>(provider => _traceUploaderMock.Object);
 
             serviceCollection.AddTransient<ISerializationProvider, HighPerfJsonSerializationProvider>();
@@ -279,9 +279,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         protected static readonly DateTimeOffset _testSessionId = DateTimeOffset.UtcNow;
         protected const string _testTraceFilePath = "/mnt/d/temp/trace.etl.zip";
 
-        internal Mock<IProfilerFrontendClient> _stampFrontendClientMock;
-        internal Mock<IPrioritizedUploaderLocator> _uploaderLocatorMock;
-        internal Mock<ITraceUploader> _traceUploaderMock;
+        internal Mock<IProfilerFrontendClient>? _stampFrontendClientMock;
+        internal Mock<IPrioritizedUploaderLocator>? _uploaderLocatorMock;
+        internal Mock<ITraceUploader>? _traceUploaderMock;
 
         private IServiceCollection BuildServiceCollection()
         {
