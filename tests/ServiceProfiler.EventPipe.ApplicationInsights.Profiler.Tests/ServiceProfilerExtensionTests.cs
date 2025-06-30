@@ -92,7 +92,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         public void ShouldBeAbleToCustomizeProfilerByConfigurationOverwrites()
         {
             IConfiguration config = new ConfigurationBuilder().AddInMemoryCollection(
-                new Dictionary<string, string>(){
+                new Dictionary<string, string?>(){
                     {"a" , "b"}, // noise
                     {"ServiceProfiler:BufferSizeInMB", "100"},
                     {"ServiceProfiler:Duration", "00:01:15"},
@@ -115,7 +115,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         public void ShouldBeAbleToCustomizeProfilerByConfigurations()
         {
             IConfiguration config = new ConfigurationBuilder().AddInMemoryCollection(
-                new Dictionary<string, string>(){
+                new Dictionary<string, string?>(){
                     { "APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=8e321e78-834f-4397-96fd-297fa844d140" },
                     {"a" , "b"}, // noise
                     {"ServiceProfiler:BufferSizeInMB", "100"},
@@ -180,7 +180,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         }
 
         #region Private
-        private ServiceCollection CreateInitialServiceCollection(IConfiguration customConfiguration = null)
+        private ServiceCollection CreateInitialServiceCollection(IConfiguration? customConfiguration = null)
         {
             ServiceCollection serviceCollection = new ServiceCollection();
 
@@ -216,17 +216,17 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             protected IServiceCollection CreateServiceCollection(
                 TimeSpan duration,
                 TimeSpan initialDelay,
-                IServiceCollection inCollection,
-                Action traceControlEnableCallback = null,
-                Action traceControlDisableCallback = null,
-                Action setupStampFrontendCallback = null,
-                Action uploaderExecuteCallback = null,
+                IServiceCollection? inCollection,
+                Action? traceControlEnableCallback = null,
+                Action? traceControlDisableCallback = null,
+                Action? setupStampFrontendCallback = null,
+                Action? uploaderExecuteCallback = null,
                 bool isIKeyNull = false)
             {
                 IServiceCollection serviceCollection = inCollection ?? new ServiceCollection();
                 serviceCollection.AddLogging(config => config.AddDebug().SetMinimumLevel(LogLevel.Debug));
 
-                ILogger<IServiceProfilerContext> profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
+                ILogger<IServiceProfilerContext>? profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
 
                 serviceCollection.AddTransient<IEndpointProvider>(p =>
                 {
@@ -302,10 +302,10 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             private IServiceProvider CreateServiceProvider(
             TimeSpan duration,
             TimeSpan initialDelay,
-            Action traceControlEnableCallback = null,
-            Action traceControlDisableCallback = null,
-            Action setupStampFrontendCallback = null,
-            Action uploaderExecuteCallback = null,
+            Action? traceControlEnableCallback = null,
+            Action? traceControlDisableCallback = null,
+            Action? setupStampFrontendCallback = null,
+            Action? uploaderExecuteCallback = null,
             bool isIKeyNull = false)
             {
                 IServiceProvider serviceProvider = CreateServiceCollection(
