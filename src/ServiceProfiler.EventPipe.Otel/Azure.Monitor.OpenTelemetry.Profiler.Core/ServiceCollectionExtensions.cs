@@ -66,7 +66,6 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IPayloadSerializer, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
         services.AddSingleton<ISerializationOptionsProvider<JsonSerializerOptions>, HighPerfJsonSerializationProvider>();
-        services.AddSingleton<ISerializationProvider, HighPerfJsonSerializationProvider>();
 
         // Uploader caller
         AddUploaderCallerServices(services);
