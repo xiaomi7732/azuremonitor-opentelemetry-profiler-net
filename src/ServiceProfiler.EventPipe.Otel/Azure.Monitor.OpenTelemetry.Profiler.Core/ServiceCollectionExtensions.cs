@@ -37,6 +37,7 @@ internal static class ServiceCollectionExtensions
     public static IServiceCollection AddServiceProfilerCore(this IServiceCollection services)
     {
         // Utilities
+        services.AddSingleton<IAgentStringProvider, AgentStringProvider>();
         services.AddConnectionString();
         services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
 

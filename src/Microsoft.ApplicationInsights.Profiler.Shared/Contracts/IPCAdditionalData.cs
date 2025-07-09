@@ -12,4 +12,6 @@ internal record IPCAdditionalData
     public ServiceProfilerIndex ServiceProfilerIndex { get; init; } = default!;
 
     public IEnumerable<ServiceProfilerSample> ServiceProfilerSamples { get; init; } = default!;
+
+    public string? AgentString { get; set; }
 }

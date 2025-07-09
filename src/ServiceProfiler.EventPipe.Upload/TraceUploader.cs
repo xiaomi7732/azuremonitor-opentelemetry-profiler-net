@@ -3,13 +3,10 @@
 //-----------------------------------------------------------------------------
 
 using Azure.Storage.Blobs;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
-using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
@@ -22,7 +19,6 @@ using ServiceProfiler.EventPipe.Upload;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;

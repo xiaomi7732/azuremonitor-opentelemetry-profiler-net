@@ -13,18 +13,25 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
 
         public IProfilerFrontendClient Build()
         {
-            if (_uploadContextExtension == null)
+            if (_uploadContextExtension is null)
             {
                 throw new InvalidOperationException(Invariant($"Call {nameof(WithUploadContext)} before calling {nameof(Build)}."));
             }
 
+            string agentString = Invariant($"EventPipeUploader/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}");
+            if (!string.IsNullOrEmpty(_uploadContextExtension.AdditionalData?.AgentString))
+            {
+                agentString = _uploadContextExtension.AdditionalData.AgentString;
+            }
+
             UploadContext context = _uploadContextExtension.UploadContext;
+
             return new ProfilerFrontendClient(
                 host: context.HostUrl,
                 instrumentationKey: context.AIInstrumentationKey,
                 machineName: EnvironmentUtilities.MachineName,
                 featureVersion: null,
-                userAgent: Invariant($"EventPipeUploader/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
+                userAgent: agentString,
                 tokenCredential: _uploadContextExtension.TokenCredential,
                 skipCertificateValidation: context.SkipEndpointCertificateValidation);
         }
