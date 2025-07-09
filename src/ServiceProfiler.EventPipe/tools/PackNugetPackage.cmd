@@ -54,7 +54,7 @@ ECHO Calling ./PackUploader.cmd %CONFIG% %REBUILD%
 call ./PackUploader.cmd %CONFIG% %REBUILD%
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
-ECHO Running xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\ > NUL
+ECHO Running xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 
 ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
