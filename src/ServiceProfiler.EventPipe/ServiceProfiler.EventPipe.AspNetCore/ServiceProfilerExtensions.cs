@@ -103,6 +103,8 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.AddLogging();
             serviceCollection.AddOptions();
 
+            serviceCollection.AddSingleton<IAgentStringProvider, AgentStringProvider>();
+
             // Register IOptions<UserConfiguration> and IOptions<UserConfigurationBase>.
             serviceCollection.AddSingleton<IConfigureOptions<UserConfiguration>>(p =>
             {

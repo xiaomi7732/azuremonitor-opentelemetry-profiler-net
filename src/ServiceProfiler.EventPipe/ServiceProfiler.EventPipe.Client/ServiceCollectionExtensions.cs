@@ -65,7 +65,6 @@ internal static class ServiceCollectionExtensions
         });
 
         // Utilities
-        services.AddSingleton<IAgentStringProvider, AgentStringProvider>();
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
