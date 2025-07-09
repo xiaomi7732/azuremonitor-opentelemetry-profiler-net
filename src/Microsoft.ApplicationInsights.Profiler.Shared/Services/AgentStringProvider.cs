@@ -10,7 +10,7 @@ internal class AgentStringProvider : IAgentStringProvider
 
     private static string CreateAgentString()
     {
-        Assembly entryAssembly = Assembly.GetEntryAssembly()
+        Assembly entryAssembly = Assembly.GetExecutingAssembly()
             ?? throw new InvalidOperationException("Entry assembly is not available.");
         string name = entryAssembly.GetName().FullName;
         string version = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
