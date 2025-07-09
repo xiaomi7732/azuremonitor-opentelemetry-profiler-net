@@ -57,7 +57,7 @@ internal class PostStopProcessor : IPostStopProcessor
         _metadataWriter = metadataWriter ?? throw new ArgumentNullException(nameof(metadataWriter));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _customEventsBuilder = customEventsBuilder ?? throw new ArgumentNullException(nameof(customEventsBuilder));
-        _agentStringProvider = agentStringProvider;
+        _agentStringProvider = agentStringProvider ?? throw new ArgumentNullException(nameof(agentStringProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
