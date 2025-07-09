@@ -34,7 +34,7 @@
       </group>
     </dependencies>
     <contentFiles>
-      <files include="any\net6.0\ServiceProfiler\TraceUpload.zip" buildAction="None" copyToOutput="true" flatten="true" />
+      <files include="any\any\ServiceProfiler\TraceUpload.zip" buildAction="None" copyToOutput="true" flatten="true" />
     </contentFiles>
   </metadata>
   <files>
@@ -43,7 +43,7 @@
     <file src="bin\$configuration$\$targetFramework$\*.pdb" target="lib/$targetFramework$"></file>
 
     <!-- Uploader -->
-    <file src="obj\$configuration$\Uploader\Uploader.zip" target="contentFiles\any\net8.0\ServiceProfiler\TraceUpload.zip"></file>
+    <file src="obj\$configuration$\Uploader\Uploader.zip" target="contentFiles\any\any\ServiceProfiler\TraceUpload.zip"></file>
 
     <!-- Readme -->
     <file src="..\Readme.md" target="docs\" />
