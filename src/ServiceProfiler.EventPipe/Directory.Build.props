@@ -5,10 +5,13 @@
     <Nullable>enable</Nullable>
 
     <!-- Setup Version property. -->
+    <MajorVersion>3</MajorVersion>
+    <MinorVersion>0</MinorVersion>
+
     <TimeSuffix>$([System.DateTime]::Now.ToString(yyyyMMddHHmm))</TimeSuffix>
     <VersionSuffix Condition=" '$(VersionSuffix)' == '' ">-private-$(TimeSuffix)</VersionSuffix>
     <!-- Allows build parameter to overwrite the NuGet package versions -->
-    <DefaultPackageVersion Condition=" $(DefaultPackageVersion) == '' ">3.0.0</DefaultPackageVersion>
+    <DefaultPackageVersion Condition=" $(DefaultPackageVersion) == '' ">$(MajorVersion).$(MinorVersion).0</DefaultPackageVersion>
     <!-- Provides default SemVer when the property is set to `default`. That is expected to be the default parameter of the build pipeline. -->
     <Version Condition=" '$(SPEventPipeNugetVersion)' == 'default' ">$(DefaultPackageVersion)-build-$(TimeSuffix)</Version>
     <!-- When the value is provided but other than `default`, use it literally. -->

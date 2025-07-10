@@ -27,6 +27,7 @@ public static class OpenTelemetryBuilderExtensions
             return builder;
         }
 
+        builder.Services.AddSingleton<IAgentStringProvider, AgentStringProvider>();
         // Passed the registering check, keep registering classes into the 
         ConfigureServices(builder.Services, configureServiceProfiler);
         return builder;

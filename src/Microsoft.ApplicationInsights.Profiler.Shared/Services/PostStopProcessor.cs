@@ -30,6 +30,7 @@ internal class PostStopProcessor : IPostStopProcessor
     private readonly IMetadataWriter _metadataWriter;
     private readonly IRoleNameSource _roleNameSource;
     private readonly ICustomEventsBuilder _customEventsBuilder;
+    private readonly IAgentStringProvider _agentStringProvider;
     private readonly ILogger _logger;
 
     public PostStopProcessor(
@@ -43,6 +44,7 @@ internal class PostStopProcessor : IPostStopProcessor
         IMetadataWriter metadataWriter,
         IRoleNameSource roleNameSource,
         ICustomEventsBuilder customEventsBuilder,
+        IAgentStringProvider agentStringProvider,
         ILogger<PostStopProcessor> logger)
     {
         _serviceProfilerOptions = serviceProfilerOptions?.Value ?? throw new ArgumentNullException(nameof(serviceProfilerOptions));
@@ -55,6 +57,7 @@ internal class PostStopProcessor : IPostStopProcessor
         _metadataWriter = metadataWriter ?? throw new ArgumentNullException(nameof(metadataWriter));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _customEventsBuilder = customEventsBuilder ?? throw new ArgumentNullException(nameof(customEventsBuilder));
+        _agentStringProvider = agentStringProvider ?? throw new ArgumentNullException(nameof(agentStringProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -197,16 +200,17 @@ internal class PostStopProcessor : IPostStopProcessor
         {
             ConnectionString = _serviceProfilerContext.ConnectionString.ToString(),
             ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
-            fileId: EnvironmentUtilities.CreateSessionId(),
-            stampId: stampId,
-            sessionId: sessionId,
-            appId: appId,
-            profilerSource: profilerSource),
+                fileId: EnvironmentUtilities.CreateSessionId(),
+                stampId: stampId,
+                sessionId: sessionId,
+                appId: appId,
+                profilerSource: profilerSource),
             ServiceProfilerSamples = _customEventsBuilder.CreateServiceProfilerSamples(
-            samples: samples,
-            stampId: stampId,
-            sessionId: sessionId,
-            appId: appId),
+                samples: samples,
+                stampId: stampId,
+                sessionId: sessionId,
+                appId: appId),
+            AgentString = _agentStringProvider.AgentString,
         };
 
     /// <summary>

@@ -11,6 +11,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using AgentStringProvider = Azure.Monitor.OpenTelemetry.Profiler.AgentStringProvider;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -102,6 +103,8 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             serviceCollection.AddLogging();
             serviceCollection.AddOptions();
+
+            serviceCollection.AddSingleton<IAgentStringProvider, AgentStringProvider>();
 
             // Register IOptions<UserConfiguration> and IOptions<UserConfigurationBase>.
             serviceCollection.AddSingleton<IConfigureOptions<UserConfiguration>>(p =>
