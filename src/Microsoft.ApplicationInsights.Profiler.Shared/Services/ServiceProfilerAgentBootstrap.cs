@@ -20,6 +20,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     private readonly UserConfigurationBase _userConfiguration;
     private readonly ICompatibilityUtilityFactory _compatibilityUtilityFactory;
     private readonly ISerializationProvider _serializer;
+    private readonly IEventPipeEnvironmentCheckService _eventPipeEnvironmentCheckService;
     private readonly ILogger _logger;
 
     public ServiceProfilerAgentBootstrap(
@@ -28,6 +29,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         IOptions<UserConfigurationBase> userConfiguration,
         ICompatibilityUtilityFactory compatibilityUtilityFactory,
         ISerializationProvider serializer,
+        IEventPipeEnvironmentCheckService eventPipeEnvironmentCheckService,
         ILogger<ServiceProfilerAgentBootstrap> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -35,6 +37,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 
         _compatibilityUtilityFactory = compatibilityUtilityFactory ?? throw new ArgumentNullException(nameof(compatibilityUtilityFactory));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        _eventPipeEnvironmentCheckService = eventPipeEnvironmentCheckService ?? throw new ArgumentNullException(nameof(eventPipeEnvironmentCheckService));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
     }
@@ -57,6 +60,8 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         _logger.LogTrace("Starting service profiler from application builder.");
         (bool compatible, string reason) = _userConfiguration.IsSkipCompatibilityTest ? (true, "Skipped the compatibility test by settings.") : _compatibilityUtilityFactory.Create().IsCompatible();
 
+        if (!string.IsNullOrEmpty(reason)) { _logger.LogDebug(reason); }
+
         if (!compatible)
         {
             _logger.LogError("Compatibility test failed. Reason: {reason}" + Environment.NewLine +
@@ -64,18 +69,11 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
             return;
         }
 
-        // Check if any of these diagnostic settings are disabled
-        // https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-environment-variables#dotnet_enablediagnostics
-        foreach (string item in DiagnosticsVariables.GetAllVariables())
+        if(!_eventPipeEnvironmentCheckService.IsEnvironmentSuitable())
         {
-            if (Environment.GetEnvironmentVariable(item) == "0")
-            {
-                _logger.LogError("{variable} is set to 0. Profiler is disabled", item);
-                return;
-            }
+            _logger.LogError("Environment check failed. Profiler is disabled.");
+            return;
         }
-
-        if (!string.IsNullOrEmpty(reason)) { _logger.LogDebug(reason); }
 
         try
         {
