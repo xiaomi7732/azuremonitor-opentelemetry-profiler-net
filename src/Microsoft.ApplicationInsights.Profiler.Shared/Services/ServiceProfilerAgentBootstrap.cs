@@ -1,21 +1,23 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 
-namespace Microsoft.ApplicationInsights.Profiler.AspNetCore;
+namespace Microsoft.ApplicationInsights.Profiler.Shared;
 
 internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 {
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IOrchestrator _orchestrator;
-    private readonly UserConfiguration _userConfiguration;
+    private readonly UserConfigurationBase _userConfiguration;
     private readonly ICompatibilityUtilityFactory _compatibilityUtilityFactory;
     private readonly ISerializationProvider _serializer;
     private readonly ILogger _logger;
@@ -23,7 +25,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     public ServiceProfilerAgentBootstrap(
         IServiceProfilerContext serviceProfilerContext,
         IOrchestrator orchestrator,
-        IOptions<UserConfiguration> userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         ICompatibilityUtilityFactory compatibilityUtilityFactory,
         ISerializationProvider serializer,
         ILogger<ServiceProfilerAgentBootstrap> logger)
@@ -41,10 +43,9 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     {
         string noConnectionStringMessage = "No connection string is set. Application Insights Profiler won't start.";
 
-        bool isUserConfigSerialized = _serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration);
-        if (isUserConfigSerialized)
+        if (_serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration))
         {
-            _logger.LogDebug("User Settings:" + Environment.NewLine + "{details}", serializedUserConfiguration);
+            _logger.LogDebug("User Settings:{eol} {details}", Environment.NewLine, serializedUserConfiguration);
         }
 
         if (_userConfiguration.IsDisabled)
@@ -83,6 +84,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
             {
                 _logger.LogError(noConnectionStringMessage);
                 return;
+
             }
 
             // Instrumentation key is well-formed.
@@ -92,7 +94,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
                 return;
             }
 
-            _logger.LogInformation("Starting application insights profiler with instrumentation key: {iKey}", _serviceProfilerContext.AppInsightsInstrumentationKey);
+            _logger.LogInformation("Starting application insights profiler with connection string: {connectionString}", _serviceProfilerContext.ConnectionString);
             await _orchestrator.StartAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
