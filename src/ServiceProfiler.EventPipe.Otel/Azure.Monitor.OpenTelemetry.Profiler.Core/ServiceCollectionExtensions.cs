@@ -39,6 +39,7 @@ internal static class ServiceCollectionExtensions
         // Utilities
         services.AddConnectionString();
         services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
+        services.AddTransient<IEventPipeEnvironmentCheckService, EventPipeEnvironmentCheckService>();
 
         // Role name detectors and sources
         services.AddSingleton<OtelResourceDetector>();

@@ -65,6 +65,8 @@ internal static class ServiceCollectionExtensions
         });
 
         // Utilities
+        services.AddTransient<IEventPipeEnvironmentCheckService, EventPipeEnvironmentCheckService>();
+        
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
