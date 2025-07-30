@@ -5,16 +5,16 @@ namespace Azure.Monitor.OpenTelemetry.Profiler;
 
 /// <summary>
 /// An implementation of <see cref="IAgentStringProvider"/> that provides the agent string for the profiler.
-/// The agent string is constructed using the executing assembly's name and version.
-/// It is important to put this implementation in a header project to identify the agent correctly.
+/// The agent string is constructed using the specified type's assembly name and version.
 /// </summary>
-internal class AgentStringProvider : IAgentStringProvider
+/// <typeparam name="T">The type whose assembly information will be used to construct the agent string.</typeparam>
+internal class AgentStringProvider<T> : IAgentStringProvider
 {
     private static readonly string _agentString = CreateAgentString();
 
     private static string CreateAgentString()
     {
-        Assembly assembly = Assembly.GetExecutingAssembly();
+        Assembly assembly = typeof(T).Assembly;
         AssemblyName assemblyName = assembly.GetName();
         string version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? assembly.GetName().Version?.ToString() ?? "unknown";
