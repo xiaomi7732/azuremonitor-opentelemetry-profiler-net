@@ -2,6 +2,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -33,7 +34,7 @@ internal class AgentStatusService : IAgentStatusService
         IAgentStatusSender agentStatusSender,
         IProfilerSettingsService profilerSettingsService,
         IRoleNameSource roleNameSource, IRoleInstanceSource roleInstanceSource,
-        UserConfigurationBase userConfiguration,
+        IOptions<UserConfigurationBase> userConfiguration,
         ILogger<AgentStatusService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -41,7 +42,7 @@ internal class AgentStatusService : IAgentStatusService
         _profilerSettingsService = profilerSettingsService ?? throw new ArgumentNullException(nameof(profilerSettingsService));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _roleInstanceSource = roleInstanceSource ?? throw new ArgumentNullException(nameof(roleInstanceSource));
-        _userConfiguration = userConfiguration ?? throw new ArgumentNullException(nameof(userConfiguration));
+        _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
     }
 
     public ProfilerAgentStatus Current => _current ?? throw new InvalidOperationException("Agent status has not been initialized.");
