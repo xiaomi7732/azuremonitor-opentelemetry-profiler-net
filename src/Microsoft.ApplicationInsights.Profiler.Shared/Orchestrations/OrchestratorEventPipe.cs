@@ -21,6 +21,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
 {
     private readonly IReadOnlyCollection<SchedulingPolicy> _policyCollection;
     private readonly IServiceProfilerProvider _profilerProvider;
+    private readonly IAgentStatusService _agentStatusService;
     private ILogger _logger;
     private TimeSpan _initialDelay;
 
@@ -37,12 +38,14 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         IOptions<UserConfigurationBase> config,
         IEnumerable<SchedulingPolicy> policyCollection,
         IDelaySource delaySource,
+        IAgentStatusService agentStatusService,
         ILogger<OrchestratorEventPipe> logger) : base(delaySource)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _policyCollection = (policyCollection ?? throw new ArgumentNullException(nameof(policyCollection)))
             .ToList().AsReadOnly();
         _profilerProvider = profilerProvider ?? throw new ArgumentNullException(nameof(profilerProvider));
+        _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
         _initialDelay = config.Value.InitialDelay;
     }
 
@@ -51,6 +54,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     /// </summary>
     public async override Task StartAsync(CancellationToken cancellationToken)
     {
+        await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         _logger.LogDebug("Starting the orchestrator.");
 
         int activatedCount = ActivateSchedulePolicies();

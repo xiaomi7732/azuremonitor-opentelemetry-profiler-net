@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
@@ -40,6 +41,10 @@ internal static class ServiceCollectionExtensions
         services.AddConnectionString();
         services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
         services.AddTransient<IEventPipeEnvironmentCheckService, EventPipeEnvironmentCheckService>();
+
+        // Agent status
+        services.AddSingleton<IAgentStatusSender, AgentStatusSender>();
+        services.AddSingleton<IAgentStatusService, AgentStatusService>();
 
         // Role name detectors and sources
         services.AddSingleton<OtelResourceDetector>();
