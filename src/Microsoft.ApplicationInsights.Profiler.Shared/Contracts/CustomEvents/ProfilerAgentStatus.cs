@@ -1,4 +1,4 @@
-﻿using Microsoft.ServiceProfiler.Contract.Agent;
+﻿using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;

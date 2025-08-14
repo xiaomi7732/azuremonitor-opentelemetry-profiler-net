@@ -6,5 +6,5 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 internal interface IAgentStatusSender
 {
-    Task SendAsync(ProfilerAgentStatus agentStatus, CancellationToken cancellationToken);
+    Task SendAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken);
 }

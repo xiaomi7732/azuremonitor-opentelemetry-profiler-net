@@ -3,10 +3,10 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,7 +56,7 @@ internal class AgentStatusService : IAgentStatusService
             _roleInstanceSource.CloudRoleInstance,
             cancellationToken).ConfigureAwait(false);
 
-        await UpdateAsync(_current, cancellationToken).ConfigureAwait(false);
+        await UpdateAsync(_current, "Initialization", cancellationToken).ConfigureAwait(false);
 
         // Setup the timer to periodically update the agent status.
         _statusUpdateTimer = new Timer(StatusTimerCallback, state: null, dueTime: DefaultStatusUpdateInterval, period: DefaultStatusUpdateInterval);
@@ -76,34 +76,37 @@ internal class AgentStatusService : IAgentStatusService
         try
         {
             // Fire & forget
-            await UpdateAsync(_current, CancellationToken.None).ConfigureAwait(false);
+            await UpdateAsync(_current, "Refresh", CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
-        { 
+        {
             _logger.LogError(ex, "Failed to update agent status regularly.");
         }
     }
 
     private async void OnProfilerSettingsUpdated(SettingsContract contract)
     {
-        // Check if the settings request a different agent status. If it is, change the status.
-        _logger.LogWarning("TODO: update the current with the new settings contract.");
-
         // When the status changed
         try
         {
+            _logger.LogInformation("Profiler settings updated. Checking for agent status changes.");
+            // Check if the settings request a different agent status. If it is, change the status.
+            _current = await CreateNewStatusAsync(_roleNameSource.CloudRoleName, _roleInstanceSource.CloudRoleInstance, CancellationToken.None).ConfigureAwait(false);
             // Fire & forget
-            await UpdateAsync(_current ?? throw new InvalidOperationException("Agent status has not been initialized."), CancellationToken.None).ConfigureAwait(false);
+            await UpdateAsync(
+                _current ?? throw new InvalidOperationException("Agent status has not been initialized."),
+                "Settings updated",
+                CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
-        { 
+        {
             _logger.LogError(ex, "Failed to update agent status on new settings.");
         }
     }
 
-    public async ValueTask<ProfilerAgentStatus> UpdateAsync(ProfilerAgentStatus agentStatus, CancellationToken cancellationToken)
+    private async ValueTask<ProfilerAgentStatus> UpdateAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
-        await _agentStatusSender.SendAsync(agentStatus, cancellationToken).ConfigureAwait(false);
+        await _agentStatusSender.SendAsync(agentStatus, reason, cancellationToken).ConfigureAwait(false);
 
         // For whatever reason, push the next status report after the default interval.
         _statusUpdateTimer?.Change(DefaultStatusUpdateInterval, DefaultStatusUpdateInterval);
@@ -115,22 +118,48 @@ internal class AgentStatusService : IAgentStatusService
         return new ValueTask<ProfilerAgentStatus>(new ProfilerAgentStatus
         {
             Timestamp = DateTime.UtcNow,
-            Status = GetDefaultAgentStatus(), 
+            Status = GetAgentStatus(),
             RoleName = roleName,
             RoleInstance = roleInstance
         });
     }
 
-    private AgentStatus GetDefaultAgentStatus()
-    { 
+    /// <summary>
+    /// Get the agent status. Here's the logic:
+    /// 1. If the settings are available, use the settings from ProfilerSettingsService.CurrentSettings.
+    /// 2. If the settings are not available, get the local settings from UserConfigurationBase.
+    /// 3. If no settings are available, return a default status (e.g., Active).
+    /// </summary>
+    private AgentStatus GetAgentStatus()
+    {
         _logger.LogWarning("Get default settings' logic is not implemented yet.");
-        AgentStatus agentStatus = AgentStatus.Active;
-        
-        // 1. Get and use the settings from ProfilerSettingsService.CurrentSettings.
 
+        string currentRoleName = _roleNameSource.CloudRoleName;
+        string currentRoleInstance = _roleInstanceSource.CloudRoleInstance;
+
+        // 1. Get and use the settings from ProfilerSettingsService.CurrentSettings.
+        AgentStatusGraph? agentStatusGraph = _profilerSettingsService.CurrentSettings?.AgentStatusGraph;
+        if (agentStatusGraph is not null)
+        {
+            // Find the matching status for the current role name and instance.
+            AgentStatusItem? match = agentStatusGraph.Statuses.FirstOrDefault(item =>
+                string.Equals(item.RoleName, currentRoleName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+            {
+                _logger.LogWarning("Found matching agent status: {Status} for role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, currentRoleName, currentRoleInstance);
+                return match.Status;
+            }
+
+            _logger.LogWarning("No matching agent status found for role name '{RoleName}' and instance '{RoleInstance}'. Using default status.", currentRoleName, currentRoleInstance);
+            return agentStatusGraph.DefaultStatus;
+        }
+
+        _logger.LogWarning("No agent status graph found in settings. Using local status.");
         // 2. If settings are not available, get the local settings from UserConfigurationBase.
 
         // TODO: Get the initial settings from ProfilerSettingsService.CurrentSettings.
-        return agentStatus; // Default status can be set based on the initial settings or configuration.
+        return AgentStatus.Inactive; // Default status can be set based on the initial settings or configuration.
     }
 }

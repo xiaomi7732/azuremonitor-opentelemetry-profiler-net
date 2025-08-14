@@ -13,9 +13,9 @@ internal class AgentStatusSender : IAgentStatusSender
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task SendAsync(ProfilerAgentStatus agentStatus, CancellationToken cancellationToken)
+    public Task SendAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("{microsoft.custom_event.name} {status} {instance}", "ProfilerStatus", agentStatus.Status, agentStatus.RoleInstance);
+        _logger.LogInformation("{microsoft.custom_event.name} {status} {instance} {reason}", "ProfilerStatus", agentStatus.Status, agentStatus.RoleInstance, reason);
         return Task.CompletedTask;
     }
 }
