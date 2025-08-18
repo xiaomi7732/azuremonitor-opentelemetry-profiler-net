@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,10 +52,9 @@ internal class AgentStatusService : IAgentStatusService
     {
         _profilerSettingsService.SettingsUpdated += OnProfilerSettingsUpdated;
 
-        _current = await CreateNewStatusAsync(
+        _current = CreateNewStatus(
             _roleNameSource.CloudRoleName,
-            _roleInstanceSource.CloudRoleInstance,
-            cancellationToken).ConfigureAwait(false);
+            _roleInstanceSource.CloudRoleInstance);
 
         await UpdateAsync(_current, "Initialization", cancellationToken).ConfigureAwait(false);
 
@@ -64,10 +64,9 @@ internal class AgentStatusService : IAgentStatusService
         return _current;
     }
 
-
     private async void StatusTimerCallback(object? state)
     {
-        if (_current == null)
+        if (_current is null)
         {
             _logger.LogWarning("Agent status is not initialized. Cannot update status.");
             return;
@@ -91,7 +90,8 @@ internal class AgentStatusService : IAgentStatusService
         {
             _logger.LogInformation("Profiler settings updated. Checking for agent status changes.");
             // Check if the settings request a different agent status. If it is, change the status.
-            _current = await CreateNewStatusAsync(_roleNameSource.CloudRoleName, _roleInstanceSource.CloudRoleInstance, CancellationToken.None).ConfigureAwait(false);
+            _current = CreateNewStatus(_roleNameSource.CloudRoleName, _roleInstanceSource.CloudRoleInstance);
+
             // Fire & forget
             await UpdateAsync(
                 _current ?? throw new InvalidOperationException("Agent status has not been initialized."),
@@ -113,16 +113,14 @@ internal class AgentStatusService : IAgentStatusService
         return agentStatus;
     }
 
-    private ValueTask<ProfilerAgentStatus> CreateNewStatusAsync(string roleName, string roleInstance, CancellationToken cancellationToken)
-    {
-        return new ValueTask<ProfilerAgentStatus>(new ProfilerAgentStatus
+    private ProfilerAgentStatus CreateNewStatus(string roleName, string roleInstance)
+        => new()
         {
             Timestamp = DateTime.UtcNow,
             Status = GetAgentStatus(),
             RoleName = roleName,
             RoleInstance = roleInstance
-        });
-    }
+        };
 
     /// <summary>
     /// Get the agent status. Here's the logic:
@@ -132,21 +130,17 @@ internal class AgentStatusService : IAgentStatusService
     /// </summary>
     private AgentStatus GetAgentStatus()
     {
-        _logger.LogWarning("Get default settings' logic is not implemented yet.");
-
         string currentRoleName = _roleNameSource.CloudRoleName;
         string currentRoleInstance = _roleInstanceSource.CloudRoleInstance;
 
+        _logger.LogWarning("Looking for agent status for role name '{RoleName}' and instance '{RoleInstance}'.", currentRoleName, currentRoleInstance);
+
         // 1. Get and use the settings from ProfilerSettingsService.CurrentSettings.
         AgentStatusGraph? agentStatusGraph = _profilerSettingsService.CurrentSettings?.AgentStatusGraph;
+
         if (agentStatusGraph is not null)
         {
-            // Find the matching status for the current role name and instance.
-            AgentStatusItem? match = agentStatusGraph.Statuses.FirstOrDefault(item =>
-                string.Equals(item.RoleName, currentRoleName, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
-
-            if (match is not null)
+            if (TryGetMatchedItem(currentRoleName, currentRoleInstance, agentStatusGraph, out AgentStatusItem match))
             {
                 _logger.LogWarning("Found matching agent status: {Status} for role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, currentRoleName, currentRoleInstance);
                 return match.Status;
@@ -155,11 +149,34 @@ internal class AgentStatusService : IAgentStatusService
             _logger.LogWarning("No matching agent status found for role name '{RoleName}' and instance '{RoleInstance}'. Using default status.", currentRoleName, currentRoleInstance);
             return agentStatusGraph.DefaultStatus;
         }
+        else
+        {
+            _logger.LogWarning("Agent status graph is null in settings");
+        }
 
         _logger.LogWarning("No agent status graph found in settings. Using local status.");
         // 2. If settings are not available, get the local settings from UserConfigurationBase.
-
         // TODO: Get the initial settings from ProfilerSettingsService.CurrentSettings.
         return AgentStatus.Inactive; // Default status can be set based on the initial settings or configuration.
+    }
+
+    private bool TryGetMatchedItem(string currentRoleName, string currentRoleInstance, AgentStatusGraph agentStatusGraph, [NotNullWhen(true)] out AgentStatusItem? match)
+    {
+        // Special case for "Unknown" role name.
+        if (string.Equals(currentRoleName, "Unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Current role name is 'Unknown'. This should only happen when the agent is running on non-production environment.");
+
+            match = agentStatusGraph.Statuses.FirstOrDefault(item =>
+                item.RoleName.StartsWith("unknown_service:", StringComparison.Ordinal) &&
+                string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Find the matching status for the current role name and instance.
+        match = agentStatusGraph.Statuses.FirstOrDefault(item =>
+            string.Equals(item.RoleName, currentRoleName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
+
+        return match is not null;
     }
 }
