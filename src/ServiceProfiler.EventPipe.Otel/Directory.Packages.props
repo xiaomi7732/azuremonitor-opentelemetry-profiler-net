@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <_AzureMonitorOpenTelemetryExporterVersion>1.4.0-beta.2</_AzureMonitorOpenTelemetryExporterVersion>
-    <_MicrosoftDiagnosticsNETCoreClientVersion>0.2.532401</_MicrosoftDiagnosticsNETCoreClientVersion>
+    <_MicrosoftDiagnosticsNETCoreClientVersion>0.2.607501</_MicrosoftDiagnosticsNETCoreClientVersion>
     <_SystemCollectionsImmutableVersion>8.0.0</_SystemCollectionsImmutableVersion>
     <_SystemMemoryDataVersion>9.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>9.0.0</_SystemSecurityCryptographyProtectedDataVersion>
