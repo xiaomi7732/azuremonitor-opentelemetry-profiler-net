@@ -126,7 +126,6 @@ internal class AgentStatusService : IAgentStatusService
     /// Get the agent status. Here's the logic:
     /// 1. If the settings are available, use the settings from ProfilerSettingsService.CurrentSettings.
     /// 2. If the settings are not available, get the local settings from UserConfigurationBase.
-    /// 3. If no settings are available, return a default status (e.g., Active).
     /// </summary>
     private AgentStatus GetAgentStatus()
     {
@@ -140,7 +139,7 @@ internal class AgentStatusService : IAgentStatusService
 
         if (agentStatusGraph is not null)
         {
-            if (TryGetMatchedItem(currentRoleName, currentRoleInstance, agentStatusGraph, out AgentStatusItem match))
+            if (TryGetMatchedItem(currentRoleName, currentRoleInstance, agentStatusGraph, out AgentStatusItem? match))
             {
                 _logger.LogWarning("Found matching agent status: {Status} for role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, currentRoleName, currentRoleInstance);
                 return match.Status;
@@ -154,10 +153,9 @@ internal class AgentStatusService : IAgentStatusService
             _logger.LogWarning("Agent status graph is null in settings");
         }
 
-        _logger.LogWarning("No agent status graph found in settings. Using local status.");
         // 2. If settings are not available, get the local settings from UserConfigurationBase.
-        // TODO: Get the initial settings from ProfilerSettingsService.CurrentSettings.
-        return AgentStatus.Inactive; // Default status can be set based on the initial settings or configuration.
+        _logger.LogWarning("No agent status graph found in settings. Using local status.");
+        return _userConfiguration.ActivatedOnStart ? AgentStatus.Active : AgentStatus.Inactive;
     }
 
     private bool TryGetMatchedItem(string currentRoleName, string currentRoleInstance, AgentStatusGraph agentStatusGraph, [NotNullWhen(true)] out AgentStatusItem? match)

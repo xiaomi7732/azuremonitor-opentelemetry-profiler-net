@@ -160,4 +160,14 @@ public abstract class UserConfigurationBase
     /// Gets or sets the trace scavenger service options.
     /// </summary>
     public TraceScavengerServiceOptions TraceScavenger { get; set; } = new TraceScavengerServiceOptions();
+
+    /// <summary>
+    /// Gets or sets whether to activate the agent by on start or not.
+    /// When the agent is activated, it will run profiler and collect data.
+    /// When the agent is not activated, it will only keep fetching settings, waiting for activation.
+    /// The server end has the ability to overwrite this value.
+    /// This status is used when the agent is not configured with any specific status.
+    /// Default value is true to keep backward compatibility.
+    /// </summary>
+    public bool ActivatedOnStart { get; set; } = true;
 }
