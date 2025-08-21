@@ -14,7 +14,10 @@
 4. Run the prompt with CoPilot.
 5. Commit the generated changes.
 
-![Screenshots shows that Profiler added by CoPilot](./images/enable-profiler-by-copilot.png)
+4. Run the prompt with Copilot.
+5. Commit the generated changes.
+
+![Screenshots shows that Profiler added by Copilot](./images/enable-profiler-by-copilot.png)
 
 ## Next
 
