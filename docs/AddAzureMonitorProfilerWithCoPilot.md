@@ -1,4 +1,4 @@
-# Add Azure Monitor Profiler using CoPilot (Experiment)
+# Add Azure Monitor Profiler using Copilot (Experiment)
 
 ## Why?
 
