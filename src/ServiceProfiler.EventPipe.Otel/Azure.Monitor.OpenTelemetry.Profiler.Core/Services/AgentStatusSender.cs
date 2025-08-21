@@ -2,7 +2,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.ServiceProfiler.Contract.Agent;
+namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Services;
 
 internal class AgentStatusSender : IAgentStatusSender
 {
@@ -15,7 +15,8 @@ internal class AgentStatusSender : IAgentStatusSender
 
     public Task SendAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("{microsoft.custom_event.name} {status} {instance} {reason}", "ProfilerStatus", agentStatus.Status, agentStatus.RoleInstance, reason);
+        // Consider using a structured logging approach for better performance and readability. It's currently blocked by a compile error due to this bug: https://github.com/dotnet/extensions/issues/6733.
+        _logger.LogInformation("CustomEvent: {eventName} | {status} {instance} {reason}", "ProfilerStatus", agentStatus.Status, agentStatus.RoleInstance, reason);
         return Task.CompletedTask;
     }
 }

@@ -1,13 +1,16 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.RoleNames;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +24,7 @@ internal class AgentStatusService : IAgentStatusService
     private readonly IRoleInstanceSource _roleInstanceSource;
     private readonly UserConfigurationBase _userConfiguration;
     private readonly ILogger _logger;
-    private ProfilerAgentStatus? _current = null;
+    private (string Reason, ProfilerAgentStatus Status)? _current = null;
 
 #if DEBUG
     private static readonly TimeSpan DefaultStatusUpdateInterval = TimeSpan.FromMinutes(2);
@@ -46,22 +49,20 @@ internal class AgentStatusService : IAgentStatusService
         _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
     }
 
-    public ProfilerAgentStatus Current => _current ?? throw new InvalidOperationException("Agent status has not been initialized.");
+    public ProfilerAgentStatus Current => _current?.Status ?? throw new InvalidOperationException("Agent status has not been initialized.");
 
     public async ValueTask<ProfilerAgentStatus> InitializeAsync(CancellationToken cancellationToken)
     {
+        await Task.Yield();
         _profilerSettingsService.SettingsUpdated += OnProfilerSettingsUpdated;
 
-        _current = CreateNewStatus(
+        ProfilerAgentStatus initialStatus = CreateNewStatus(
             _roleNameSource.CloudRoleName,
-            _roleInstanceSource.CloudRoleInstance);
+            _roleInstanceSource.CloudRoleInstance) ?? throw new InvalidOperationException("Failed to create initial agent status.");
 
-        await UpdateAsync(_current, "Initialization", cancellationToken).ConfigureAwait(false);
+        ReportStatusChange(initialStatus, "Initialization");
 
-        // Setup the timer to periodically update the agent status.
-        _statusUpdateTimer = new Timer(StatusTimerCallback, state: null, dueTime: DefaultStatusUpdateInterval, period: DefaultStatusUpdateInterval);
-
-        return _current;
+        return initialStatus;
     }
 
     private async void StatusTimerCallback(object? state)
@@ -74,8 +75,13 @@ internal class AgentStatusService : IAgentStatusService
 
         try
         {
+            (string reason, ProfilerAgentStatus status) = _current.Value;
+
             // Fire & forget
-            await UpdateAsync(_current, "Refresh", CancellationToken.None).ConfigureAwait(false);
+            await UpdateAsync(status, reason, CancellationToken.None).ConfigureAwait(false);
+
+            // Unless interrupted, the reason for the next update will be "Refresh".
+            _current = ("Refresh", _current.Value.Status);
         }
         catch (Exception ex)
         {
@@ -83,44 +89,69 @@ internal class AgentStatusService : IAgentStatusService
         }
     }
 
-    private async void OnProfilerSettingsUpdated(SettingsContract contract)
+    private void OnProfilerSettingsUpdated(SettingsContract contract)
     {
-        // When the status changed
-        try
-        {
-            _logger.LogInformation("Profiler settings updated. Checking for agent status changes.");
-            // Check if the settings request a different agent status. If it is, change the status.
-            _current = CreateNewStatus(_roleNameSource.CloudRoleName, _roleInstanceSource.CloudRoleInstance);
+        _logger.LogInformation("Profiler settings updated. Checking for agent status changes.");
 
-            // Fire & forget
-            await UpdateAsync(
-                _current ?? throw new InvalidOperationException("Agent status has not been initialized."),
-                "Settings updated",
-                CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception ex)
+        // Check if the settings request a different agent status. If it is, change the status.
+        ProfilerAgentStatus? newProfilerAgentStatus = CreateNewStatus(_roleNameSource.CloudRoleName, _roleInstanceSource.CloudRoleInstance);
+        if (newProfilerAgentStatus is null)
         {
-            _logger.LogError(ex, "Failed to update agent status on new settings.");
+            _logger.LogDebug("No changes in agent status detected.");
+            return;
         }
+
+        _logger.LogInformation("Detected new agent status: {Status}.", newProfilerAgentStatus.Status);
+
+        ReportStatusChange(newProfilerAgentStatus, "ProfilerSettingsChanged");
+    }
+
+    private void ReportStatusChange(ProfilerAgentStatus newStatus, string reason)
+    {
+        _current = (reason, newStatus);
+
+        // Very first time, create the timer.
+        if (_statusUpdateTimer is null)
+        {
+            _statusUpdateTimer = new Timer(StatusTimerCallback, null, TimeSpan.Zero, DefaultStatusUpdateInterval);
+            return;
+        }
+
+        // If the timer already exists, change trigger the timer immediately.
+        _statusUpdateTimer?.Change(TimeSpan.Zero, DefaultStatusUpdateInterval);
     }
 
     private async ValueTask<ProfilerAgentStatus> UpdateAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
         await _agentStatusSender.SendAsync(agentStatus, reason, cancellationToken).ConfigureAwait(false);
-
-        // For whatever reason, push the next status report after the default interval.
-        _statusUpdateTimer?.Change(DefaultStatusUpdateInterval, DefaultStatusUpdateInterval);
         return agentStatus;
     }
 
-    private ProfilerAgentStatus CreateNewStatus(string roleName, string roleInstance)
-        => new()
+    /// <summary>
+    /// Creates a new agent status based on the current role name and instance.
+    /// If the status has not changed, returns null.
+    /// </summary>
+    /// <param name="roleName"></param>
+    /// <param name="roleInstance"></param>
+    /// <returns>The new status or null if the status didn't change.</returns>
+    private ProfilerAgentStatus? CreateNewStatus(string roleName, string roleInstance)
+    {
+        AgentStatus newStatus = GetAgentStatus();
+        if (_current is not null && _current.Value.Status.Status == newStatus)
+        {
+            _logger.LogDebug("Agent status has not changed. Current status: {Status}", newStatus);
+            return null;
+        }
+
+        return new()
         {
             Timestamp = DateTime.UtcNow,
             Status = GetAgentStatus(),
             RoleName = roleName,
             RoleInstance = roleInstance
         };
+    }
+
 
     /// <summary>
     /// Get the agent status. Here's the logic:
@@ -160,14 +191,24 @@ internal class AgentStatusService : IAgentStatusService
 
     private bool TryGetMatchedItem(string currentRoleName, string currentRoleInstance, AgentStatusGraph agentStatusGraph, [NotNullWhen(true)] out AgentStatusItem? match)
     {
+        string debug = JsonSerializer.Serialize(agentStatusGraph, new JsonSerializerOptions { WriteIndented = true });
+        _logger.LogWarning("Agent status graph: {Graph}", debug);
+
         // Special case for "Unknown" role name.
-        if (string.Equals(currentRoleName, "Unknown", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(currentRoleName, UnknownRoleNameDetector.RoleName, StringComparison.Ordinal))
         {
-            _logger.LogWarning("Current role name is 'Unknown'. This should only happen when the agent is running on non-production environment.");
+            string fallbackRoleName = GetFallbackRoleName();
+            _logger.LogWarning("Current role name is 'Unknown'. Fallback to default role name '{DefaultRoleName}'.", fallbackRoleName);
 
             match = agentStatusGraph.Statuses.FirstOrDefault(item =>
-                item.RoleName.StartsWith("unknown_service:", StringComparison.Ordinal) &&
+                string.Equals(item.RoleName, fallbackRoleName, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+            {
+                _logger.LogWarning("Found matching agent status: {Status} for fallback role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, fallbackRoleName, currentRoleInstance);
+                return true;
+            }
         }
 
         // Find the matching status for the current role name and instance.
@@ -176,5 +217,13 @@ internal class AgentStatusService : IAgentStatusService
             string.Equals(item.RoleInstance, currentRoleInstance, StringComparison.OrdinalIgnoreCase));
 
         return match is not null;
+    }
+
+    private static string GetFallbackRoleName()
+    {
+        using Process process = Process.GetCurrentProcess();
+        string processName = process.ProcessName;
+        string roleName = $"unknown_service:{processName}";
+        return roleName;
     }
 }
