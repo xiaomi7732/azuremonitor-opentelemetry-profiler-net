@@ -21,7 +21,7 @@ Welcome! Enable profiler, integrate seamlessly with your Application Insights re
 - **Azure Monitor OpenTelemetry**: Profiler works with Azure Monitor OpenTelemetry Activities for analysis.
   - If you are using `Microsoft.ApplicationInsights.AspNetCore`, please go to [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) for instructions.
 
-### Experiment: Let CoPilot enable the Profiler for you
+### Experiment: Let Copilot enable the Profiler for you
 
 - [Enable Profiler using Copilot](./docs/AddAzureMonitorProfilerWithCoPilot.md)
 
