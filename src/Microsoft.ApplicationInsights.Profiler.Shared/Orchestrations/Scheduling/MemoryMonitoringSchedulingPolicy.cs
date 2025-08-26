@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -26,6 +27,7 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         ProcessExpirationPolicy expirationPolicy,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<MemoryMonitoringSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -35,6 +37,7 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         delaySource,
         expirationPolicy,
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     {
@@ -58,6 +61,8 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         MemoryTriggerSettings memorySettings = ProfilerSettings.MemoryTriggerSettings;
 
@@ -67,7 +72,8 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(memorySettings.MemoryTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);
         _memoryThreshold = UpdateRefreshAndGetSetting(memorySettings.MemoryThreshold, _memoryThreshold, ref needsRefresh);
 
-        return needsRefresh;
+        // Either the base policy needs refresh or any of the memory settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 }
 

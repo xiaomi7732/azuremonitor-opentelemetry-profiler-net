@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -26,6 +27,7 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         ProcessExpirationPolicy expirationPolicy,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<CPUMonitoringSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -35,6 +37,7 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         delaySource,
         expirationPolicy,
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     {
@@ -59,6 +62,8 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         CpuTriggerSettings cpuSettings = ProfilerSettings.CpuTriggerSettings;
 
@@ -68,7 +73,8 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(cpuSettings.CpuTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);
         _cpuThreshold = UpdateRefreshAndGetSetting(cpuSettings.CpuThreshold, _cpuThreshold, ref needsRefresh);
 
-        return needsRefresh;
+        // Either the base policy needs refresh or any of the CPU sampling settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 }
 

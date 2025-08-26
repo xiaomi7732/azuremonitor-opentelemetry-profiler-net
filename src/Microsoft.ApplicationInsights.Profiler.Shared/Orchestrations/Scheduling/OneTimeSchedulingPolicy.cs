@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -20,6 +21,7 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
         LimitedExpirationPolicyFactory limitedExpirationPolicyFactory,
+        IAgentStatusService agentStatusService,
         ILogger<OneTimeSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -29,6 +31,7 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         delaySource,
         limitedExpirationPolicyFactory.Create(1),
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     { }
@@ -44,7 +47,5 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         yield return (profilingDuration, ProfilerAction.StartProfilingSession);
         yield return (profilingDuration, ProfilerAction.Standby);
     }
-
-    protected override bool PolicyNeedsRefresh() => false;
 }
 

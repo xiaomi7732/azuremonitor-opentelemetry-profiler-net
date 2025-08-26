@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -28,6 +29,7 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
         IProfilerSettingsService profilerSettingsService,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<OnDemandSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -37,6 +39,7 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
         delaySource,
         expirationPolicy,
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     {

@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -32,6 +33,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         IDelaySource delaySource,
         IRandomSource randomSource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<RandomSchedulingPolicy> logger)
         : base(
             profilingDuration: TimeSpan.FromSeconds(profilerSettings.SamplingOptions.ProfilingDurationInSeconds),
@@ -41,6 +43,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             delaySource,
             expirationPolicy,
             resourceUsageSource,
+            agentStatusService,
             logger
         )
     {
@@ -126,6 +129,8 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         SamplingOptions samplingSettings = ProfilerSettings.SamplingOptions;
 
@@ -134,7 +139,8 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         _overhead = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
 
-        return needsRefresh;
+        // Either the base policy needs refresh or any of the random sampling settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 
     public override string Source { get; } = nameof(RandomSchedulingPolicy);
