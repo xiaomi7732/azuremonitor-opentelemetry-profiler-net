@@ -49,6 +49,11 @@ internal class AgentStatusService : IAgentStatusService
         _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
     }
 
+    /// <summary>
+    /// Event fired when the agent status changes.
+    /// </summary>
+    public event Action<AgentStatus, string>? StatusChanged;
+
     public AgentStatus Current => _current?.Status ?? throw new InvalidOperationException("Agent status has not been initialized.");
 
     public ValueTask<AgentStatus> InitializeAsync(CancellationToken cancellationToken)
@@ -77,6 +82,7 @@ internal class AgentStatusService : IAgentStatusService
 
             // Fire & forget
             await UpdateAsync(status, reason, CancellationToken.None).ConfigureAwait(false);
+            StatusChanged?.Invoke(status, reason);
 
             // Unless interrupted, the reason for the next update will be "Refresh".
             _current = ("Refresh", _current.Value.Status);
