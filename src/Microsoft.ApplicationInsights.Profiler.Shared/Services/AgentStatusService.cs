@@ -16,15 +16,20 @@ using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
-internal class AgentStatusService : IAgentStatusService
+internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 {
+    // Semaphore to protect the initialization and status update so that the initialization would only happen once.
+    private readonly SemaphoreSlim _semaphoreSlim = new(initialCount: 1, maxCount: 1);
+
+    // The current status and the reason for the status. Null if not initialized.
+    private (string Reason, AgentStatus Status)? _current = null;
+
     private readonly IAgentStatusSender _agentStatusSender;
     private readonly IProfilerSettingsService _profilerSettingsService;
     private readonly IRoleNameSource _roleNameSource;
     private readonly IRoleInstanceSource _roleInstanceSource;
     private readonly UserConfigurationBase _userConfiguration;
     private readonly ILogger _logger;
-    private (string Reason, AgentStatus Status)? _current = null;
 
 #if DEBUG
     private static readonly TimeSpan DefaultStatusUpdateInterval = TimeSpan.FromMinutes(2);
@@ -58,14 +63,27 @@ internal class AgentStatusService : IAgentStatusService
 
     public ValueTask<AgentStatus> InitializeAsync(CancellationToken cancellationToken)
     {
-        // Listen to settings changes.
-        _profilerSettingsService.SettingsUpdated += OnProfilerSettingsUpdated;
+        _semaphoreSlim.Wait(cancellationToken);
+        try
+        {
+            if (_current is not null)
+            {
+                return new ValueTask<AgentStatus>(_current.Value.Status);
+            }
 
-        AgentStatus initialStatus = GetChangedStatusOrNull() ?? throw new InvalidOperationException("Failed to create initial agent status.");
+            // Listen to settings changes.
+            _profilerSettingsService.SettingsUpdated += OnProfilerSettingsUpdated;
 
-        ReportStatusChange(initialStatus, "Initialization");
+            AgentStatus initialStatus = GetChangedStatusOrNull() ?? throw new InvalidOperationException("Failed to create initial agent status.");
 
-        return new ValueTask<AgentStatus>(initialStatus);
+            ReportStatusChange(initialStatus, "Initialization");
+
+            return new ValueTask<AgentStatus>(initialStatus);
+        }
+        finally
+        {
+            _semaphoreSlim.Release();
+        }
     }
 
     private async void StatusTimerCallback(object? state)
@@ -232,5 +250,10 @@ internal class AgentStatusService : IAgentStatusService
         string processName = process.ProcessName;
         string roleName = $"unknown_service:{processName}";
         return roleName;
+    }
+
+    public void Dispose()
+    {
+        _semaphoreSlim.Dispose();
     }
 }
