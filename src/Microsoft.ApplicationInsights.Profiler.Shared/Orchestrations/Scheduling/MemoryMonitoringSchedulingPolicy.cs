@@ -66,7 +66,6 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         bool needsRefresh = false;
         MemoryTriggerSettings memorySettings = ProfilerSettings.MemoryTriggerSettings;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(memorySettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(memorySettings.MemoryTriggerProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(memorySettings.MemoryTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);

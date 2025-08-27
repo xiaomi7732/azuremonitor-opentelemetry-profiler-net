@@ -67,11 +67,12 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         bool needsRefresh = false;
         CpuTriggerSettings cpuSettings = ProfilerSettings.CpuTriggerSettings;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(cpuSettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(cpuSettings.CpuTriggerProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(cpuSettings.CpuTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);
         _cpuThreshold = UpdateRefreshAndGetSetting(cpuSettings.CpuThreshold, _cpuThreshold, ref needsRefresh);
+
+        Logger.LogDebug("Policy needs refresh by {policy}: {decision}", nameof(CPUMonitoringSchedulingPolicy), needsRefresh);
 
         // Either the base policy needs refresh or any of the CPU sampling settings changed.
         return generalPolicyNeedsRefresh || needsRefresh;

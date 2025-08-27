@@ -14,7 +14,6 @@ internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy
 
     /// <summary>
     /// The expected new status for the scheduler to run into.
-    /// Null if no change is requested.
     /// </summary>
     private AgentStatus? _agentStatusRequest = null;
 
@@ -47,21 +46,29 @@ internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy
 
     protected override bool PolicyNeedsRefresh()
     {
-        // If there is a new status, we need to refresh the policy.
-        bool isEnabled = _agentStatusRequest is not null && _agentStatusRequest == AgentStatus.Active;
-        // Reset
-        _agentStatusRequest = null;
+        bool toEnable;
 
-        // Backward compatibility: if the profiler settings is disabled, we should not profile regardless of the agent status.
-        isEnabled = isEnabled && ProfilerSettings.Enabled;
+        if (_agentStatusRequest is not null)
+        {
+            // If there's agent activation/deactivation request, follow it.
+            Logger.LogDebug("Desired agent status: {status}", _agentStatusRequest);
+            toEnable = _agentStatusRequest == AgentStatus.Active;
+        }
+        else
+        {
+            // Otherwise, follow the profiler settings for backward compatibility.
+            toEnable = ProfilerSettings.Enabled;
+        }
 
         // Policy needs refresh if the enabled status has changed.
-        if (isEnabled != ProfilerEnabled)
+        if (ProfilerEnabled != toEnable)
         {
-            ProfilerEnabled = ProfilerSettings.Enabled;
+            ProfilerEnabled = toEnable;
+            Logger.LogDebug("Policy needs refresh by {policy}: true", nameof(EventPipeSchedulingPolicy));
             return true;
         }
 
+        Logger.LogDebug("Policy needs refresh by {policy}: false", nameof(EventPipeSchedulingPolicy));
         return false;
     }
 

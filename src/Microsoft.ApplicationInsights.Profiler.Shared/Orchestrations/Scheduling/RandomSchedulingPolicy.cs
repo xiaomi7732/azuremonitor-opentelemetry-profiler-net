@@ -134,7 +134,6 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         bool needsRefresh = false;
         SamplingOptions samplingSettings = ProfilerSettings.SamplingOptions;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(samplingSettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         _overhead = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
