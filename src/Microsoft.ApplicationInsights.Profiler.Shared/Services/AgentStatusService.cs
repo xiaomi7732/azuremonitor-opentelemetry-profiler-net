@@ -1,5 +1,6 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
+using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.RoleNames;
 using Microsoft.Extensions.Logging;
@@ -61,14 +62,29 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
     public AgentStatus Current => _current?.Status ?? throw new InvalidOperationException("Agent status has not been initialized.");
 
-    public ValueTask<AgentStatus> InitializeAsync(CancellationToken cancellationToken)
+    public async ValueTask<AgentStatus> InitializeAsync(CancellationToken cancellationToken)
     {
+
         _semaphoreSlim.Wait(cancellationToken);
         try
         {
+            // The initialization has already happened before.
             if (_current is not null)
             {
-                return new ValueTask<AgentStatus>(_current.Value.Status);
+                return _current.Value.Status;
+            }
+
+            // Waiting for the initialization of the settings service for 5 seconds.
+            // This is the best sequence to ensure the settings are ready before we read the status.
+            // However, if the settings service is not ready in 5 seconds, we will proceed anyway.
+            _logger.LogTrace("Waiting for profiler settings service to be ready.");
+            if (!await _profilerSettingsService.WaitForInitializedAsync(RemoteSettingsServiceBase.DefaultInitializationTimeout, cancellationToken).ConfigureAwait(false))
+            {
+                _logger.LogDebug("Profiler settings service is not ready in given time: {Timeout}. Proceeding anyway.", RemoteSettingsServiceBase.DefaultInitializationTimeout);
+            }
+            else
+            {
+                _logger.LogTrace("Profiler settings service ready.");
             }
 
             // Listen to settings changes.
@@ -78,7 +94,7 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
             ReportStatusChange(initialStatus, "Initialization");
 
-            return new ValueTask<AgentStatus>(initialStatus);
+            return initialStatus;
         }
         finally
         {
