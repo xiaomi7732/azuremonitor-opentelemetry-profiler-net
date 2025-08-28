@@ -22,8 +22,8 @@ internal class TraceScavengerService : BackgroundService
     private readonly FileScavenger _fileScavenger;
     private readonly IAgentStatusService _agentStatusService;
     private readonly UserConfigurationBase _userConfiguration;
-
-    private AgentStatus _lastAgentStatus = AgentStatus.Inactive;
+    private CancellationTokenSource? _cancellationTokenSource = null;
+    private Task? _scavengerTask; // background loop task
 
     public TraceScavengerService(
         IOptions<UserConfigurationBase> userConfiguration,
@@ -51,26 +51,73 @@ internal class TraceScavengerService : BackgroundService
         _logger.LogInformation("{serviceName} started. Initial delay: {delay}, Grace period from last access: {gracePeriod}", nameof(TraceScavengerService), initialDelay, _options.GracePeriod);
         await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
 
+        AgentStatus initialStatus = await _agentStatusService.InitializeAsync(stoppingToken).ConfigureAwait(false);
+        await OnAgentStatusChanged(initialStatus, "Initial status").ConfigureAwait(false);
         _agentStatusService.StatusChanged += OnAgentStatusChanged;
-        _lastAgentStatus = await _agentStatusService.InitializeAsync(stoppingToken).ConfigureAwait(false);
-
-        while (true)
-        {
-            if (_lastAgentStatus == AgentStatus.Active)
-            {
-                _logger.LogDebug("Agent status is {status}, running trace scavenger.", _lastAgentStatus);
-                _fileScavenger.Run(stoppingToken);
-            }
-            else
-            {
-                _logger.LogDebug("Agent status is {status}, skipping trace scavenger.", _lastAgentStatus);
-            }
-            await Task.Delay(_options.Interval, stoppingToken).ConfigureAwait(false);
-        }
     }
 
     private void OnAgentStatusChanged(AgentStatus status, string _)
     {
-        _lastAgentStatus = status;
+        switch (status)
+        {
+            case AgentStatus.Active:
+                if (_scavengerTask is not null && !_scavengerTask.IsCompleted)
+                {
+                    _logger.LogDebug("Trace scavenger already running.");
+                    return; // already active
+                }
+
+                _cancellationTokenSource?.Cancel();
+                _cancellationTokenSource = new CancellationTokenSource();
+                CancellationToken token = _cancellationTokenSource.Token;
+                _scavengerTask = Task.Run(() => RunScavengerLoopAsync(token));
+                break;
+            case AgentStatus.Inactive:
+                _logger.LogDebug("Agent status is {status}, stopping trace scavenger.", status);
+                _cancellationTokenSource?.Cancel();
+                break;
+            default:
+                _logger.LogWarning("Unknown agent status: {status}. No action taken.", status);
+                break;
+        }
+    }
+
+    private async Task RunScavengerLoopAsync(CancellationToken token)
+    {
+        _logger.LogDebug("Trace scavenger loop started.");
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                _fileScavenger.Run(token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred when running trace scavenger: {message}", ex.Message);
+            }
+            try
+            {
+                await Task.Delay(_options.Interval > TimeSpan.Zero ? _options.Interval : TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        }
+        _logger.LogDebug("Trace scavenger loop stopped.");
+    }
+
+    public override void Dispose()
+    {
+        _agentStatusService.StatusChanged -= OnAgentStatusChanged;
+        try
+        {
+            _cancellationTokenSource?.Cancel();
+            _scavengerTask?.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch { /* ignore */ }
+        finally
+        {
+            _cancellationTokenSource?.Dispose();
+        }
+        base.Dispose();
     }
 }
