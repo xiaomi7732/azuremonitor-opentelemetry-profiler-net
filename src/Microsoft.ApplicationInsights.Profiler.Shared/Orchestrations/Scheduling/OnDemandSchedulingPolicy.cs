@@ -9,7 +9,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -48,12 +50,12 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
 
     public override string Source => nameof(OnDemandSchedulingPolicy);
 
-    public override async Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+    public override async IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         Logger.LogTrace("Start to wait for profiler settings service to be ready.");
 
         // This is best effort.
-        await _profilerSettingsService.WaitForInitializedAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        await _profilerSettingsService.WaitForInitializedAsync(RemoteSettingsServiceBase.DefaultInitializationTimeout, cancellationToken).ConfigureAwait(false);
         Logger.LogTrace("Profiler settings service is ready.");
 
         // A new collection plan is in place.
@@ -73,14 +75,20 @@ internal sealed class OnDemandSchedulingPolicy : EventPipeSchedulingPolicy
                 // Client Safety. Notice, this shall not replace any server side check.
                 if (durationInSeconds <= 0 || durationInSeconds > 360)
                 {
-                    Logger.LogWarning("Invalid Profile Now duration ({0}s) detected. Use the default value of {1}s instead.", durationInSeconds, DefaultProfileNowDurationInSeconds);
+                    Logger.LogWarning("Invalid Profile Now duration ({duration}s) detected. Use the default value of {defaultDelay}s instead.", durationInSeconds, DefaultProfileNowDurationInSeconds);
                     durationInSeconds = DefaultProfileNowDurationInSeconds;
                 }
 
-                return CreateProfilingSchedule(TimeSpan.FromSeconds(durationInSeconds));
+                await foreach ((TimeSpan, ProfilerAction) item in CreateProfilingSchedule(TimeSpan.FromSeconds(durationInSeconds)).ToAsyncEnumerable())
+                {
+                    yield return item;
+                }
             }
         }
 
-        return CreateStandbySchedule();
+        await foreach ((TimeSpan, ProfilerAction) item in CreateStandbySchedule().ToAsyncEnumerable())
+        {
+            yield return item;
+        }
     }
 }

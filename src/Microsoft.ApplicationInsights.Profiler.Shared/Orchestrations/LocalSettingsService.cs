@@ -30,7 +30,7 @@ internal sealed class LocalProfileSettingsService : BackgroundService, IProfiler
         _logger.LogTrace("{serviceName} is initialized.", nameof(LocalProfileSettingsService));
     }
 
-    public Task<bool> WaitForInitializedAsync(TimeSpan timeout)
+    public Task<bool> WaitForInitializedAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
         // Task complete as long as the constructor is executed.
         return Task.FromResult(true);

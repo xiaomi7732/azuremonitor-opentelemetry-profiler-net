@@ -1,17 +1,14 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove(Directory.Packages.props, $(MSBuildThisFileDirectory)..))" />
-
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-  
   <PropertyGroup>
     <_SystemDiagnosticsDiagnosticSourceVersion>9.0.8</_SystemDiagnosticsDiagnosticSourceVersion>
     <_SystemMemoryDataVersion>9.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>9.0.0</_SystemSecurityCryptographyProtectedDataVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
     <PackageVersion Update="System.Memory.Data" Version="$(_SystemMemoryDataVersion)" />

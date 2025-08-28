@@ -8,9 +8,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using System.Threading;
+using System.Linq;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -46,18 +47,18 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
 
     public override string Source => nameof(CPUMonitoringSchedulingPolicy);
 
-    // Return action + action duration based on whether recent average CPU usage exceeds threshold
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
+        // Return action + action duration based on whether recent average CPU usage exceeds threshold
         float cpuUsage = ResourceUsageSource.GetAverageCPUUsage();
         Logger.LogTrace("CPU Usage: {0}", cpuUsage);
 
         if (cpuUsage > _cpuThreshold)
         {
-            return Task.FromResult(CreateProfilingSchedule(ProfilingDuration));
+            return CreateProfilingSchedule(ProfilingDuration).ToAsyncEnumerable();
         }
 
-        return Task.FromResult(CreateStandbySchedule());
+        return CreateStandbySchedule().ToAsyncEnumerable();
     }
 
     protected override bool PolicyNeedsRefresh()

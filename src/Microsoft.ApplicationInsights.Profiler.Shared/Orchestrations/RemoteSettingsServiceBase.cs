@@ -18,6 +18,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfilerSettingsService
 {
+    /// <summary>
+    /// The timeout for waiting for initialization.
+    public static readonly TimeSpan DefaultInitializationTimeout = TimeSpan.FromSeconds(5);
+
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
@@ -44,9 +48,9 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         _isDisabled = _userConfiguration.IsDisabled;
     }
 
-    public async Task<bool> WaitForInitializedAsync(TimeSpan timeout)
+    public async Task<bool> WaitForInitializedAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        Task completed = await Task.WhenAny(Task.Delay(timeout), _taskCompletionSource.Task).ConfigureAwait(false);
+        Task completed = await Task.WhenAny(Task.Delay(timeout, cancellationToken), _taskCompletionSource.Task).ConfigureAwait(false);
         if (completed == _taskCompletionSource.Task)
         {
             // Initialize done.

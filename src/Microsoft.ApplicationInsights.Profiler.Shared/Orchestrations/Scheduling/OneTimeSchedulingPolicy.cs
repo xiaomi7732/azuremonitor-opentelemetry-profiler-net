@@ -9,7 +9,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Linq;
+using System.Threading;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -37,9 +38,10 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
     { }
 
     public override string Source { get; } = nameof(OneTimeSchedulingPolicy);
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult(CreateSchedule(ProfilingDuration));
+        return CreateSchedule(ProfilingDuration).ToAsyncEnumerable();
     }
 
     private IEnumerable<(TimeSpan duration, ProfilerAction action)> CreateSchedule(TimeSpan profilingDuration)
