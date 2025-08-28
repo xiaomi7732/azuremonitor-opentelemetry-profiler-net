@@ -6,6 +6,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
+
 ///<summary>
 /// Orchestrator for the EventPipe profiler. Starts all provided scheduling policies concurrently.
 ///</summary>
@@ -32,6 +34,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     private readonly List<Task> _semaphoreTasks = [];
 
     private SchedulingPolicy? _currentProfilingPolicy = null;
+
+    private CancellationTokenSource _cancellationTokenSource = new();
 
     public OrchestratorEventPipe(
         IServiceProfilerProvider profilerProvider,
@@ -55,7 +59,6 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     public async override Task StartAsync(CancellationToken cancellationToken)
     {
         await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false);
-
         _logger.LogDebug("Starting the orchestrator.");
 
         int activatedCount = ActivateSchedulePolicies();
@@ -70,18 +73,51 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 _logger.LogInformation("Finish initial delay. Profiling is activated.");
             }
 
-            // Go through each provided policy and start them
-            List<Task> policyAsync = [];
-            foreach (SchedulingPolicy policy in _policyCollection)
-            {
-                policyAsync.Add(policy.StartPolicyAsync(cancellationToken));
-            }
-
-            await Task.WhenAll(policyAsync).ConfigureAwait(false);
+            _agentStatusService.StatusChanged += OnAgentStatusChanged;
         }
         else
         {
             _logger.LogError("No scheduling policy has been activated.");
+        }
+    }
+
+    private async void OnAgentStatusChanged(AgentStatus status, string reason)
+    {
+        _logger.LogDebug("Agent status changed to {status} for the reason of {reason}.", status, reason);
+
+        try
+        {
+            switch (status)
+            {
+                case AgentStatus.Active:
+                    _cancellationTokenSource = new CancellationTokenSource();
+                    // Go through each provided policy and start them
+                    List<Task> policyAsync = [];
+                    foreach (SchedulingPolicy policy in _policyCollection)
+                    {
+                        policyAsync.Add(policy.StartPolicyAsync(_cancellationTokenSource.Token));
+                    }
+
+                    await Task.WhenAll(policyAsync).ConfigureAwait(false);
+                    break;
+                case AgentStatus.Inactive:
+                    if (!_cancellationTokenSource.IsCancellationRequested)
+                    {
+                        _cancellationTokenSource.Cancel();
+                        _cancellationTokenSource.Dispose();
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(status));
+            }
+        }
+        catch (OperationCanceledException ex) when (ex.CancellationToken == _cancellationTokenSource.Token)
+        {
+            _logger.LogDebug("Operation cancelled to change the agent status to {status} for the reason of {reason}.", status, reason);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to change the agent status to {status} for the reason of {reason}.", status, reason);
         }
     }
 
@@ -182,7 +218,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         {
                             _currentProfilingPolicy = null;
                         }
-                        
+
                         throw;
                     }
                     finally
@@ -210,6 +246,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         base.Dispose(disposing);
         if (disposing)
         {
+            _cancellationTokenSource.Dispose();
+
             Task.WaitAll(_semaphoreTasks.ToArray());
             _policyChangeHandler.Dispose();
         }
