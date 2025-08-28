@@ -8,9 +8,10 @@ using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
-internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy
+internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy, IDisposable
 {
     private readonly IAgentStatusService _agentStatusService;
+    private bool _disposed; // dispose tracking
 
     /// <summary>
     /// The expected new status for the scheduler to run into.
@@ -29,8 +30,8 @@ internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy
         ILogger<EventPipeSchedulingPolicy> logger
     ) : base(profilingDuration, profilingCooldown, pollingInterval, delaySource, expirationPolicy, logger)
     {
-        ProfilerSettings = profilerSettings;
-        ResourceUsageSource = resourceUsageSource;
+        ProfilerSettings = profilerSettings ?? throw new ArgumentNullException(nameof(profilerSettings));
+        ResourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
         _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
         _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
@@ -84,5 +85,21 @@ internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy
     protected IEnumerable<(TimeSpan duration, ProfilerAction action)> CreateStandbySchedule()
     {
         yield return (PollingInterval, ProfilerAction.Standby);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing)
+        {
+            _agentStatusService.StatusChanged -= OnAgentStatusChanged;
+        }
+        _disposed = true;
     }
 }
