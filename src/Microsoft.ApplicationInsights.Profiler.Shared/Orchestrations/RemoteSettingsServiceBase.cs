@@ -91,7 +91,7 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         }
         catch (Exception ex) when (string.Equals(ex.Message, "Invalid instrumentation key format or instrumentation key has been revoked.", StringComparison.Ordinal))
         {
-            _logger.LogError(ex.Message);
+            _logger.LogError(ex, "{errorMessage}", ex.Message);
             _logger.LogTrace(ex.ToString());
         }
 #pragma warning disable CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.

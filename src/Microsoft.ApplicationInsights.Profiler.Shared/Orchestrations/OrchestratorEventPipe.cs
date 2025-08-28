@@ -37,6 +37,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
 
     private CancellationTokenSource _cancellationTokenSource = new();
 
+    private SemaphoreSlim _statusChangeSemaphore = new(1, 1);
+
     public OrchestratorEventPipe(
         IServiceProfilerProvider profilerProvider,
         IOptions<UserConfigurationBase> config,
@@ -85,6 +87,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     {
         _logger.LogDebug("Agent status changed to {status} for the reason of {reason}.", status, reason);
 
+        await _statusChangeSemaphore.WaitAsync().ConfigureAwait(false);
         try
         {
             switch (status)
@@ -98,7 +101,9 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         policyAsync.Add(policy.StartPolicyAsync(_cancellationTokenSource.Token));
                     }
 
+                    _logger.LogDebug("Starting and blocking on all scheduling policies.");
                     await Task.WhenAll(policyAsync).ConfigureAwait(false);
+                    _logger.LogInformation("All scheduling policies completed.");
                     break;
                 case AgentStatus.Inactive:
                     if (!_cancellationTokenSource.IsCancellationRequested)
@@ -118,6 +123,10 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to change the agent status to {status} for the reason of {reason}.", status, reason);
+        }
+        finally
+        {
+            _statusChangeSemaphore.Release();
         }
     }
 
@@ -247,6 +256,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         if (disposing)
         {
             _cancellationTokenSource.Dispose();
+            _statusChangeSemaphore.Dispose();
 
             Task.WaitAll(_semaphoreTasks.ToArray());
             _policyChangeHandler.Dispose();
