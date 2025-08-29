@@ -160,14 +160,14 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     if (!_cancellationTokenSource.IsCancellationRequested)
                     {
                         _cancellationTokenSource.Cancel();
-                        _cancellationTokenSource.Dispose();
+                        _logger.LogDebug("Agent status is {status}, stopping all scheduling policies.", status);
                     }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status));
             }
         }
-        catch (OperationCanceledException ex) when (ex.CancellationToken == _cancellationTokenSource.Token)
+        catch (OperationCanceledException)
         {
             _logger.LogDebug("Operation cancelled to change the agent status to {status} for the reason of {reason}.", status, reason);
         }
@@ -306,10 +306,11 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         base.Dispose(disposing);
         if (disposing)
         {
+            _agentStatusService.StatusChanged -= OnAgentStatusChanged;
+
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource.Dispose();
 
-            _agentStatusService.StatusChanged -= OnAgentStatusChanged;
             _statusChangeSemaphore.Dispose();
 
             Task.WhenAll(_semaphoreTasks.Keys);

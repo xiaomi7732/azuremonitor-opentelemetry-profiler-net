@@ -67,7 +67,7 @@ internal class TraceScavengerService : BackgroundService
                     return Task.CompletedTask; // already active
                 }
 
-                CancellationTokenSource newCancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource newCancellationTokenSource = new();
                 CancellationTokenSource? oldCancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, newCancellationTokenSource);
                 oldCancellationTokenSource?.Cancel();
                 oldCancellationTokenSource?.Dispose();
@@ -110,6 +110,7 @@ internal class TraceScavengerService : BackgroundService
     public override void Dispose()
     {
         _agentStatusService.StatusChanged -= OnAgentStatusChanged;
+
         try
         {
             _cancellationTokenSource?.Cancel();
@@ -120,6 +121,7 @@ internal class TraceScavengerService : BackgroundService
         {
             _cancellationTokenSource?.Dispose();
         }
+
         base.Dispose();
     }
 }
