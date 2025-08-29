@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -58,7 +59,7 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
     /// <summary>
     /// Event fired when the agent status changes.
     /// </summary>
-    public event Action<AgentStatus, string>? StatusChanged;
+    public event Func<AgentStatus, string, Task>? StatusChanged;
 
     public AgentStatus Current => _current?.Status ?? throw new InvalidOperationException("Agent status has not been initialized.");
 
@@ -116,7 +117,7 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
             // Fire & forget
             await UpdateAsync(status, reason, CancellationToken.None).ConfigureAwait(false);
-            StatusChanged?.Invoke(status, reason);
+            await RaiseStatusChangedAsync(status, reason).ConfigureAwait(false);
 
             // Unless interrupted, the reason for the next update will be "Refresh".
             _current = ("Refresh", _current.Value.Status);
@@ -125,6 +126,21 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
         {
             _logger.LogError(ex, "Failed to update agent status regularly.");
         }
+    }
+
+    private async Task RaiseStatusChangedAsync(AgentStatus status, string reason)
+    {
+        Delegate[]? handlers = StatusChanged?.GetInvocationList();
+        if (handlers is null || handlers.Length == 0)
+        {
+            return;
+        }
+
+        IEnumerable<Task> tasks = handlers
+            .Cast<Func<AgentStatus, string, Task>>()
+            .Select(handler => handler.Invoke(status, reason));
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     private void OnProfilerSettingsUpdated(SettingsContract contract)

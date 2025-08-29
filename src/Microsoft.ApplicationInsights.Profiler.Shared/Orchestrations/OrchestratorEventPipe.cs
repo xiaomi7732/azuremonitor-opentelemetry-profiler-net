@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -24,6 +25,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     private readonly IReadOnlyCollection<SchedulingPolicy> _policyCollection;
     private readonly IServiceProfilerProvider _profilerProvider;
     private readonly IAgentStatusService _agentStatusService;
+    private readonly IResourceUsageSource _resourceUsageSource;
     private ILogger _logger;
     private TimeSpan _initialDelay;
 
@@ -31,7 +33,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     private readonly SemaphoreSlim _policyChangeHandler = new(1, 1);
 
     // Refer to: https://stackoverflow.com/questions/67732623/is-it-safe-to-dispose-a-semaphoreslim-while-waiting-for-pending-operations-to-ca
-    private readonly List<Task> _semaphoreTasks = [];
+    private readonly ConcurrentDictionary<Task, byte> _semaphoreTasks = new();
 
     private SchedulingPolicy? _currentProfilingPolicy = null;
 
@@ -39,12 +41,16 @@ internal abstract class OrchestratorEventPipe : Orchestrator
 
     private SemaphoreSlim _statusChangeSemaphore = new(1, 1);
 
+    // Managed via Interlocked/Volatile; explicit 'volatile' not needed and causes CS0420 with ref operations.
+    private Task _runningSchedules = Task.CompletedTask;
+
     public OrchestratorEventPipe(
         IServiceProfilerProvider profilerProvider,
         IOptions<UserConfigurationBase> config,
         IEnumerable<SchedulingPolicy> policyCollection,
         IDelaySource delaySource,
         IAgentStatusService agentStatusService,
+        IResourceUsageSource resourceUsageSource,
         ILogger<OrchestratorEventPipe> logger) : base(delaySource)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -52,6 +58,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             .ToList().AsReadOnly();
         _profilerProvider = profilerProvider ?? throw new ArgumentNullException(nameof(profilerProvider));
         _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
+        _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
         _initialDelay = config.Value.InitialDelay;
     }
 
@@ -60,8 +67,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     /// </summary>
     public async override Task StartAsync(CancellationToken cancellationToken)
     {
-        await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogDebug("Starting the orchestrator.");
+        await Task.WhenAll(CreateInitializationTasks(cancellationToken)).ConfigureAwait(false);
 
         int activatedCount = ActivateSchedulePolicies();
 
@@ -83,7 +90,16 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         }
     }
 
-    private async void OnAgentStatusChanged(AgentStatus status, string reason)
+    private IEnumerable<Task> CreateInitializationTasks(CancellationToken cancellationToken)
+    {
+        if (_resourceUsageSource is ResourceUsageSource resourceUsageSource)
+        {
+            yield return resourceUsageSource.StartAsync(cancellationToken);
+        }
+        yield return _agentStatusService.InitializeAsync(cancellationToken).AsTask();
+    }
+
+    private async Task OnAgentStatusChanged(AgentStatus status, string reason)
     {
         _logger.LogDebug("Agent status changed to {status} for the reason of {reason}.", status, reason);
 
@@ -93,17 +109,52 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             switch (status)
             {
                 case AgentStatus.Active:
-                    _cancellationTokenSource = new CancellationTokenSource();
+                    CancellationTokenSource newCancellationTokenSource = new();
+                    CancellationTokenSource oldCancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, newCancellationTokenSource);
+                    oldCancellationTokenSource.Cancel();
+                    oldCancellationTokenSource.Dispose();
+
                     // Go through each provided policy and start them
                     List<Task> policyAsync = [];
                     foreach (SchedulingPolicy policy in _policyCollection)
                     {
-                        policyAsync.Add(policy.StartPolicyAsync(_cancellationTokenSource.Token));
+                        policyAsync.Add(policy.StartPolicyAsync(newCancellationTokenSource.Token));
                     }
 
-                    _logger.LogDebug("Starting and blocking on all scheduling policies.");
-                    await Task.WhenAll(policyAsync).ConfigureAwait(false);
-                    _logger.LogInformation("All scheduling policies completed.");
+                    _logger.LogDebug("Starting all scheduling policies.");
+                    // Atomically start schedules exactly once when none are currently running.
+                    while (true)
+                    {
+                        var current = Volatile.Read(ref _runningSchedules);
+                        if (current != null && !current.IsCompleted)
+                        {
+                            _logger.LogWarning("The schedules are already running.");
+                            break;
+                        }
+
+                        var schedulesTask = Task.WhenAll(policyAsync);
+                        if (Interlocked.CompareExchange(ref _runningSchedules, schedulesTask, current) == current)
+                        {
+                            _ = schedulesTask.ContinueWith(t =>
+                            {
+                                if (t.IsFaulted)
+                                {
+                                    _logger.LogError(t.Exception?.Flatten(), "Scheduling policies task faulted.");
+                                }
+                                else if (t.IsCanceled)
+                                {
+                                    _logger.LogDebug("Scheduling policies task canceled.");
+                                }
+                                else
+                                {
+                                    _logger.LogDebug("Scheduling policies task completed successfully.");
+                                }
+                            }, TaskScheduler.Default);
+                            _logger.LogDebug("Started all scheduling policies.");
+                            break;
+                        }
+                        // Another thread won; retry to observe its state.
+                    }
                     break;
                 case AgentStatus.Inactive:
                     if (!_cancellationTokenSource.IsCancellationRequested)
@@ -119,10 +170,6 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         catch (OperationCanceledException ex) when (ex.CancellationToken == _cancellationTokenSource.Token)
         {
             _logger.LogDebug("Operation cancelled to change the agent status to {status} for the reason of {reason}.", status, reason);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to change the agent status to {status} for the reason of {reason}.", status, reason);
         }
         finally
         {
@@ -142,7 +189,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         Task<bool> waitSemaphoreTask = _policyChangeHandler.WaitAsync(TimeSpan.FromMilliseconds(500), cancellationToken);
         try
         {
-            _semaphoreTasks.Add(waitSemaphoreTask);
+            _semaphoreTasks.TryAdd(waitSemaphoreTask, 0);
             if (await waitSemaphoreTask.ConfigureAwait(false))
             {
                 try
@@ -168,13 +215,17 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     _policyChangeHandler.Release();
                 }
             }
+            else
+            {
+                _logger.LogWarning("Can't get the handler to start a profiling. Requested by {newSource}. Current Profiling by: {currentSource}", policy.Source, _currentProfilingPolicy?.Source);
+            }
 
             _logger.LogTrace("Profiling is running by policy: {source}", _currentProfilingPolicy?.Source);
             return false;
         }
         finally
         {
-            _semaphoreTasks.Remove(waitSemaphoreTask);
+            _semaphoreTasks.TryRemove(waitSemaphoreTask, out _);
         }
     }
 
@@ -198,7 +249,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             Task<bool> waitSemaphoreTask = _policyChangeHandler.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
             try
             {
-                _semaphoreTasks.Add(waitSemaphoreTask);
+                _semaphoreTasks.TryAdd(waitSemaphoreTask, 0);
                 if (await waitSemaphoreTask.ConfigureAwait(false))
                 {
                     try
@@ -243,7 +294,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             }
             finally
             {
-                _semaphoreTasks.Remove(waitSemaphoreTask);
+                _semaphoreTasks.TryRemove(waitSemaphoreTask, out _);
             }
         }
 
@@ -255,10 +306,13 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         base.Dispose(disposing);
         if (disposing)
         {
+            _cancellationTokenSource.Cancel();
             _cancellationTokenSource.Dispose();
+
+            _agentStatusService.StatusChanged -= OnAgentStatusChanged;
             _statusChangeSemaphore.Dispose();
 
-            Task.WaitAll(_semaphoreTasks.ToArray());
+            Task.WhenAll(_semaphoreTasks.Keys);
             _policyChangeHandler.Dispose();
         }
     }

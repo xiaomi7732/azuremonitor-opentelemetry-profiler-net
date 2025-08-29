@@ -2,32 +2,43 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-// TODO: Consider moving this to the the process monitoring project.
-
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;
 using Microsoft.ServiceProfiler.ProcessMonitor;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal sealed class ResourceUsageSource : IResourceUsageSource
 {
+    private bool _running = false;
+
     private float _currentCPUBaseline = 0f;
     private float _currentMemoryBaseline = 0f;
     private bool _disposed = false;
-    
-    private readonly BaselineTracker? _cpuBaselineTracker;
-    private readonly BaselineTracker? _memoryBaselineTracker;
+
+    private BaselineTracker? _cpuBaselineTracker;
+    private BaselineTracker? _memoryBaselineTracker;
     private readonly UserConfigurationBase _userConfigurations;
+    private readonly IMetricsProvider _cpuMetricsProvider;
+    private readonly IMetricsProvider _memoryMetricsProvider;
+    private readonly CpuTriggerSettings _cpuTriggerSettings;
+    private readonly MemoryTriggerSettings _memoryTriggerSettings;
+    private readonly AgentStatusService _agentStatusService;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
+
+    private readonly SemaphoreSlim _statusChangeSemaphore = new SemaphoreSlim(1, 1);
 
     ///<summary>
     /// Aggregates CPU and RAM usage in recent times.
@@ -41,9 +52,15 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         MemoryTriggerSettings memoryTriggerSettings,
         ISerializationProvider serializer,
         IOptions<UserConfigurationBase> userConfigurations,
+        AgentStatusService agentStatusService,
         ILogger<ResourceUsageSource> logger,
         ILoggerFactory loggerFactory)
     {
+        _cpuMetricsProvider = cpuMetricsProvider;
+        _memoryMetricsProvider = memoryMetricsProvider;
+        _cpuTriggerSettings = cpuTriggerSettings;
+        _memoryTriggerSettings = memoryTriggerSettings;
+        _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
@@ -93,16 +110,65 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
             _logger.LogDebug("Resource usage monitoring is disabled because profiler is disabled.");
             return;
         }
+    }
 
-        _cpuBaselineTracker = CreateAndStartCPUBaselineTracker(cpuTriggerSettings, cpuMetricsProvider);
-        _memoryBaselineTracker = CreateAndStartMemoryBaselineTracker(memoryMetricsProvider, memoryTriggerSettings);
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        AgentStatus currentStatus = await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await OnAgentStatusChanged(currentStatus, "Initial status").ConfigureAwait(false);
+        _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
 
     public float GetAverageCPUUsage()
-    => LogAndReturn(() => _currentCPUBaseline, MetricsProviderCategory.CPU);
+        => LogAndReturn(() => _currentCPUBaseline, MetricsProviderCategory.CPU);
 
     public float GetAverageMemoryUsage()
         => LogAndReturn(() => _currentMemoryBaseline, MetricsProviderCategory.Memory);
+
+    private async Task OnAgentStatusChanged(AgentStatus status, string reason)
+    {
+        await _statusChangeSemaphore.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            _cpuBaselineTracker?.Dispose();
+            _memoryBaselineTracker?.Dispose();
+
+            switch (status)
+            {
+                case AgentStatus.Active:
+                    if (_running)
+                    {
+                        _logger.LogDebug("Resource usage monitoring already running.");
+                        return; // already active
+                    }
+                    // Start or resume the baseline trackers.
+                    _cpuBaselineTracker = CreateAndStartCPUBaselineTracker(_cpuTriggerSettings, _cpuMetricsProvider);
+                    _memoryBaselineTracker = CreateAndStartMemoryBaselineTracker(_memoryMetricsProvider, _memoryTriggerSettings);
+                    _running = true;
+                    _logger.LogDebug("Resource usage monitoring started or resumed because agent status changed to Active for the reason of {reason}.", reason);
+                    break;
+
+                case AgentStatus.Inactive:
+                    if (!_running)
+                    {
+                        _logger.LogDebug("Resource usage monitoring already stopped.");
+                        return;  // already inactive
+                    }
+                    // Dispose of the trackers happened above.
+                    _running = false;
+                    _logger.LogDebug("Resource usage monitoring paused because agent status changed to Inactive for the reason of {reason}.", reason);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unsupported agent status: {status}");
+            }
+        }
+        finally
+        {
+            _statusChangeSemaphore.Release();
+        }
+    }
 
     private BaselineTracker CreateAndStartMemoryBaselineTracker(IMetricsProvider memoryMetricsProvider, MemoryTriggerSettings memoryTriggerSettings)
     {
@@ -130,7 +196,7 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
             new RollingHistoryArray<float>(
                 TimeSpan.FromMinutes(cpuTriggerSettings.CpuRollingHistorySize),
                 TimeSpan.FromSeconds(cpuTriggerSettings.CpuRollingHistoryInterval)),
-            TimeSpan.FromSeconds(cpuTriggerSettings.CpuAverageWindow), 
+            TimeSpan.FromSeconds(cpuTriggerSettings.CpuAverageWindow),
             getNextMetric: cpuMetricsProvider.GetNextValue,
             logger: _loggerFactory.CreateLogger<BaselineTracker>());
 
@@ -157,6 +223,8 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         {
             _cpuBaselineTracker?.Dispose();
             _memoryBaselineTracker?.Dispose();
+            _agentStatusService.StatusChanged -= OnAgentStatusChanged;
+            _statusChangeSemaphore.Dispose();
             _disposed = true;
         }
     }

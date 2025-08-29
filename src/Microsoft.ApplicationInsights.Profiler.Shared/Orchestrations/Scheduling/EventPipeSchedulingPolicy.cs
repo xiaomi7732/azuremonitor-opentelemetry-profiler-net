@@ -5,6 +5,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using System.Collections.Generic;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
+using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -36,7 +37,12 @@ internal abstract class EventPipeSchedulingPolicy : SchedulingPolicy, IDisposabl
         _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
 
-    private void OnAgentStatusChanged(AgentStatus status, string reason) => _agentStatusRequest = status;
+    private Task OnAgentStatusChanged(AgentStatus status, string reason)
+    {
+        _agentStatusRequest = status;
+        return Task.CompletedTask;
+    }
+     
 
     protected T UpdateRefreshAndGetSetting<T>(T newSetting, T currentSetting, ref bool needsRefresh)
     {

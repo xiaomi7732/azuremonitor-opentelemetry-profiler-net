@@ -56,7 +56,7 @@ internal class TraceScavengerService : BackgroundService
         _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
 
-    private void OnAgentStatusChanged(AgentStatus status, string _)
+    private Task OnAgentStatusChanged(AgentStatus status, string _)
     {
         switch (status)
         {
@@ -64,13 +64,14 @@ internal class TraceScavengerService : BackgroundService
                 if (_scavengerTask is not null && !_scavengerTask.IsCompleted)
                 {
                     _logger.LogDebug("Trace scavenger already running.");
-                    return; // already active
+                    return Task.CompletedTask; // already active
                 }
 
-                _cancellationTokenSource?.Cancel();
-                _cancellationTokenSource = new CancellationTokenSource();
-                CancellationToken token = _cancellationTokenSource.Token;
-                _scavengerTask = Task.Run(() => RunScavengerLoopAsync(token));
+                CancellationTokenSource newCancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource? oldCancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, newCancellationTokenSource);
+                oldCancellationTokenSource?.Cancel();
+                oldCancellationTokenSource?.Dispose();
+                _scavengerTask = Task.Run(() => RunScavengerLoopAsync(newCancellationTokenSource.Token));
                 break;
             case AgentStatus.Inactive:
                 _logger.LogDebug("Agent status is {status}, stopping trace scavenger.", status);
@@ -80,6 +81,7 @@ internal class TraceScavengerService : BackgroundService
                 _logger.LogWarning("Unknown agent status: {status}. No action taken.", status);
                 break;
         }
+        return Task.CompletedTask;
     }
 
     private async Task RunScavengerLoopAsync(CancellationToken token)

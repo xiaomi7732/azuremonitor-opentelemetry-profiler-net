@@ -10,7 +10,7 @@ internal interface IAgentStatusService
     /// <summary>
     /// Event fired when the status of the agent changes.
     /// </summary>
-    event Action<AgentStatus, string>? StatusChanged;
+    event Func<AgentStatus, string, Task>? StatusChanged;
 
 
     /// <summary>
