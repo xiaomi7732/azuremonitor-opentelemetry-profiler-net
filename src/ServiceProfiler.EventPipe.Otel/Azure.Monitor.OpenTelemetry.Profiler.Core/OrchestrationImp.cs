@@ -6,15 +6,13 @@ using Microsoft.ServiceProfiler.Orchestration;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
 
-internal class OrchestrationImp : OrchestratorEventPipe
+internal class OrchestrationImp(
+    IServiceProfilerProvider profilerProvider,
+    IOptions<ServiceProfilerOptions> config,
+    IEnumerable<SchedulingPolicy> policyCollection,
+    IDelaySource delaySource,
+    IAgentStatusService agentStatusService,
+    IResourceUsageSource resourceUsageSource,
+    ILogger<OrchestrationImp> logger) : OrchestratorEventPipe(profilerProvider, config, policyCollection, delaySource, agentStatusService, resourceUsageSource, logger)
 {
-    public OrchestrationImp(IServiceProfilerProvider profilerProvider,
-        IOptions<ServiceProfilerOptions> config,
-        IEnumerable<SchedulingPolicy> policyCollection,
-        IDelaySource delaySource,
-        IAgentStatusService agentStatusService,
-        ILogger<OrchestratorEventPipe> logger)
-        : base(profilerProvider, config, policyCollection, delaySource, agentStatusService, logger)
-    {
-    }
 }

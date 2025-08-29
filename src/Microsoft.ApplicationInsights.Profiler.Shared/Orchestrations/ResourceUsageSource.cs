@@ -34,7 +34,7 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
     private readonly IMetricsProvider _memoryMetricsProvider;
     private readonly CpuTriggerSettings _cpuTriggerSettings;
     private readonly MemoryTriggerSettings _memoryTriggerSettings;
-    private readonly AgentStatusService _agentStatusService;
+    private readonly IAgentStatusService _agentStatusService;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
 
@@ -52,7 +52,7 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         MemoryTriggerSettings memoryTriggerSettings,
         ISerializationProvider serializer,
         IOptions<UserConfigurationBase> userConfigurations,
-        AgentStatusService agentStatusService,
+        IAgentStatusService agentStatusService,
         ILogger<ResourceUsageSource> logger,
         ILoggerFactory loggerFactory)
     {
