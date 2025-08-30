@@ -72,10 +72,11 @@ internal class TraceScavengerService : BackgroundService
                 oldCancellationTokenSource?.Cancel();
                 oldCancellationTokenSource?.Dispose();
                 _scavengerTask = Task.Run(() => RunScavengerLoopAsync(newCancellationTokenSource.Token));
+                _logger.LogInformation("Agent status is {status}, trace scavenger started.", status);
                 break;
             case AgentStatus.Inactive:
-                _logger.LogDebug("Agent status is {status}, stopping trace scavenger.", status);
                 _cancellationTokenSource?.Cancel();
+                _logger.LogInformation("Agent status is {status}, trace scavenger stopped.", status);
                 break;
             default:
                 _logger.LogWarning("Unknown agent status: {status}. No action taken.", status);

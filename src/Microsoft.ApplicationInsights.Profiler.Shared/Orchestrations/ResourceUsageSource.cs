@@ -146,7 +146,7 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
                     _cpuBaselineTracker = CreateAndStartCPUBaselineTracker(_cpuTriggerSettings, _cpuMetricsProvider);
                     _memoryBaselineTracker = CreateAndStartMemoryBaselineTracker(_memoryMetricsProvider, _memoryTriggerSettings);
                     _running = true;
-                    _logger.LogDebug("Resource usage monitoring started or resumed because agent status changed to Active for the reason of {reason}.", reason);
+                    _logger.LogInformation("Resource usage monitoring started or resumed because agent status changed to Active for the reason of {reason}.", reason);
                     break;
 
                 case AgentStatus.Inactive:
@@ -157,7 +157,7 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
                     }
                     // Dispose of the trackers happened above.
                     _running = false;
-                    _logger.LogDebug("Resource usage monitoring paused because agent status changed to Inactive for the reason of {reason}.", reason);
+                    _logger.LogInformation("Resource usage monitoring paused because agent status changed to Inactive for the reason of {reason}.", reason);
                     break;
 
                 default:

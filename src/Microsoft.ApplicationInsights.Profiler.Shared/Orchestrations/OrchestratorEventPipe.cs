@@ -150,7 +150,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                                     _logger.LogDebug("Scheduling policies task completed successfully.");
                                 }
                             }, TaskScheduler.Default);
-                            _logger.LogDebug("Started all scheduling policies.");
+                            _logger.LogInformation("Agent status is {status}, all scheduling policies started.", status);
                             break;
                         }
                         // Another thread won; retry to observe its state.
@@ -160,7 +160,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     if (!_cancellationTokenSource.IsCancellationRequested)
                     {
                         _cancellationTokenSource.Cancel();
-                        _logger.LogDebug("Agent status is {status}, stopping all scheduling policies.", status);
+                        _logger.LogInformation("Agent status is {status}, stopping all scheduling policies.", status);
                     }
                     break;
                 default:
