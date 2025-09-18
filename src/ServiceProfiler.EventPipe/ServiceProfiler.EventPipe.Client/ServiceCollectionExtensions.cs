@@ -113,6 +113,9 @@ internal static class ServiceCollectionExtensions
         // Consume IEnumerable<IAppInsightsLogger> to form a sink.
         services.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
 
+        // Agent status
+        services.AddSingleton<IAgentStatusSender, AgentStatusSender>();
+        services.AddSingleton<IAgentStatusService, AgentStatusService>();
 
         // Role name detectors and sources
         services.AddSingleton<IRoleNameDetector, EnvRoleNameDetector>(_ => new EnvRoleNameDetector("WEBSITE_SITE_NAME"));

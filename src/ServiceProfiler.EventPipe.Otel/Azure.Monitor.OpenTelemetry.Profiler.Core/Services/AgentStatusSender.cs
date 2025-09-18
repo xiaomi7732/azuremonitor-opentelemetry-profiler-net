@@ -16,7 +16,7 @@ internal class AgentStatusSender : IAgentStatusSender
     public Task SendAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
         // Consider using a structured logging approach for better performance and readability. It's currently blocked by a compile error due to this bug: https://github.com/dotnet/extensions/issues/6733.
-        _logger.LogInformation("CustomEvent: {eventName} | {status} {instance} {reason}", "ProfilerStatus", agentStatus.Status, agentStatus.RoleInstance, reason);
+        _logger.LogInformation(ProfilerAgentStatus.TraceTelemetryFormat, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason);
         return Task.CompletedTask;
     }
 }

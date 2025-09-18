@@ -5,7 +5,7 @@
 using System;
 using System.Threading.Tasks;
 using Azure.Core;
-using Microsoft.ApplicationInsights.Profiler.Uploader;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
 using Xunit;
 
 namespace ServiceProfiler.EventPipe.Upload.Tests
@@ -15,9 +15,9 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         [Fact]
         public void ShouldBeAbleToGetToken()
         {
-            AccessToken accessToken = new AccessToken("token", DateTimeOffset.UtcNow.AddMinutes(5));
+            AccessToken accessToken = new("token", DateTimeOffset.UtcNow.AddMinutes(5));
 
-            StaticAccessTokenCredential target = new StaticAccessTokenCredential(accessToken);
+            StaticAccessTokenCredential target = new(accessToken);
 
             AccessToken returnedToken = target.GetToken(default, default);
 
@@ -27,9 +27,9 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         [Fact]
         public async Task ShouldBeAbleToGetTokenAsync()
         {
-            AccessToken accessToken = new AccessToken("token", DateTimeOffset.UtcNow.AddMinutes(5));
+            AccessToken accessToken = new("token", DateTimeOffset.UtcNow.AddMinutes(5));
 
-            StaticAccessTokenCredential target = new StaticAccessTokenCredential(accessToken);
+            StaticAccessTokenCredential target = new(accessToken);
 
             AccessToken returnedToken = await target.GetTokenAsync(default, default);
 

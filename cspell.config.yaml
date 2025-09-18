@@ -11,6 +11,7 @@ words:
   - eventpipe
   - extensionless
   - HRESULT
+  - IAAD
   - Ikey
   - ikie
   - inetpub
@@ -22,9 +23,12 @@ words:
   - profilepath
   - referencesource
   - Retriable
+  - testlocation
+  - testtrace
   - WADVM
   - WEBROOT
   - wwwroot
+  - Xunit
 ignoreWords:
   - artifactkinds
   - browsable
