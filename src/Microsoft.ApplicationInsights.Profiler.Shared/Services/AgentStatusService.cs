@@ -220,7 +220,7 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
         string currentRoleName = _roleNameSource.CloudRoleName;
         string currentRoleInstance = _roleInstanceSource.CloudRoleInstance;
 
-        _logger.LogWarning("Looking for agent status for role name '{RoleName}' and instance '{RoleInstance}'.", currentRoleName, currentRoleInstance);
+        _logger.LogDebug("Looking for agent status for role name '{RoleName}' and instance '{RoleInstance}'.", currentRoleName, currentRoleInstance);
 
         // 1. Get and use the settings from ProfilerSettingsService.CurrentSettings.
         AgentStatusGraph? agentStatusGraph = _profilerSettingsService.CurrentSettings?.AgentStatusGraph;
@@ -229,33 +229,33 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
         {
             if (TryGetMatchedItem(currentRoleName, currentRoleInstance, agentStatusGraph, out AgentStatusItem? match))
             {
-                _logger.LogWarning("Found matching agent status: {Status} for role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, currentRoleName, currentRoleInstance);
+                _logger.LogDebug("Found matching agent status: {Status} for role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, currentRoleName, currentRoleInstance);
                 return match.Status;
             }
 
-            _logger.LogWarning("No matching agent status found for role name '{RoleName}' and instance '{RoleInstance}'. Using default status.", currentRoleName, currentRoleInstance);
+            _logger.LogDebug("No matching agent status found for role name '{RoleName}' and instance '{RoleInstance}'. Using default status.", currentRoleName, currentRoleInstance);
             return agentStatusGraph.DefaultStatus;
         }
         else
         {
-            _logger.LogWarning("Agent status graph is null in settings");
+            _logger.LogTrace("Agent status graph is null in settings");
         }
 
         // 2. If settings are not available, get the local settings from UserConfigurationBase.
-        _logger.LogWarning("No agent status graph found in settings. Using local status.");
+        _logger.LogDebug("No agent status graph found in settings. Using local status.");
         return _userConfiguration.ActivatedOnStart ? AgentStatus.Active : AgentStatus.Inactive;
     }
 
     private bool TryGetMatchedItem(string currentRoleName, string currentRoleInstance, AgentStatusGraph agentStatusGraph, [NotNullWhen(true)] out AgentStatusItem? match)
     {
         string debug = JsonSerializer.Serialize(agentStatusGraph, new JsonSerializerOptions { WriteIndented = true });
-        _logger.LogWarning("Agent status graph: {Graph}", debug);
+        _logger.LogDebug("Agent status graph: {Graph}", debug);
 
         // Special case for "Unknown" role name.
         if (string.Equals(currentRoleName, UnknownRoleNameDetector.RoleName, StringComparison.Ordinal))
         {
             string fallbackRoleName = GetFallbackRoleName();
-            _logger.LogWarning("Current role name is 'Unknown'. Fallback to default role name '{DefaultRoleName}'.", fallbackRoleName);
+            _logger.LogDebug("Current role name is 'Unknown'. Fallback to default role name '{DefaultRoleName}'.", fallbackRoleName);
 
             match = agentStatusGraph.Statuses.FirstOrDefault(item =>
                 string.Equals(item.RoleName, fallbackRoleName, StringComparison.OrdinalIgnoreCase) &&
@@ -263,7 +263,7 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
             if (match is not null)
             {
-                _logger.LogWarning("Found matching agent status: {Status} for fallback role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, fallbackRoleName, currentRoleInstance);
+                _logger.LogDebug("Found matching agent status: {Status} for fallback role name '{RoleName}' and instance '{RoleInstance}'.", match.Status, fallbackRoleName, currentRoleInstance);
                 return true;
             }
         }
