@@ -44,7 +44,10 @@ internal class AgentStatusSender : IAgentStatusSender
         TelemetryClient telemetryClient = new(telemetryConfiguration);
 
         _logger.LogDebug("Sending agent status: {status} {instance} {reason}", agentStatus.Status, agentStatus.RoleInstance, reason);
-        TraceTelemetry traceTelemetry = new(message: string.Format(ProfilerAgentStatus.TraceTelemetryFormatWithIndexHolder, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason));
+        TraceTelemetry traceTelemetry = new(message: string.Format(ProfilerAgentStatus.TraceTelemetryFormatWithIndexHolder, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason))
+        {
+            SeverityLevel = SeverityLevel.Information
+        };
         traceTelemetry.Properties["CategoryName"] = CategoryName;
         traceTelemetry.Properties["eventName"] = ProfilerAgentStatus.EventName;
         traceTelemetry.Properties["status"] = agentStatus.Status.ToString();
