@@ -82,6 +82,10 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 _logger.LogInformation("Finish initial delay. Profiling is activated.");
             }
 
+            // Triggers the initial status check and starts the scheduling policies if needed.
+            await OnAgentStatusChanged(
+                status: await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false),
+                reason: "Initial activation").ConfigureAwait(false);
             _agentStatusService.StatusChanged += OnAgentStatusChanged;
         }
         else
