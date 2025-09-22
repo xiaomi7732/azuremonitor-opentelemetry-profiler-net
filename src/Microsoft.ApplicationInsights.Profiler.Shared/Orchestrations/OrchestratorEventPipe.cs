@@ -11,6 +11,7 @@ using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,7 +69,20 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     public async override Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Starting the orchestrator.");
-        await Task.WhenAll(CreateInitializationTasks(cancellationToken)).ConfigureAwait(false);
+
+        // Avoid holding both a ValueTask and a Task (double-consumption risk); normalize to Task.
+        Task<AgentStatus> agentStatusTask = _agentStatusService.InitializeAsync(cancellationToken).AsTask();
+        List<Task> initTasks =
+        [
+            agentStatusTask
+        ];
+
+        if (_resourceUsageSource is ResourceUsageSource resourceUsageSource)
+        {
+            initTasks.Add(resourceUsageSource.StartAsync(cancellationToken));
+        }
+
+        await Task.WhenAll(initTasks).ConfigureAwait(false);
 
         int activatedCount = ActivateSchedulePolicies();
 
@@ -82,9 +96,11 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 _logger.LogInformation("Finish initial delay. Profiling is activated.");
             }
 
+            Debug.Assert(agentStatusTask.IsCompleted, "The agent status task is expected to be completed.");
+
             // Triggers the initial status check and starts the scheduling policies if needed.
             await OnAgentStatusChanged(
-                status: await _agentStatusService.InitializeAsync(cancellationToken).ConfigureAwait(false),
+                status: agentStatusTask.Result,
                 reason: "Initial activation").ConfigureAwait(false);
             _agentStatusService.StatusChanged += OnAgentStatusChanged;
         }
@@ -92,15 +108,6 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         {
             _logger.LogError("No scheduling policy has been activated.");
         }
-    }
-
-    private IEnumerable<Task> CreateInitializationTasks(CancellationToken cancellationToken)
-    {
-        if (_resourceUsageSource is ResourceUsageSource resourceUsageSource)
-        {
-            yield return resourceUsageSource.StartAsync(cancellationToken);
-        }
-        yield return _agentStatusService.InitializeAsync(cancellationToken).AsTask();
     }
 
     private async Task OnAgentStatusChanged(AgentStatus status, string reason)
