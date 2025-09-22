@@ -21,7 +21,7 @@ internal sealed class RemoteProfilerSettingsService : RemoteSettingsServiceBase
     public RemoteProfilerSettingsService(
         IProfilerFrontendClient frontendClient,
         IOptions<UserConfiguration> userConfigurationOptions,
-        ILogger<RemoteSettingsServiceBase> logger,
+        ILogger<RemoteProfilerSettingsService> logger,
         IServiceProvider serviceProvider) : base(frontendClient, userConfigurationOptions, logger)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));

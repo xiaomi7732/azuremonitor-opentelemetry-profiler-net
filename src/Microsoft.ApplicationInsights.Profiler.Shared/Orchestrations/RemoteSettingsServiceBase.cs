@@ -117,6 +117,8 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        _logger.LogTrace("Remote settings service is starting.");
+        
         if (_standaloneMode)
         {
             _logger.LogTrace("Running in standalone mode. No remote settings will be fetched.");

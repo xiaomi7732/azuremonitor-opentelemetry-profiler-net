@@ -20,6 +20,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.DataContract.Settings;
@@ -185,6 +186,11 @@ internal static class ServiceCollectionExtensions
             {
                 return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
             }
+        });
+        services.AddHostedService(p =>
+        {
+            BackgroundService? backgroundService = p.GetRequiredService<IProfilerSettingsService>() as BackgroundService;
+            return backgroundService ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service.");
         });
 
         // Triggers
