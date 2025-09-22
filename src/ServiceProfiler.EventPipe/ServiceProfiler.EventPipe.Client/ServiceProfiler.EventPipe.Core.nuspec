@@ -23,12 +23,14 @@
         <dependency id="CommandLineParser" version="$CommandLineParserVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.ApplicationInsights.AspNetCore" version="$MicrosoftApplicationInsightsAspNetCoreVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.AspNetCore.Hosting" version="$MicrosoftAspNetCoreHostingVersion$" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="$MicrosoftBclAsyncInterfacesVersion$" exclude="Build,Analyzers"/>
         <dependency id="Microsoft.Diagnostics.NETCore.Client" version="$MicrosoftDiagnosticsNETCoreClientVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Caching.Memory" version="$MicrosoftExtensionsCachingMemoryVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Configuration.EnvironmentVariables" version="$MicrosoftExtensionsConfigurationEnvironmentVariablesVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Configuration.Json" version="$MicrosoftExtensionsConfigurationJsonVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Hosting.Abstractions" version="$MicrosoftExtensionsHostingAbstractionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Debug" version="$MicrosoftExtensionsLoggingDebugVersion$" exclude="Build,Analyzers" />
+        <dependency id="System.Linq.Async" version="$SystemLinqAsyncVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Diagnostics.DiagnosticSource" version="$SystemDiagnosticsDiagnosticSourceVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Diagnostics.PerformanceCounter" version="$SystemDiagnosticsPerformanceCounterVersion$" exclude="Build,Analyzers" />
         <dependency id="System.IdentityModel.Tokens.Jwt" version="$SystemIdentityModelTokensJwtVersion$" exclude="Build,Analyzers" />
