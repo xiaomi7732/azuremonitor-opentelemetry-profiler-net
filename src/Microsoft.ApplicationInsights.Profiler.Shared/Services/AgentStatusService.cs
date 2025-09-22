@@ -65,8 +65,8 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
     public async ValueTask<AgentStatus> InitializeAsync(CancellationToken cancellationToken)
     {
+        await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-        _semaphoreSlim.Wait(cancellationToken);
         try
         {
             // The initialization has already happened before.
