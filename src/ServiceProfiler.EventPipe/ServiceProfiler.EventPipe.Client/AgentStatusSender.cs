@@ -19,14 +19,16 @@ internal class AgentStatusSender : IAgentStatusSender
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IAuthTokenProvider _authTokenProvider;
     private readonly ILoggerFactory _loggerFactory;
-
+    private readonly ILogger<AgentStatusSender> _logger;
     private static readonly string CategoryName = typeof(AgentStatusSender).FullName ?? "AgentStatusSender";
 
     public AgentStatusSender(
         IServiceProfilerContext serviceProfilerContext,
         IAuthTokenProvider authTokenProvider,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        ILogger<AgentStatusSender> logger)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _authTokenProvider = authTokenProvider ?? throw new ArgumentNullException(nameof(authTokenProvider));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
@@ -41,7 +43,8 @@ internal class AgentStatusSender : IAgentStatusSender
         using TelemetryConfiguration telemetryConfiguration = BuildTelemetryConfiguration(accessToken);
         TelemetryClient telemetryClient = new(telemetryConfiguration);
 
-        TraceTelemetry traceTelemetry = new(message: string.Format(ProfilerAgentStatus.TraceTelemetryFormat, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason));
+        _logger.LogDebug("Sending agent status: {status} {instance} {reason}", agentStatus.Status, agentStatus.RoleInstance, reason);
+        TraceTelemetry traceTelemetry = new(message: string.Format(ProfilerAgentStatus.TraceTelemetryFormatWithIndexHolder, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason));
         traceTelemetry.Properties["CategoryName"] = CategoryName;
         traceTelemetry.Properties["eventName"] = ProfilerAgentStatus.EventName;
         traceTelemetry.Properties["status"] = agentStatus.Status.ToString();
