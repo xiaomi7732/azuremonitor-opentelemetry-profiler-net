@@ -46,7 +46,7 @@ This document summarizes configuration options exposed via `UserConfigurationBas
 
 | Property | Type | Description |
 |----------|------|-------------|
-| CustomEventPipeProviders | IEnumerable<EventPipeProviderItem> | Adds extra EventPipe providers. Use cautiously—can greatly increase volume and overhead. |
+| CustomEventPipeProviders | IEnumerable&lt;EventPipeProviderItem&gt; | Adds extra EventPipe providers. Use cautiously—can greatly increase volume and overhead. |
 | NamedPipe | NamedPipeOptions | IPC channel customization (diagnostics / tooling). |
 | TraceScavenger | TraceScavengerServiceOptions | Controls cleanup policy for local traces (age, limits, etc.). |
 
@@ -114,4 +114,3 @@ Example: overhead=0.01, duration=0.5 min (30s) → (60 * 0.01)/0.5 = 1.2 session
 ## Versioning / Evolution
 
 Defaults may evolve; pin critical behavior via explicit settings to avoid surprises during upgrades.
-
