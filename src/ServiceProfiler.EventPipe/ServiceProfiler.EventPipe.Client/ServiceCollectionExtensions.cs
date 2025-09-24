@@ -67,7 +67,7 @@ internal static class ServiceCollectionExtensions
 
         // Utilities
         services.AddTransient<IEventPipeEnvironmentCheckService, EventPipeEnvironmentCheckService>();
-        
+
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
@@ -187,10 +187,11 @@ internal static class ServiceCollectionExtensions
                 return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
             }
         });
+        
         services.AddHostedService(p =>
         {
-            BackgroundService? backgroundService = p.GetRequiredService<IProfilerSettingsService>() as BackgroundService;
-            return backgroundService ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service.");
+            BackgroundService backgroundService = (BackgroundService)p.GetRequiredService<IProfilerSettingsService>();
+            return backgroundService;
         });
 
         // Triggers

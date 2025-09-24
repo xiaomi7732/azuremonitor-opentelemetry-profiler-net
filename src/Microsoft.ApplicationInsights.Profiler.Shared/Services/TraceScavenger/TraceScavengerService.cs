@@ -117,7 +117,14 @@ internal class TraceScavengerService : BackgroundService
             _cancellationTokenSource?.Cancel();
             _scavengerTask?.Wait(TimeSpan.FromSeconds(5));
         }
-        catch { /* ignore */ }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Error occurred when disposing trace scavenger: {message}", ex.Message);
+        }
+        catch (OperationCanceledException)
+        { 
+            _logger.LogTrace("Trace scavenger task cancellation requested during dispose.");
+        }
         finally
         {
             _cancellationTokenSource?.Dispose();

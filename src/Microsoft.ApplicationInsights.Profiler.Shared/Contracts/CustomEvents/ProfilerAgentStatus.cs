@@ -5,8 +5,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 
 internal record ProfilerAgentStatus
 {
-    // Keep these 2 formats in sync.
-    public const string TraceTelemetryFormat = "CustomEvent: {eventName} | {status} {instance} {reason}";
+    // Keep these 2 formats in sync. 
+    // Do not change the existing format as it is used in production and changing it will break existing queries.
+    public const string TraceTelemetryFormat = "CustomEvent: {EventName} | {Status} {Instance} {Reason}";
     public const string TraceTelemetryFormatWithIndexHolder = "CustomEvent: {0} | {1} {2} {3}";
 
     public const string EventName = "ProfilerStatus";

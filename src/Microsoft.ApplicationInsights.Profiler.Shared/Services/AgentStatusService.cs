@@ -286,6 +286,9 @@ internal sealed class AgentStatusService : IAgentStatusService, IDisposable
 
     public void Dispose()
     {
+        _profilerSettingsService.SettingsUpdated -= OnProfilerSettingsUpdated;
+        
         _semaphoreSlim.Dispose();
+        _statusUpdateTimer?.Dispose();
     }
 }

@@ -49,10 +49,10 @@ internal class AgentStatusSender : IAgentStatusSender
             SeverityLevel = SeverityLevel.Information
         };
         traceTelemetry.Properties["CategoryName"] = CategoryName;
-        traceTelemetry.Properties["eventName"] = ProfilerAgentStatus.EventName;
-        traceTelemetry.Properties["status"] = agentStatus.Status.ToString();
-        traceTelemetry.Properties["instance"] = agentStatus.RoleInstance ?? "Unknown";
-        traceTelemetry.Properties["reason"] = reason;
+        traceTelemetry.Properties["EventName"] = ProfilerAgentStatus.EventName;
+        traceTelemetry.Properties["Status"] = agentStatus.Status.ToString();
+        traceTelemetry.Properties["Instance"] = agentStatus.RoleInstance ?? "Unknown";
+        traceTelemetry.Properties["Reason"] = reason;
 
         telemetryClient.TrackTrace(traceTelemetry);
         telemetryClient.Flush();
