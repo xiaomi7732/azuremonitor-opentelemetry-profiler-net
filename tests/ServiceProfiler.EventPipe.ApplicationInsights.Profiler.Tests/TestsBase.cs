@@ -176,6 +176,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection.AddTransient<ICustomEventsBuilder, CustomEventsBuilder>();
             serviceCollection.AddSingleton<IPostStopProcessorFactory, PostStopProcessorFactory>();
+            Mock<IAgentStringProvider> agentStringProviderMock = new Mock<IAgentStringProvider>();
+            agentStringProviderMock.Setup(provider => provider.AgentString).Returns("UnitTestAgentString/1.0");
+            serviceCollection.AddSingleton<IAgentStringProvider>(_ => agentStringProviderMock.Object);
             serviceCollection.AddSingleton<ServiceProfilerProvider>();
 
             _uploaderLocatorMock = new Mock<IPrioritizedUploaderLocator>();

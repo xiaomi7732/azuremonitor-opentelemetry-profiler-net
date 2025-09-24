@@ -96,7 +96,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
         public override string Source => nameof(PotentialCrashSchedulingPolicy);
 
-        public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+        public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("Expected unexpected exception that might cause crash.");
         }

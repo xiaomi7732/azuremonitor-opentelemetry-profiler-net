@@ -60,7 +60,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             IServiceCollection services = GetRichServiceCollection(duration, initialDelay);
             if (uploaderExecuteCallback != null)
             {
-                _traceUploaderMock.Setup(u => u.UploadAsync(
+                _traceUploaderMock?.Setup(u => u.UploadAsync(
                     It.IsAny<DateTimeOffset>(),
                     It.IsAny<string>(),
                     It.IsAny<string>(),

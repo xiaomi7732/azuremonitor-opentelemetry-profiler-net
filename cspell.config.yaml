@@ -3,28 +3,43 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - Antlr
   - Authenticode
   - byos
   - cooldown
   - datacube
+  - Decompiler
   - diagsession
   - eventpipe
   - extensionless
   - HRESULT
+  - IAAD
   - Ikey
   - ikie
   - inetpub
+  - Kusto
+  - Linq
   - localstamp
+  - Modernizr
   - msdl
   - Namedpipe
   - netperf
+  - Newtonsoft
   - NGEN
+  - Owin
   - profilepath
   - referencesource
   - Retriable
+  - Serilog
+  - Swashbuckle
+  - testlocation
+  - testtrace
+  - VSSDK
   - WADVM
+  - Wapd
   - WEBROOT
   - wwwroot
+  - Xunit
 ignoreWords:
   - artifactkinds
   - browsable

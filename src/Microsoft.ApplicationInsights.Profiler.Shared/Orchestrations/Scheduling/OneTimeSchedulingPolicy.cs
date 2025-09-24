@@ -3,12 +3,14 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Linq;
+using System.Threading;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -20,6 +22,7 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
         LimitedExpirationPolicyFactory limitedExpirationPolicyFactory,
+        IAgentStatusService agentStatusService,
         ILogger<OneTimeSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -29,14 +32,16 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         delaySource,
         limitedExpirationPolicyFactory.Create(1),
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     { }
 
     public override string Source { get; } = nameof(OneTimeSchedulingPolicy);
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult(CreateSchedule(ProfilingDuration));
+        return CreateSchedule(ProfilingDuration).ToAsyncEnumerable();
     }
 
     private IEnumerable<(TimeSpan duration, ProfilerAction action)> CreateSchedule(TimeSpan profilingDuration)
@@ -44,7 +49,5 @@ internal class OneTimeSchedulingPolicy : EventPipeSchedulingPolicy
         yield return (profilingDuration, ProfilerAction.StartProfilingSession);
         yield return (profilingDuration, ProfilerAction.Standby);
     }
-
-    protected override bool PolicyNeedsRefresh() => false;
 }
 

@@ -20,6 +20,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.DataContract.Settings;
@@ -66,7 +67,7 @@ internal static class ServiceCollectionExtensions
 
         // Utilities
         services.AddTransient<IEventPipeEnvironmentCheckService, EventPipeEnvironmentCheckService>();
-        
+
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();
@@ -113,6 +114,9 @@ internal static class ServiceCollectionExtensions
         // Consume IEnumerable<IAppInsightsLogger> to form a sink.
         services.TryAddSingleton<IAppInsightsSinks, AppInsightsSinks>();
 
+        // Agent status
+        services.AddSingleton<IAgentStatusSender, AgentStatusSender>();
+        services.AddSingleton<IAgentStatusService, AgentStatusService>();
 
         // Role name detectors and sources
         services.AddSingleton<IRoleNameDetector, EnvRoleNameDetector>(_ => new EnvRoleNameDetector("WEBSITE_SITE_NAME"));
@@ -182,6 +186,12 @@ internal static class ServiceCollectionExtensions
             {
                 return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
             }
+        });
+        
+        services.AddHostedService(p =>
+        {
+            BackgroundService backgroundService = (BackgroundService)p.GetRequiredService<IProfilerSettingsService>();
+            return backgroundService;
         });
 
         // Triggers

@@ -8,8 +8,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using System.Threading;
+using System.Linq;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -26,6 +28,7 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         ProcessExpirationPolicy expirationPolicy,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<CPUMonitoringSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -35,6 +38,7 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
         delaySource,
         expirationPolicy,
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     {
@@ -43,32 +47,36 @@ internal sealed class CPUMonitoringSchedulingPolicy : EventPipeSchedulingPolicy
 
     public override string Source => nameof(CPUMonitoringSchedulingPolicy);
 
-    // Return action + action duration based on whether recent average CPU usage exceeds threshold
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
+        // Return action + action duration based on whether recent average CPU usage exceeds threshold
         float cpuUsage = ResourceUsageSource.GetAverageCPUUsage();
         Logger.LogTrace("CPU Usage: {0}", cpuUsage);
 
         if (cpuUsage > _cpuThreshold)
         {
-            return Task.FromResult(CreateProfilingSchedule(ProfilingDuration));
+            return CreateProfilingSchedule(ProfilingDuration).ToAsyncEnumerable();
         }
 
-        return Task.FromResult(CreateStandbySchedule());
+        return CreateStandbySchedule().ToAsyncEnumerable();
     }
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         CpuTriggerSettings cpuSettings = ProfilerSettings.CpuTriggerSettings;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(cpuSettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(cpuSettings.CpuTriggerProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(cpuSettings.CpuTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);
         _cpuThreshold = UpdateRefreshAndGetSetting(cpuSettings.CpuThreshold, _cpuThreshold, ref needsRefresh);
 
-        return needsRefresh;
+        Logger.LogDebug("Policy needs refresh by {policy}: {decision}", nameof(CPUMonitoringSchedulingPolicy), needsRefresh);
+
+        // Either the base policy needs refresh or any of the CPU sampling settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 }
 

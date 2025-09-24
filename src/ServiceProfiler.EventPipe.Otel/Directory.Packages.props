@@ -7,10 +7,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <_AzureMonitorOpenTelemetryExporterVersion>1.4.0-beta.2</_AzureMonitorOpenTelemetryExporterVersion>
-    <_MicrosoftDiagnosticsNETCoreClientVersion>0.2.532401</_MicrosoftDiagnosticsNETCoreClientVersion>
+    <_AzureMonitorOpenTelemetryExporterVersion>1.4.0</_AzureMonitorOpenTelemetryExporterVersion>
+    <_MicrosoftDiagnosticsNETCoreClientVersion>0.2.621003</_MicrosoftDiagnosticsNETCoreClientVersion>
     <_SystemCollectionsImmutableVersion>8.0.0</_SystemCollectionsImmutableVersion>
-    <_SystemDiagnosticsDiagnosticSourceVersion>9.0.3</_SystemDiagnosticsDiagnosticSourceVersion>
     <_SystemMemoryDataVersion>9.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>9.0.0</_SystemSecurityCryptographyProtectedDataVersion>
   </PropertyGroup>
@@ -28,6 +27,7 @@ MicrosoftExtensionsLoggingVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsVersion);
 SystemCollectionsImmutableVersion=$(_SystemCollectionsImmutableVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+SystemLinqAsyncVersion=$(_SystemLinqAsyncVersion);
 SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
 SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);
 SystemTextJsonVersion=$(_SystemTextJsonVersion);

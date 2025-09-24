@@ -52,6 +52,7 @@ MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsVersion);
 SystemDiagnosticsDiagnosticSourceVersion=$(_SystemDiagnosticsDiagnosticSourceVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
 SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
+SystemLinqAsyncVersion=$(_SystemLinqAsyncVersion);
 SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
 SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);
 SystemTextJsonVersion=$(_SystemTextJsonVersion);

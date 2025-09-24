@@ -18,6 +18,11 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfilerSettingsService
 {
+    /// <summary>
+    /// The timeout for waiting for initialization.
+    /// </summary>
+    public static readonly TimeSpan DefaultInitializationTimeout = TimeSpan.FromSeconds(5);
+
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
@@ -44,9 +49,9 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         _isDisabled = _userConfiguration.IsDisabled;
     }
 
-    public async Task<bool> WaitForInitializedAsync(TimeSpan timeout)
+    public async Task<bool> WaitForInitializedAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        Task completed = await Task.WhenAny(Task.Delay(timeout), _taskCompletionSource.Task).ConfigureAwait(false);
+        Task completed = await Task.WhenAny(Task.Delay(timeout, cancellationToken), _taskCompletionSource.Task).ConfigureAwait(false);
         if (completed == _taskCompletionSource.Task)
         {
             // Initialize done.
@@ -82,21 +87,21 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         }
         catch (InstrumentationKeyInvalidException ikie)
         {
-            _logger.LogError(ikie.Message);
-            _logger.LogTrace(ikie.ToString());
+            _logger.LogError(ikie, "{errorMessage}", ikie.Message);
+            _logger.LogTrace(ikie, "{fullError}", ikie.ToString());
         }
         catch (Exception ex) when (string.Equals(ex.Message, "Invalid instrumentation key format or instrumentation key has been revoked.", StringComparison.Ordinal))
         {
-            _logger.LogError(ex.Message);
-            _logger.LogTrace(ex.ToString());
+            _logger.LogError(ex, "{errorMessage}", ex.Message);
+            _logger.LogTrace(ex, "{fullError}", ex.ToString());
         }
 #pragma warning disable CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.
         catch (Exception ex)
 #pragma warning restore CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.
         {
             // Move on for the next iteration.
-            _logger.LogDebug("Unexpected error contacting service profiler service endpoint for settings. Details: {details}", ex);
-            _logger.LogTrace("Error with trace: {error}", ex.ToString());
+            _logger.LogDebug(ex, "Unexpected error contacting service profiler service endpoint for settings. Details: {details}", ex.Message);
+            _logger.LogTrace(ex, "Error with trace: {error}", ex.ToString());
         }
         finally
         {
@@ -113,6 +118,8 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        _logger.LogTrace("Remote settings service is starting.");
+
         if (_standaloneMode)
         {
             _logger.LogTrace("Running in standalone mode. No remote settings will be fetched.");

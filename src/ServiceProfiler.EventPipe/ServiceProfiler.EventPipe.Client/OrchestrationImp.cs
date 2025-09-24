@@ -14,7 +14,10 @@ internal class OrchestrationImp : OrchestratorEventPipe
         IServiceProfilerProvider profilerProvider,
         IOptions<UserConfiguration> config, 
         IEnumerable<SchedulingPolicy> policyCollection, 
-        IDelaySource delaySource, ILogger<OrchestratorEventPipe> logger) : base(profilerProvider, config, policyCollection, delaySource, logger)
+        IDelaySource delaySource,
+        IAgentStatusService agentStatusService,
+        IResourceUsageSource resourceUsageSource,
+        ILogger<OrchestrationImp> logger) : base(profilerProvider, config, policyCollection, delaySource, agentStatusService, resourceUsageSource, logger)
     {
     }
 }

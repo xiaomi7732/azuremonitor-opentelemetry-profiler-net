@@ -14,7 +14,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         public void ShouldHaveMeaningfulDefaultValues()
         {
             // Whenever a property is added or removed, this needs to be updated.
-            const int expectedPropertyNum = 23;
+            const int expectedPropertyNum = 24;
             int propertyCount = typeof(UserConfiguration).GetTypeInfo().DeclaredProperties.Count();
             int propertyOffBaseClassCount = typeof(UserConfigurationBase).GetTypeInfo().DeclaredProperties.Count();
 

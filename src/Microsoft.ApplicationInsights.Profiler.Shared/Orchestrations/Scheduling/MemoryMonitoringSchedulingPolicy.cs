@@ -8,8 +8,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using System.Threading;
+using System.Linq;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -26,6 +28,7 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         ProcessExpirationPolicy expirationPolicy,
         IDelaySource delaySource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<MemoryMonitoringSchedulingPolicy> logger
     ) : base(
         userConfiguration.Value.Duration,
@@ -35,6 +38,7 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
         delaySource,
         expirationPolicy,
         resourceUsageSource,
+        agentStatusService,
         logger
     )
     {
@@ -43,31 +47,33 @@ internal sealed class MemoryMonitoringSchedulingPolicy : EventPipeSchedulingPoli
 
     public override string Source => nameof(MemoryMonitoringSchedulingPolicy);
 
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
         float memoryUsage = ResourceUsageSource.GetAverageMemoryUsage();
         Logger.LogTrace("Memory Usage: {0}", memoryUsage);
 
         if (memoryUsage > _memoryThreshold)
         {
-            return Task.FromResult(CreateProfilingSchedule(ProfilingDuration));
+            return CreateProfilingSchedule(ProfilingDuration).ToAsyncEnumerable();
         }
 
-        return Task.FromResult(CreateStandbySchedule());
+        return CreateStandbySchedule().ToAsyncEnumerable();
     }
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         MemoryTriggerSettings memorySettings = ProfilerSettings.MemoryTriggerSettings;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(memorySettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(memorySettings.MemoryTriggerProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         ProfilingCooldown = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(memorySettings.MemoryTriggerCooldownInSeconds), ProfilingCooldown, ref needsRefresh);
         _memoryThreshold = UpdateRefreshAndGetSetting(memorySettings.MemoryThreshold, _memoryThreshold, ref needsRefresh);
 
-        return needsRefresh;
+        // Either the base policy needs refresh or any of the memory settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 }
 

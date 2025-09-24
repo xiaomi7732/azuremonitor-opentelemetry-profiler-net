@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace ServiceProfiler.EventPipe.Client.Tests.Stubs
 {
@@ -25,7 +26,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests.Stubs
 
         public override string Source { get; } = nameof(MockSchedulingPolicy);
 
-        public override System.Threading.Tasks.Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+        public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

@@ -1,2 +1,3 @@
 #nullable enable
-
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ActivatedOnStart.get -> bool
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ActivatedOnStart.set -> void

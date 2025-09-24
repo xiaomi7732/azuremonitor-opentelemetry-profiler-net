@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -10,7 +11,7 @@ using Microsoft.ServiceProfiler.Orchestration.Modes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -32,6 +33,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         IDelaySource delaySource,
         IRandomSource randomSource,
         IResourceUsageSource resourceUsageSource,
+        IAgentStatusService agentStatusService,
         ILogger<RandomSchedulingPolicy> logger)
         : base(
             profilingDuration: TimeSpan.FromSeconds(profilerSettings.SamplingOptions.ProfilingDurationInSeconds),
@@ -41,6 +43,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             delaySource,
             expirationPolicy,
             resourceUsageSource,
+            agentStatusService,
             logger
         )
     {
@@ -49,7 +52,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         _overhead = profilerSettings.SamplingOptions.SamplingRate;
     }
 
-    public override Task<IEnumerable<(TimeSpan duration, ProfilerAction action)>> GetScheduleAsync()
+    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
     {
         var result = new List<(TimeSpan duration, ProfilerAction action)>();
 
@@ -61,7 +64,7 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         if (targetCount == 0)
         {
             result.Add((PollingInterval, ProfilerAction.Standby));
-            return Task.FromResult(result.AsEnumerable());
+            return result.ToAsyncEnumerable();
         }
 
         // Divide total duration into segments.
@@ -121,20 +124,22 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             Logger.LogDebug("{0}.\tRandom plan - Duration: {1}, action: {2}", ++count, plan.Item1, plan.Item2);
         }
 #endif
-        return Task.FromResult(result.AsEnumerable());
+        return result.ToAsyncEnumerable();
     }
 
     protected override bool PolicyNeedsRefresh()
     {
+        bool generalPolicyNeedsRefresh = base.PolicyNeedsRefresh();
+
         bool needsRefresh = false;
         SamplingOptions samplingSettings = ProfilerSettings.SamplingOptions;
 
-        ProfilerEnabled = UpdateRefreshAndGetSetting(ProfilerSettings.Enabled, ProfilerEnabled, ref needsRefresh);
         PolicyEnabled = UpdateRefreshAndGetSetting(samplingSettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
         _overhead = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
 
-        return needsRefresh;
+        // Either the base policy needs refresh or any of the random sampling settings changed.
+        return generalPolicyNeedsRefresh || needsRefresh;
     }
 
     public override string Source { get; } = nameof(RandomSchedulingPolicy);
