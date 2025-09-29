@@ -12,8 +12,6 @@ internal record ProfilerAgentStatus
 
     public const string EventName = "ProfilerStatus";
 
-    public static readonly ProfilerAgentStatus Default = new();
-
     public DateTime Timestamp { get; init; }
     public AgentStatus Status { get; init; }
     public string RoleName { get; init; } = null!;
