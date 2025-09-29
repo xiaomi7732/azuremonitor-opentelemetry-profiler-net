@@ -15,6 +15,16 @@ internal class AgentStatusSender : IAgentStatusSender
 
     public Task SendAsync(ProfilerAgentStatus agentStatus, string reason, CancellationToken cancellationToken)
     {
+        if (agentStatus is null)
+        {
+            throw new ArgumentNullException(nameof(agentStatus));
+        }
+
+        if (string.IsNullOrEmpty(reason))
+        {
+            throw new ArgumentException($"'{nameof(reason)}' cannot be null or empty.", nameof(reason));
+        }
+
         // Consider using a structured logging approach for better performance and readability. It's currently blocked by a compile error due to this bug: https://github.com/dotnet/extensions/issues/6733.
         _logger.LogInformation(ProfilerAgentStatus.TraceTelemetryFormat, ProfilerAgentStatus.EventName, agentStatus.Status, agentStatus.RoleInstance, reason);
         return Task.CompletedTask;
