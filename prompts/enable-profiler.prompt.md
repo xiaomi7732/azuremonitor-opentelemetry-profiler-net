@@ -28,7 +28,7 @@ Here are the steps you need to follow:
   // Import the Azure.Monitor.OpenTelemetry.Profiler namespace.
   using Azure.Monitor.OpenTelemetry.Profiler;
 
-  ...
+  // ...
   builder.Services.AddOpenTelemetry()
         .UseAzureMonitor()
         .AddAzureMonitorProfiler();  // Add Azure Monitor Profiler
