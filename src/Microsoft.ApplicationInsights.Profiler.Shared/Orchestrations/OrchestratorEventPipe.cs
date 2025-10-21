@@ -120,18 +120,6 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             switch (status)
             {
                 case AgentStatus.Active:
-                    CancellationTokenSource newCancellationTokenSource = new();
-                    CancellationTokenSource oldCancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, newCancellationTokenSource);
-                    oldCancellationTokenSource.Cancel();
-                    oldCancellationTokenSource.Dispose();
-
-                    // Go through each provided policy and start them
-                    List<Task> policyAsync = [];
-                    foreach (SchedulingPolicy policy in _policyCollection)
-                    {
-                        policyAsync.Add(policy.StartPolicyAsync(newCancellationTokenSource.Token));
-                    }
-
                     _logger.LogDebug("Starting all scheduling policies.");
                     // Atomically start schedules exactly once when none are currently running.
                     while (true)
@@ -141,6 +129,18 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         {
                             _logger.LogWarning("The schedules are already running.");
                             break;
+                        }
+
+                        CancellationTokenSource newCancellationTokenSource = new();
+                        CancellationTokenSource oldCancellationTokenSource = Interlocked.Exchange(ref _cancellationTokenSource, newCancellationTokenSource);
+                        oldCancellationTokenSource.Cancel();
+                        oldCancellationTokenSource.Dispose();
+
+                        // Go through each provided policy and start them
+                        List<Task> policyAsync = [];
+                        foreach (SchedulingPolicy policy in _policyCollection)
+                        {
+                            policyAsync.Add(policy.StartPolicyAsync(newCancellationTokenSource.Token));
                         }
 
                         var schedulesTask = Task.WhenAll(policyAsync);
