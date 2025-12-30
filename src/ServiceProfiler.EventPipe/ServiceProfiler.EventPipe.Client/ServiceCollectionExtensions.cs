@@ -147,9 +147,22 @@ internal static class ServiceCollectionExtensions
         // Profiler context
         services.AddSingleton(static p =>
         {
-            ConnectionString connectionString = p.GetRequiredService<ConnectionString>();
+            ConnectionString? connectionString = p.GetService<ConnectionString>();
+
+            // If connection string is null, return null context.
+            string breezeEndpoint;
+            if (connectionString is null)
+            {
+                // Use a placeholder endpoint to avoid null reference exceptions downstream.
+                breezeEndpoint = "https://placeholder.endpoint/";
+            }
+            else
+            {
+                breezeEndpoint = ConnectionStringFeatures.GetIngestionEndpoint(connectionString).AbsoluteUri;
+            }
+
             IEndpointProvider endpointProvider = p.GetRequiredService<IEndpointProvider>();
-            return new AppInsightsProfileFetcher(breezeEndpoint: ConnectionStringFeatures.GetIngestionEndpoint(connectionString).AbsoluteUri);
+            return new AppInsightsProfileFetcher(breezeEndpoint: breezeEndpoint);
         });
 
         services.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();
@@ -187,7 +200,7 @@ internal static class ServiceCollectionExtensions
                 return ActivatorUtilities.CreateInstance<RemoteProfilerSettingsService>(p);
             }
         });
-        
+
         services.AddHostedService(p =>
         {
             BackgroundService backgroundService = (BackgroundService)p.GetRequiredService<IProfilerSettingsService>();
