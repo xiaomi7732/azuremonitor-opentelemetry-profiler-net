@@ -6,6 +6,7 @@ using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Options;
 using System;
@@ -31,7 +32,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             // Add Service Profiler Background Service
             if (!services.Any(descriptor =>
-                descriptor.ImplementationType == typeof(ServiceProfilerBackgroundService)))
+                descriptor.ImplementationType == typeof(ProfilerBackgroundService)))
             {
                 services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
                 {
@@ -41,7 +42,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p) :
                         ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
                 });
-                services.AddHostedService<ServiceProfilerBackgroundService>();
+                services.AddHostedService<ProfilerBackgroundService>();
             }
 
             return services;
