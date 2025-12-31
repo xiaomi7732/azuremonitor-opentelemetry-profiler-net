@@ -4,6 +4,8 @@
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.FrontendClient;
@@ -15,9 +17,10 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 internal sealed class RemoteSettingsService : RemoteSettingsServiceBase
 {
     public RemoteSettingsService(
+        BootstrapState bootstrapState,
         IProfilerFrontendClient frontendClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
-        ILogger<RemoteSettingsService> logger) : base(frontendClient, userConfigurationOptions, logger)
+        ILogger<RemoteSettingsService> logger) : base(bootstrapState, frontendClient, userConfigurationOptions, logger)
     {
     }
 

@@ -34,6 +34,7 @@ namespace Microsoft.Extensions.DependencyInjection
             if (!services.Any(descriptor =>
                 descriptor.ImplementationType == typeof(ProfilerBackgroundService)))
             {
+                services.AddSingleton<BootstrapState>();
                 services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
                 {
                     UserConfiguration userConfiguration = p.GetRequiredService<IOptions<UserConfiguration>>().Value;

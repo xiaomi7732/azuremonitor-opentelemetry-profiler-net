@@ -22,7 +22,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.MetricsProviders;

@@ -59,7 +59,7 @@ internal static class ServiceCollectionExtensions
             if (!ConnectionString.TryParse(connectionStringValue, out ConnectionString instance))
             {
                 ILogger logger = p.GetRequiredService<ILogger<ConnectionString>>();
-                logger.LogError("Connection string is not set or is invalid. Connection string provided: {connectionString}", connectionStringValue);
+                logger.LogDebug("Connection string is not set or is invalid. Connection string provided: {connectionString}", connectionStringValue);
             }
 
             return instance;

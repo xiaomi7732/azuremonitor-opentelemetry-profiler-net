@@ -3,6 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
-internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfilerSettingsService
+internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBase, IProfilerSettingsService
 {
     /// <summary>
     /// The timeout for waiting for initialization.
@@ -36,9 +38,11 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
     public event Action<SettingsContract>? SettingsUpdated;
 
     public RemoteSettingsServiceBase(
+        BootstrapState bootstrapState,
         IProfilerFrontendClient frontendClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
         ILogger<RemoteSettingsServiceBase> logger)
+        : base(bootstrapState, logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _userConfiguration = userConfigurationOptions.Value ?? throw new ArgumentNullException(nameof(userConfigurationOptions));
@@ -116,8 +120,14 @@ internal abstract class RemoteSettingsServiceBase : BackgroundService, IProfiler
         SettingsUpdated?.Invoke(settingsContract);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAfterProfilerBootstrapAsync(bool isProfilerBootstrapped, CancellationToken cancellationToken)
     {
+        if (!isProfilerBootstrapped)
+        {
+            _logger.LogInformation("Profiler is not correctly bootstrapped. Remote settings service will not start.");
+            return;
+        }
+
         _logger.LogTrace("Remote settings service is starting.");
 
         if (_standaloneMode)

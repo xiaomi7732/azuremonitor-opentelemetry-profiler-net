@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared;
 
 internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 {
+    private readonly BootstrapState _bootstrapState;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IOrchestrator _orchestrator;
     private readonly UserConfigurationBase _userConfiguration;
@@ -24,6 +26,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     private readonly ILogger _logger;
 
     public ServiceProfilerAgentBootstrap(
+        BootstrapState bootstrapState,
         IServiceProfilerContext serviceProfilerContext,
         IOrchestrator orchestrator,
         IOptions<UserConfigurationBase> userConfiguration,
@@ -38,6 +41,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         _compatibilityUtilityFactory = compatibilityUtilityFactory ?? throw new ArgumentNullException(nameof(compatibilityUtilityFactory));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _eventPipeEnvironmentCheckService = eventPipeEnvironmentCheckService ?? throw new ArgumentNullException(nameof(eventPipeEnvironmentCheckService));
+        _bootstrapState = bootstrapState ?? throw new ArgumentNullException(nameof(bootstrapState));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
     }
@@ -54,6 +58,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         if (_userConfiguration.IsDisabled)
         {
             _logger.LogInformation("Service Profiler is disabled by the configuration.");
+            Activated(false);
             return;
         }
 
@@ -66,12 +71,14 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         {
             _logger.LogError("Compatibility test failed. Reason: {reason}" + Environment.NewLine +
                 "Bypass the compatibility test by setting environment variable of ServiceProfiler__IsSkipCompatibilityTest to true.", reason);
+            Activated(false);
             return;
         }
 
-        if(!_eventPipeEnvironmentCheckService.IsEnvironmentSuitable())
+        if (!_eventPipeEnvironmentCheckService.IsEnvironmentSuitable())
         {
             _logger.LogError("Environment check failed. Profiler is disabled.");
+            Activated(false);
             return;
         }
 
@@ -81,18 +88,23 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
             if (string.IsNullOrEmpty(_serviceProfilerContext.ConnectionString?.ToString()))
             {
                 _logger.LogError(noConnectionStringMessage);
+                Activated(false);
                 return;
-
             }
 
             // Instrumentation key is well-formed.
             if (_serviceProfilerContext.AppInsightsInstrumentationKey == Guid.Empty)
             {
                 _logger.LogError("Instrumentation key is not set or malformed in the connection string. Application Insights Profiler won't start.");
+                Activated(false);
                 return;
             }
 
             _logger.LogInformation("Starting application insights profiler with connection string: {connectionString}", _serviceProfilerContext.ConnectionString);
+
+            // Signal activation BEFORE starting orchestrator to avoid circular wait
+            Activated(true);
+
             await _orchestrator.StartAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
@@ -104,15 +116,23 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         {
             Debug.Fail("You hit the safety net! How could it escape the instrumentation key check?");
             _logger.LogError(noConnectionStringMessage);
+            Activated(false);
             return;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error.");
+            _logger.LogError(ex, "Unexpected error during profiler activation.");
+            _logger.LogTrace(ex, "Full stack trace: {stackTrace}", ex.ToString());
+            Activated(false); // Ensure activation event fires even on failure
             if (_userConfiguration.AllowsCrash)
             {
                 throw;
             }
         }
+    }
+
+    private void Activated(bool isRunning)
+    {
+        _bootstrapState.SetProfilerRunning(isRunning);
     }
 }

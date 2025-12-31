@@ -110,6 +110,7 @@ public static class OpenTelemetryBuilderExtensions
 
         services.AddServiceProfilerCore();
 
+        services.AddSingleton<BootstrapState>();
         services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
         {
             ServiceProfilerOptions userConfiguration = GetRequiredOptions<ServiceProfilerOptions>(p);
