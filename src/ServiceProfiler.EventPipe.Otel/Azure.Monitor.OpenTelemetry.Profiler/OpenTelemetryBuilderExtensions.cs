@@ -93,13 +93,6 @@ public static class OpenTelemetryBuilderExtensions
             {
                 opt.ConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
             }
-
-            // Fast fail when the connection string is not set.
-            // This should never happen, or the profiler is not going to work.
-            if (string.IsNullOrEmpty(opt.ConnectionString))
-            {
-                throw new InvalidOperationException("Connection string can't be fetched. Please follow the instructions to setup connection string properly.");
-            }
         });
 
         services.AddSingleton<IOptions<UserConfigurationBase>>(p =>

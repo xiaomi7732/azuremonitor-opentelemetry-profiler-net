@@ -21,6 +21,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.DataContract.Settings;
 using Microsoft.ServiceProfiler.Orchestration;
@@ -174,13 +175,18 @@ internal static class ServiceCollectionExtensions
 
     private static IServiceCollection AddConnectionString(this IServiceCollection services)
     {
-        services.AddSingleton(p =>
+        services.AddSingleton<ConnectionString>(p =>
         {
             ServiceProfilerOptions serviceProfilerOptions = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value ?? throw new InvalidOperationException("ServiceProfilerOptions is required to be set.");
-            string connectionStringValue = serviceProfilerOptions.ConnectionString ?? throw new InvalidOperationException("Connection string is required. Please make sure its properly set.");
-            return ConnectionString.TryParse(connectionStringValue, out ConnectionString? connectionString)
-                ? connectionString
-                : throw new InvalidOperationException($"Invalid connection string: {connectionStringValue}");
+            string? connectionStringValue = serviceProfilerOptions.ConnectionString;
+
+            if (!ConnectionString.TryParse(connectionStringValue, out ConnectionString instance))
+            {
+                ILogger logger = p.GetRequiredService<ILogger<ConnectionString>>();
+                logger.LogDebug("Connection string is not set or is invalid. Connection string provided: {connectionString}", connectionStringValue);
+            }
+            
+            return instance;
         });
 
         return services;
