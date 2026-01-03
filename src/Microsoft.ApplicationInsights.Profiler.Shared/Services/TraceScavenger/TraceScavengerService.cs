@@ -15,7 +15,7 @@ using Microsoft.ServiceProfiler.Utilities;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
 
-internal class TraceScavengerService : BackgroundService
+internal class TraceScavengerService : DependantBackgroundServiceBase
 {
     private readonly ILogger _logger;
     private readonly TraceScavengerServiceOptions _options;
@@ -26,10 +26,12 @@ internal class TraceScavengerService : BackgroundService
     private Task? _scavengerTask; // background loop task
 
     public TraceScavengerService(
+        BootstrapState bootstrapState,
         IOptions<UserConfigurationBase> userConfiguration,
         FileScavenger fileScavenger,
         IAgentStatusService agentStatusService,
         ILogger<TraceScavengerService> logger)
+        : base(bootstrapState, logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -37,23 +39,6 @@ internal class TraceScavengerService : BackgroundService
         _options = _userConfiguration.TraceScavenger ?? throw new ArgumentNullException(nameof(userConfiguration));
         _fileScavenger = fileScavenger ?? throw new ArgumentNullException(nameof(fileScavenger));
         _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        if (_userConfiguration.IsDisabled)
-        {
-            _logger.LogDebug("No trace scavenger when the profiler is disabled.");
-            return;
-        }
-
-        TimeSpan initialDelay = _options.InitialDelay;
-        _logger.LogInformation("{serviceName} started. Initial delay: {delay}, Grace period from last access: {gracePeriod}", nameof(TraceScavengerService), initialDelay, _options.GracePeriod);
-        await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
-
-        AgentStatus initialStatus = await _agentStatusService.InitializeAsync(stoppingToken).ConfigureAwait(false);
-        await OnAgentStatusChanged(initialStatus, "Initial status").ConfigureAwait(false);
-        _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
 
     private Task OnAgentStatusChanged(AgentStatus status, string _)
@@ -122,7 +107,7 @@ internal class TraceScavengerService : BackgroundService
             _logger.LogError(ex, "Error occurred when disposing trace scavenger: {message}", ex.Message);
         }
         catch (OperationCanceledException)
-        { 
+        {
             _logger.LogTrace("Trace scavenger task cancellation requested during dispose.");
         }
         finally
@@ -131,5 +116,28 @@ internal class TraceScavengerService : BackgroundService
         }
 
         base.Dispose();
+    }
+
+    protected override async Task ExecuteAfterProfilerBootstrapAsync(bool isProfilerBootstrapped, CancellationToken stoppingToken)
+    {
+        if(!isProfilerBootstrapped)
+        {
+            _logger.LogInformation("No trace scavenger when the profiler is not bootstrapped.");
+            return;
+        }
+
+        if (_userConfiguration.IsDisabled)
+        {
+            _logger.LogDebug("No trace scavenger when the profiler is disabled.");
+            return;
+        }
+
+        TimeSpan initialDelay = _options.InitialDelay;
+        _logger.LogInformation("{serviceName} started. Initial delay: {delay}, Grace period from last access: {gracePeriod}", nameof(TraceScavengerService), initialDelay, _options.GracePeriod);
+        await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
+
+        AgentStatus initialStatus = await _agentStatusService.InitializeAsync(stoppingToken).ConfigureAwait(false);
+        await OnAgentStatusChanged(initialStatus, "Initial status").ConfigureAwait(false);
+        _agentStatusService.StatusChanged += OnAgentStatusChanged;
     }
 }

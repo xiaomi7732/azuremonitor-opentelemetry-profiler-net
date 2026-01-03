@@ -13,12 +13,15 @@ internal class ServiceProfilerContext : IServiceProfilerContext
     private readonly ILogger _logger;
 
     public ServiceProfilerContext(
-        ConnectionString connectionString,
+        ConnectionString? connectionString,
         IEndpointProvider endpointProvider,
         ILogger<ServiceProfilerContext> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        
+        // Allow null connection string for local development scenarios.
+        ConnectionString = connectionString;
+        
         _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
 
         StampFrontendEndpointUrl = _endpointProvider.GetEndpoint();
@@ -32,7 +35,7 @@ internal class ServiceProfilerContext : IServiceProfilerContext
 
     public Uri StampFrontendEndpointUrl { get; }
 
-    public Guid AppInsightsInstrumentationKey => ConnectionString.InstrumentationKeyGuid;
+    public Guid AppInsightsInstrumentationKey => ConnectionString is null ? Guid.Empty : ConnectionString.InstrumentationKeyGuid;
 
-    public ConnectionString ConnectionString { get; }
+    public ConnectionString? ConnectionString { get; }
 }

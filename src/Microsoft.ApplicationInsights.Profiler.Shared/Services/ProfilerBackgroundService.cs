@@ -4,9 +4,15 @@
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Azure.Monitor.OpenTelemetry.Profiler;
+namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
+/// <summary>
+/// A background service to trigger profiler bootstrap.
+/// </summary>
 internal class ProfilerBackgroundService : BackgroundService
 {
     private readonly IServiceProfilerAgentBootstrap _bootstrap;

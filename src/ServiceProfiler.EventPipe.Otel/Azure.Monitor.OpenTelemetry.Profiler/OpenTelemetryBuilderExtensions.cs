@@ -5,6 +5,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,13 +93,6 @@ public static class OpenTelemetryBuilderExtensions
             {
                 opt.ConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
             }
-
-            // Fast fail when the connection string is not set.
-            // This should never happen, or the profiler is not going to work.
-            if (string.IsNullOrEmpty(opt.ConnectionString))
-            {
-                throw new InvalidOperationException("Connection string can't be fetched. Please follow the instructions to setup connection string properly.");
-            }
         });
 
         services.AddSingleton<IOptions<UserConfigurationBase>>(p =>
@@ -109,6 +103,7 @@ public static class OpenTelemetryBuilderExtensions
 
         services.AddServiceProfilerCore();
 
+        services.AddSingleton<BootstrapState>();
         services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
         {
             ServiceProfilerOptions userConfiguration = GetRequiredOptions<ServiceProfilerOptions>(p);

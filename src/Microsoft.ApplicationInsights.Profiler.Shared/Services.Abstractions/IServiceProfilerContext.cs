@@ -9,7 +9,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 internal interface IServiceProfilerContext
 {
-    ConnectionString ConnectionString { get; }
+    ConnectionString? ConnectionString { get; }
 
     Guid AppInsightsInstrumentationKey { get; }
 

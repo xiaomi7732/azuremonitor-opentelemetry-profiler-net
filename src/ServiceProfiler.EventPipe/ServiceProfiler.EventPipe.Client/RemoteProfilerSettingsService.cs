@@ -6,6 +6,7 @@ using System;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,10 +20,11 @@ internal sealed class RemoteProfilerSettingsService : RemoteSettingsServiceBase
     private readonly IServiceProvider _serviceProvider;
 
     public RemoteProfilerSettingsService(
+        BootstrapState bootstrap,
         IProfilerFrontendClient frontendClient,
         IOptions<UserConfiguration> userConfigurationOptions,
         ILogger<RemoteProfilerSettingsService> logger,
-        IServiceProvider serviceProvider) : base(frontendClient, userConfigurationOptions, logger)
+        IServiceProvider serviceProvider) : base(bootstrap, frontendClient, userConfigurationOptions, logger)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
