@@ -5,8 +5,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 internal sealed class BootstrapState : IDisposable
 {
+    private bool _isDisposed = false;
+
     private readonly ManualResetEventSlim _eventWaitHandle = new(initialState: false);
-    private bool _isProfilerRunning;
+    private volatile bool _isProfilerRunning;
 
     /// <summary>
     /// Sets the profiler running state and signals any waiters.
@@ -30,6 +32,22 @@ internal sealed class BootstrapState : IDisposable
 
     public void Dispose()
     {
-        _eventWaitHandle.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _eventWaitHandle.Dispose();
+        }
+
+        _isDisposed = true;
     }
 }
