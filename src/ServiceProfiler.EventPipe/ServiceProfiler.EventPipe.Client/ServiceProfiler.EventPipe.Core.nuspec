@@ -30,7 +30,7 @@
         <dependency id="Microsoft.Extensions.Configuration.Json" version="$MicrosoftExtensionsConfigurationJsonVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Hosting.Abstractions" version="$MicrosoftExtensionsHostingAbstractionsVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Debug" version="$MicrosoftExtensionsLoggingDebugVersion$" exclude="Build,Analyzers" />
-        <dependency id="System.Linq.Async" version="$SystemLinqAsyncVersion$" exclude="Build,Analyzers" />
+        <dependency id="System.Linq.AsyncEnumerable" version="$SystemLinqAsyncEnumerableVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Diagnostics.DiagnosticSource" version="$SystemDiagnosticsDiagnosticSourceVersion$" exclude="Build,Analyzers" />
         <dependency id="System.Diagnostics.PerformanceCounter" version="$SystemDiagnosticsPerformanceCounterVersion$" exclude="Build,Analyzers" />
         <dependency id="System.IdentityModel.Tokens.Jwt" version="$SystemIdentityModelTokensJwtVersion$" exclude="Build,Analyzers" />
