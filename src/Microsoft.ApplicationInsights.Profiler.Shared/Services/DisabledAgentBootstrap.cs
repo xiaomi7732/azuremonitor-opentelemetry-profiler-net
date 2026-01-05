@@ -30,6 +30,7 @@ internal class DisabledAgentBootstrap : IServiceProfilerAgentBootstrap
     public Task ActivateAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Service Profiler is disabled by user configuration.");
+        cancellationToken.ThrowIfCancellationRequested();
         _bootstrapState.SetProfilerRunning(false);
         return Task.CompletedTask;
     }
