@@ -272,8 +272,16 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                             if (result)
                             {
                                 _logger.LogDebug("Profiler stopped by {source}", policy.Source);
-                                _currentProfilingPolicy = null;
                             }
+                            else
+                            {
+                                _logger.LogWarning("StopProfiler reported failure for {source}.", policy.Source);
+                            }
+
+                            // Always clear the policy on the non-exception return path.
+                            // StopServiceProfilerAsync guarantees the semaphore is released before returning,
+                            // so the profiler is no longer running regardless of the result value.
+                            _currentProfilingPolicy = null;
                         }
                         else
                         {
