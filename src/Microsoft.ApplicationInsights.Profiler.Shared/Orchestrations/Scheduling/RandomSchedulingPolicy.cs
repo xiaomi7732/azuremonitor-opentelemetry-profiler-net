@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
@@ -58,6 +57,8 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
     public override async IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         double clampedRate = Math.Clamp(_samplingRate, 0, 1);
         if (clampedRate != _samplingRate)
         {
@@ -68,7 +69,6 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         {
             Logger.LogWarning("ProfilingDuration {duration} is not positive. Falling back to standby.", ProfilingDuration);
             yield return (_standbyDuration, ProfilerAction.Standby);
-            await Task.CompletedTask.ConfigureAwait(false);
             yield break;
         }
 
@@ -76,6 +76,8 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         {
             Logger.LogDebug("Coin flip succeeded (rate={samplingRate:P}). Starting profiling session for {duration}.", clampedRate, ProfilingDuration);
             yield return (ProfilingDuration, ProfilerAction.StartProfilingSession);
+
+            cancellationToken.ThrowIfCancellationRequested();
             yield return (ProfilingCooldown, ProfilerAction.Standby);
         }
         else
@@ -83,8 +85,6 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             Logger.LogDebug("Coin flip missed (rate={samplingRate:P}). Standing by for {standby}.", clampedRate, _standbyDuration);
             yield return (_standbyDuration, ProfilerAction.Standby);
         }
-
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     protected override bool PolicyNeedsRefresh()
