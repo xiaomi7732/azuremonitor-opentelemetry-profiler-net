@@ -59,10 +59,19 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        double clampedRate = Math.Clamp(_samplingRate, 0, 1);
-        if (clampedRate != _samplingRate)
+        double clampedRate;
+        if (double.IsNaN(_samplingRate) || double.IsInfinity(_samplingRate))
         {
-            Logger.LogWarning("SamplingRate {samplingRate} is outside the valid range [0, 1]. Clamping to {clampedRate}.", _samplingRate, clampedRate);
+            Logger.LogWarning("SamplingRate {samplingRate} is not a finite number. Defaulting to 0 (no profiling).", _samplingRate);
+            clampedRate = 0;
+        }
+        else
+        {
+            clampedRate = Math.Clamp(_samplingRate, 0, 1);
+            if (clampedRate != _samplingRate)
+            {
+                Logger.LogWarning("SamplingRate {samplingRate} is outside the valid range [0, 1]. Clamping to {clampedRate}.", _samplingRate, clampedRate);
+            }
         }
 
         // Ensure standby is never zero/negative to prevent a tight spin loop.
