@@ -71,7 +71,7 @@ internal class ProfilerSettings
             Enabled = parsedSettings.Enabled;
             // Merge rather than replace: only overwrite properties the server explicitly set.
             // Replacing the whole object would silently overwrite user-configured local settings
-            // (e.g., RandomProfilingOverhead) with defaults when the server doesn't set them.
+            // (e.g., SamplingRate) with defaults when the server doesn't set them.
             // Fall back to assignment when the local instance is null to preserve null-tolerance.
             if (SamplingOptions is not null && parsedSettings.Engine.SamplingOptions is not null)
                 SamplingOptions.Merge(parsedSettings.Engine.SamplingOptions);

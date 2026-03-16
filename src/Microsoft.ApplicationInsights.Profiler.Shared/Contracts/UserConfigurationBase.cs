@@ -53,16 +53,6 @@ public abstract class UserConfigurationBase
     public bool IsDisabled { get; set; } = false;
 
     /// <summary>
-    /// Gets or sets the overhead for random profiling.
-    /// The rate is used to calculate the time of profiling in average per hour.
-    /// Basically, n = (60 * overhead rate) / profiling-duration
-    /// 
-    /// The default value is 0.01, which means 1%. 
-    /// </summary>
-    [Obsolete("Use SamplingRate instead. This property will be removed in a future version.")]
-    public float RandomProfilingOverhead { get; set; } = 0.01F;
-
-    /// <summary>
     /// Gets or sets the sampling rate for random profiling.
     /// At each scheduling cycle, the profiler flips a coin: if <c>random &lt; SamplingRate</c>,
     /// a profiling session starts; otherwise the profiler stands by.
