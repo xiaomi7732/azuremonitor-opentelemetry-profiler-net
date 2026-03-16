@@ -65,10 +65,17 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             Logger.LogWarning("SamplingRate {samplingRate} is outside the valid range [0, 1]. Clamping to {clampedRate}.", _samplingRate, clampedRate);
         }
 
+        // Ensure standby is never zero/negative to prevent a tight spin loop.
+        TimeSpan effectiveStandby = _standbyDuration > TimeSpan.Zero ? _standbyDuration : PollingInterval;
+        if (effectiveStandby != _standbyDuration)
+        {
+            Logger.LogWarning("StandbyDuration {standby} is not positive. Falling back to PollingInterval {polling}.", _standbyDuration, PollingInterval);
+        }
+
         if (ProfilingDuration.TotalSeconds <= 0)
         {
             Logger.LogWarning("ProfilingDuration {duration} is not positive. Falling back to standby.", ProfilingDuration);
-            yield return (_standbyDuration, ProfilerAction.Standby);
+            yield return (effectiveStandby, ProfilerAction.Standby);
             yield break;
         }
 
@@ -82,8 +89,8 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
         }
         else
         {
-            Logger.LogDebug("Coin flip missed (rate={samplingRate:P}). Standing by for {standby}.", clampedRate, _standbyDuration);
-            yield return (_standbyDuration, ProfilerAction.Standby);
+            Logger.LogDebug("Coin flip missed (rate={samplingRate:P}). Standing by for {standby}.", clampedRate, effectiveStandby);
+            yield return (effectiveStandby, ProfilerAction.Standby);
         }
     }
 
