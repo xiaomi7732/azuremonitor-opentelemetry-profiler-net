@@ -64,6 +64,14 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
             Logger.LogWarning("SamplingRate {samplingRate} is outside the valid range [0, 1]. Clamping to {clampedRate}.", _samplingRate, clampedRate);
         }
 
+        if (ProfilingDuration.TotalSeconds <= 0)
+        {
+            Logger.LogWarning("ProfilingDuration {duration} is not positive. Falling back to standby.", ProfilingDuration);
+            yield return (_standbyDuration, ProfilerAction.Standby);
+            await Task.CompletedTask.ConfigureAwait(false);
+            yield break;
+        }
+
         if (_randomSource.NextDouble() < clampedRate)
         {
             Logger.LogDebug("Coin flip succeeded (rate={samplingRate:P}). Starting profiling session for {duration}.", clampedRate, ProfilingDuration);
