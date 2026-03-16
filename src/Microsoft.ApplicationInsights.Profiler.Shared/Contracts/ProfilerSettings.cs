@@ -42,22 +42,7 @@ internal class ProfilerSettings
         _settingsParser = settingsParser ?? throw new ArgumentNullException(nameof(settingsParser));
 
         Enabled = !userConfiguration.Value.IsDisabled;
-
-        // Prefer the new SamplingRate property. Fall back to the legacy
-        // RandomProfilingOverhead when the caller hasn't explicitly set SamplingRate
-        // (i.e. it still has its default value of 0.05) but has changed the old property.
-#pragma warning disable CS0618 // Type or member is obsolete
-        double effectiveSamplingRate = userConfiguration.Value.SamplingRate;
-        float legacyOverhead = userConfiguration.Value.RandomProfilingOverhead;
-        const double newDefault = 0.05;
-        const float legacyDefault = 0.01F;
-        if (effectiveSamplingRate == newDefault && legacyOverhead != legacyDefault)
-        {
-            // User only configured the legacy property — honour it.
-            effectiveSamplingRate = legacyOverhead;
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
-        SamplingOptions.SamplingRate = effectiveSamplingRate;
+        SamplingOptions.SamplingRate = userConfiguration.Value.SamplingRate;
         SamplingOptions.ProfilingDurationInSeconds = (int)userConfiguration.Value.Duration.TotalSeconds;
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
