@@ -14,7 +14,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         public void ShouldHaveMeaningfulDefaultValues()
         {
             // Whenever a property is added or removed, this needs to be updated.
-            const int expectedPropertyNum = 24;
+            const int expectedPropertyNum = 25;
             int propertyCount = typeof(UserConfiguration).GetTypeInfo().DeclaredProperties.Count();
             int propertyOffBaseClassCount = typeof(UserConfigurationBase).GetTypeInfo().DeclaredProperties.Count();
 
@@ -34,6 +34,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Assert.Equal(UploadMode.OnSuccess, configuration.UploadMode);
             Assert.Equal(TimeSpan.FromSeconds(5), configuration.ConfigurationUpdateFrequency);
             Assert.Equal(0.01f, configuration.RandomProfilingOverhead);
+            Assert.Equal(0.05, configuration.SamplingRate);
             Assert.Equal(80.0F, configuration.CPUTriggerThreshold);
             Assert.Equal(80.0F, configuration.MemoryTriggerThreshold);
             Assert.False(configuration.StandaloneMode);

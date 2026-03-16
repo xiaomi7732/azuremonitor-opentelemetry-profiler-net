@@ -59,7 +59,16 @@ public abstract class UserConfigurationBase
     /// 
     /// The default value is 0.01, which means 1%. 
     /// </summary>
+    [Obsolete("Use SamplingRate instead. This property will be removed in a future version.")]
     public float RandomProfilingOverhead { get; set; } = 0.01F;
+
+    /// <summary>
+    /// Gets or sets the sampling rate for random profiling.
+    /// At each scheduling cycle, the profiler flips a coin: if <c>random &lt; SamplingRate</c>,
+    /// a profiling session starts; otherwise the profiler stands by.
+    /// Valid range is [0, 1]. Default value is 0.05 (5%).
+    /// </summary>
+    public double SamplingRate { get; set; } = 0.05;
 
     /// <summary>
     /// Gets or sets the value to enable or disable the compatibility test before invoking the Service Profiler. Service Profiler will be disabled
