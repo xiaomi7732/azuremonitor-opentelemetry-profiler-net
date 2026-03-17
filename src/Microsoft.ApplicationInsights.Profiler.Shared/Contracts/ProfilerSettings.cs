@@ -42,7 +42,7 @@ internal class ProfilerSettings
         _settingsParser = settingsParser ?? throw new ArgumentNullException(nameof(settingsParser));
 
         Enabled = !userConfiguration.Value.IsDisabled;
-        SamplingOptions.SamplingRate = userConfiguration.Value.RandomProfilingOverhead;
+        SamplingOptions.SamplingRate = userConfiguration.Value.SamplingRate;
         SamplingOptions.ProfilingDurationInSeconds = (int)userConfiguration.Value.Duration.TotalSeconds;
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
@@ -69,9 +69,24 @@ internal class ProfilerSettings
         {
             parsedSettings.Enabled = settingsContract.Enabled;
             Enabled = parsedSettings.Enabled;
-            SamplingOptions = parsedSettings.Engine.SamplingOptions ?? SamplingOptions;
-            CpuTriggerSettings = parsedSettings.Engine.CpuTriggerSettings ?? CpuTriggerSettings;
-            MemoryTriggerSettings = parsedSettings.Engine.MemoryTriggerSettings ?? MemoryTriggerSettings;
+            // Merge rather than replace: only overwrite properties the server explicitly set.
+            // Replacing the whole object would silently overwrite user-configured local settings
+            // (e.g., SamplingRate) with defaults when the server doesn't set them.
+            // Fall back to assignment when the local instance is null to preserve null-tolerance.
+            if (SamplingOptions is not null && parsedSettings.Engine.SamplingOptions is not null)
+                SamplingOptions.Merge(parsedSettings.Engine.SamplingOptions);
+            else
+                SamplingOptions = parsedSettings.Engine.SamplingOptions ?? SamplingOptions;
+
+            if (CpuTriggerSettings is not null && parsedSettings.Engine.CpuTriggerSettings is not null)
+                CpuTriggerSettings.Merge(parsedSettings.Engine.CpuTriggerSettings);
+            else
+                CpuTriggerSettings = parsedSettings.Engine.CpuTriggerSettings ?? CpuTriggerSettings;
+
+            if (MemoryTriggerSettings is not null && parsedSettings.Engine.MemoryTriggerSettings is not null)
+                MemoryTriggerSettings.Merge(parsedSettings.Engine.MemoryTriggerSettings);
+            else
+                MemoryTriggerSettings = parsedSettings.Engine.MemoryTriggerSettings ?? MemoryTriggerSettings;
             CollectionPlan = settingsContract.CollectionPlan ?? CollectionPlan;
             Engine = parsedSettings.Engine ?? Engine;
         }

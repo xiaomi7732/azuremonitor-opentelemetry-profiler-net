@@ -33,7 +33,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             Assert.False(configuration.SkipEndpointCertificateValidation);
             Assert.Equal(UploadMode.OnSuccess, configuration.UploadMode);
             Assert.Equal(TimeSpan.FromSeconds(5), configuration.ConfigurationUpdateFrequency);
-            Assert.Equal(0.01f, configuration.RandomProfilingOverhead);
+            Assert.Equal(0.05, configuration.SamplingRate);
             Assert.Equal(80.0F, configuration.CPUTriggerThreshold);
             Assert.Equal(80.0F, configuration.MemoryTriggerThreshold);
             Assert.False(configuration.StandaloneMode);

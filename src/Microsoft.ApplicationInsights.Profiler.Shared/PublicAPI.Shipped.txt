@@ -63,8 +63,8 @@ Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.Pr
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.PreserveTraceFile.set -> void
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ProvideAnonymousTelemetry.get -> bool
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.ProvideAnonymousTelemetry.set -> void
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.RandomProfilingOverhead.get -> float
-Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.RandomProfilingOverhead.set -> void
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SamplingRate.get -> double
+Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SamplingRate.set -> void
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SkipEndpointCertificateValidation.get -> bool
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.SkipEndpointCertificateValidation.set -> void
 Microsoft.ApplicationInsights.Profiler.Shared.Contracts.UserConfigurationBase.StandaloneMode.get -> bool

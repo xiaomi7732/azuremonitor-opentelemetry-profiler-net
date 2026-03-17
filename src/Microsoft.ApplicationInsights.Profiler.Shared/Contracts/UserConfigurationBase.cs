@@ -53,13 +53,12 @@ public abstract class UserConfigurationBase
     public bool IsDisabled { get; set; } = false;
 
     /// <summary>
-    /// Gets or sets the overhead for random profiling.
-    /// The rate is used to calculate the time of profiling in average per hour.
-    /// Basically, n = (60 * overhead rate) / profiling-duration
-    /// 
-    /// The default value is 0.01, which means 1%. 
+    /// Gets or sets the sampling rate for random profiling.
+    /// At each scheduling cycle, the profiler flips a coin: if <c>random &lt; SamplingRate</c>,
+    /// a profiling session starts; otherwise the profiler stands by.
+    /// Valid range is [0, 1]. Default value is 0.05 (5%).
     /// </summary>
-    public float RandomProfilingOverhead { get; set; } = 0.01F;
+    public double SamplingRate { get; set; } = 0.05;
 
     /// <summary>
     /// Gets or sets the value to enable or disable the compatibility test before invoking the Service Profiler. Service Profiler will be disabled

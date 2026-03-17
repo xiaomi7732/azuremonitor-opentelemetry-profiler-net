@@ -10,21 +10,22 @@ using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Orchestration.Modes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 
 /// <summary>
-/// Scheduling policy that will profile on a schedule such that a certain percentage of the day consists of profiling, the rest is idling.
+/// Scheduling policy that uses a coin-flip mechanism each cycle: with probability equal to
+/// the configured sampling rate a profiling session is started, otherwise the profiler
+/// stands by for a configured standby duration before the next coin flip.
 /// </summary>
 internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
 {
     private readonly IRandomSource _randomSource;
 
-    // Pre-calculate for 12 hours.
-    private static readonly TimeSpan _scheduleInterval = TimeSpan.FromHours(12);
-    private double _overhead;
+    private double _samplingRate;
+    private TimeSpan _standbyDuration;
 
     public RandomSchedulingPolicy(
         IOptions<UserConfigurationBase> userConfiguration,
@@ -49,82 +50,57 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
     {
         PolicyEnabled = profilerSettings.SamplingOptions.Enabled;
         _randomSource = randomSource ?? throw new ArgumentNullException(nameof(randomSource));
-        _overhead = profilerSettings.SamplingOptions.SamplingRate;
+        _samplingRate = profilerSettings.SamplingOptions.SamplingRate;
+        _standbyDuration = TimeSpan.FromSeconds(profilerSettings.SamplingOptions.StandbyDurationInSeconds);
     }
 
-    public override IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(CancellationToken cancellationToken)
+    public override async IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var result = new List<(TimeSpan duration, ProfilerAction action)>();
+        cancellationToken.ThrowIfCancellationRequested();
 
-        // Given this interval these are the number of possible segments for profiling
-        var targetCount = (int)Math.Round(_scheduleInterval.TotalSeconds * _overhead / ProfilingDuration.TotalSeconds);
-        Logger.LogDebug("Overhead is set to {overhead:p}. {count} profiling sessions expected over the period of {totalRunning}, each session will run for: {duration}. More periods will be scheduled in the future",
-            _overhead, targetCount, _scheduleInterval, ProfilingDuration);
-        // No segments needed. This will happen when overhead is set to 0.
-        if (targetCount == 0)
+        double clampedRate;
+        if (double.IsNaN(_samplingRate) || double.IsInfinity(_samplingRate))
         {
-            result.Add((PollingInterval, ProfilerAction.Standby));
-            return result.ToAsyncEnumerable();
+            Logger.LogWarning("SamplingRate {samplingRate} is not a finite number. Defaulting to 0 (no profiling).", _samplingRate);
+            clampedRate = 0;
         }
-
-        // Divide total duration into segments.
-        var segments = (int)Math.Round(_scheduleInterval.TotalSeconds / ProfilingDuration.TotalSeconds);
-        if (segments == 0)
+        else
         {
-            throw new InvalidOperationException("No valid segment for random scheduling.");
-        }
-
-        // Pick random segments according to how many random segments the user wants for this interval
-        var randomPicks = new HashSet<int>();
-        while (randomPicks.Count < targetCount)
-        {
-            var pick = _randomSource.Next() % segments;
-            if (!randomPicks.Contains(pick))
+            clampedRate = Math.Clamp(_samplingRate, 0, 1);
+            if (clampedRate != _samplingRate)
             {
-                randomPicks.Add(pick);
+                Logger.LogWarning("SamplingRate {samplingRate} is outside the valid range [0, 1]. Clamping to {clampedRate}.", _samplingRate, clampedRate);
             }
         }
 
-        // Figure out how long we should stand by between the randomly scheduling profiling events to fill in the interval
-        int accumulatedStandbySegments = 0;
-        foreach (var segment in Enumerable.Range(0, segments))
+        // Ensure standby is never zero/negative to prevent a tight spin loop.
+        TimeSpan effectiveStandby = _standbyDuration > TimeSpan.Zero ? _standbyDuration : PollingInterval;
+        if (effectiveStandby != _standbyDuration)
         {
-            if (randomPicks.Contains(segment))
-            {
-                // Flush accumulated standby segments
-                if (accumulatedStandbySegments > 0)
-                {
-                    TimeSpan newStandby = TimeSpan.FromSeconds(ProfilingDuration.TotalSeconds * accumulatedStandbySegments);
-                    MergeStandbyDuration(result, newStandby);
-                    accumulatedStandbySegments = 0;
-                }
-
-                // Invoke start profiling
-                result.Add((ProfilingDuration, ProfilerAction.StartProfilingSession));
-                // Stop the profiling afterwards.
-                result.Add((ProfilingCooldown, ProfilerAction.Standby));
-            }
-            else
-            {
-                accumulatedStandbySegments++;
-            }
+            Logger.LogWarning("StandbyDuration {standby} is not positive. Falling back to PollingInterval {polling}.", _standbyDuration, PollingInterval);
         }
 
-        // Flush accumulated standby segments
-        if (accumulatedStandbySegments > 0)
+        if (ProfilingDuration.TotalSeconds <= 0)
         {
-            TimeSpan newStandby = TimeSpan.FromSeconds(ProfilingDuration.TotalSeconds * accumulatedStandbySegments);
-            MergeStandbyDuration(result, newStandby);
+            Logger.LogWarning("ProfilingDuration {duration} is not positive. Falling back to standby.", ProfilingDuration);
+            yield return (effectiveStandby, ProfilerAction.Standby);
+            yield break;
         }
 
-#if DEBUG
-        int count = 0;
-        foreach (var plan in result)
+        if (_randomSource.NextDouble() < clampedRate)
         {
-            Logger.LogDebug("{0}.\tRandom plan - Duration: {1}, action: {2}", ++count, plan.Item1, plan.Item2);
+            Logger.LogDebug("Coin flip succeeded (rate={samplingRate:P}). Starting profiling session for {duration}.", clampedRate, ProfilingDuration);
+            yield return (ProfilingDuration, ProfilerAction.StartProfilingSession);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return (ProfilingCooldown, ProfilerAction.Standby);
         }
-#endif
-        return result.ToAsyncEnumerable();
+        else
+        {
+            Logger.LogDebug("Coin flip missed (rate={samplingRate:P}). Standing by for {standby}.", clampedRate, effectiveStandby);
+            yield return (effectiveStandby, ProfilerAction.Standby);
+        }
     }
 
     protected override bool PolicyNeedsRefresh()
@@ -136,24 +112,12 @@ internal sealed class RandomSchedulingPolicy : EventPipeSchedulingPolicy
 
         PolicyEnabled = UpdateRefreshAndGetSetting(samplingSettings.Enabled, PolicyEnabled, ref needsRefresh);
         ProfilingDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.ProfilingDurationInSeconds), ProfilingDuration, ref needsRefresh);
-        _overhead = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _overhead, ref needsRefresh);
+        _samplingRate = UpdateRefreshAndGetSetting(samplingSettings.SamplingRate, _samplingRate, ref needsRefresh);
+        _standbyDuration = UpdateRefreshAndGetSetting(TimeSpan.FromSeconds(samplingSettings.StandbyDurationInSeconds), _standbyDuration, ref needsRefresh);
 
         // Either the base policy needs refresh or any of the random sampling settings changed.
         return generalPolicyNeedsRefresh || needsRefresh;
     }
 
     public override string Source { get; } = nameof(RandomSchedulingPolicy);
-
-    private void MergeStandbyDuration(List<(TimeSpan duration, ProfilerAction action)> list, TimeSpan value)
-    {
-        int lastIndex = list.Count - 1;
-        if (list.Count > 0 && list[lastIndex].action == ProfilerAction.Standby)
-        {
-            list[lastIndex] = (list[lastIndex].duration.Add(value), ProfilerAction.Standby);
-        }
-        else
-        {
-            list.Add((value, ProfilerAction.Standby));
-        }
-    }
 }
