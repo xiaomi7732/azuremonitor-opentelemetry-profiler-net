@@ -40,7 +40,23 @@ internal class OutOfProcCaller : IOutOfProcCaller
     public int ExecuteAndWait(ProcessPriorityClass processPriorityClass = ProcessPriorityClass.Normal)
     {
         using Process p = ExecuteImp(processPriorityClass);
+        string stderr = p.StandardError.ReadToEnd();
+        string stdout = p.StandardOutput.ReadToEnd();
         p.WaitForExit();
+
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            _logger.LogDebug("Uploader stdout: {stdout}", stdout);
+        }
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            _logger.LogError("Uploader stderr: {stderr}", stderr);
+        }
+        if (p.ExitCode != 0)
+        {
+            _logger.LogError("Uploader process exited with code {exitCode}.", p.ExitCode);
+        }
+
         return p.ExitCode;
     }
 
@@ -48,7 +64,16 @@ internal class OutOfProcCaller : IOutOfProcCaller
     private Process ExecuteImp(ProcessPriorityClass processPriorityClass)
     {
         _logger.LogDebug("Calling execute out of proc on {fileName} with arguments: {arguments}. Intended priority: {intendedPriority}", _fileName, _arguments, processPriorityClass);
-        Process process = Process.Start(_fileName, _arguments);
+
+        ProcessStartInfo startInfo = new ProcessStartInfo(_fileName, _arguments)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        Process process = Process.Start(startInfo);
         try
         {
             process.PriorityClass = processPriorityClass;

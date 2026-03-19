@@ -160,7 +160,8 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
             return result;
         }
 
-        throw new UnsupportedPayloadTypeException("Can't deserialize message over the named pipe.");
+        _logger.LogError("Failed to deserialize named pipe message as {type}. Raw payload: {payload}", typeof(T).FullName, payload);
+        throw new UnsupportedPayloadTypeException($"Can't deserialize message over the named pipe. Expected type: {typeof(T).FullName}");
     }
 
     private async Task<string> ReadMessageAsync(TimeSpan timeout, CancellationToken cancellationToken)
