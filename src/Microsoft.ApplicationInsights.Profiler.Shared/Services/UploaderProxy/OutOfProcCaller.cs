@@ -40,8 +40,13 @@ internal class OutOfProcCaller : IOutOfProcCaller
     public int ExecuteAndWait(ProcessPriorityClass processPriorityClass = ProcessPriorityClass.Normal)
     {
         using Process p = ExecuteImp(processPriorityClass);
-        string stderr = p.StandardError.ReadToEnd();
-        string stdout = p.StandardOutput.ReadToEnd();
+        // Read stdout and stderr asynchronously to avoid deadlock when pipe buffers fill.
+        string stderr = string.Empty;
+        string stdout = string.Empty;
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr += e.Data + Environment.NewLine; };
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) stdout += e.Data + Environment.NewLine; };
+        p.BeginErrorReadLine();
+        p.BeginOutputReadLine();
         p.WaitForExit();
 
         if (!string.IsNullOrWhiteSpace(stdout))
