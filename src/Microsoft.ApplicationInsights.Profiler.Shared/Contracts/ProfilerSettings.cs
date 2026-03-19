@@ -45,7 +45,9 @@ internal class ProfilerSettings
         SamplingOptions.SamplingRate = userConfiguration.Value.SamplingRate;
         SamplingOptions.ProfilingDurationInSeconds = (int)userConfiguration.Value.Duration.TotalSeconds;
         CpuTriggerSettings.CpuThreshold = userConfiguration.Value.CPUTriggerThreshold;
+        CpuTriggerSettings.CpuTriggerCooldownInSeconds = (int)userConfiguration.Value.CPUTriggerCooldown.TotalSeconds;
         MemoryTriggerSettings.MemoryThreshold = userConfiguration.Value.MemoryTriggerThreshold;
+        MemoryTriggerSettings.MemoryTriggerCooldownInSeconds = (int)userConfiguration.Value.MemoryTriggerCooldown.TotalSeconds;
         settingsService.SettingsUpdated += SetFromSettingsContract;
     }
 

@@ -1,0 +1,29 @@
+{
+    "id": "294c4d1f-a7a1-458c-a3b4-8882251382ba",
+    "lastModified": "2025-08-15T23:27:49.1718384+00:00",
+    "enabledLastModified": "0001-01-01T00:00:00+00:00",
+    "enabled": true,
+    "collectionPlan": "",
+    "cpuTriggerConfiguration": "--cpu-threshold 80 --cpu-trigger-profilingDuration 120 --cpu-trigger-cooldown 14400 --cpu-trigger-enabled true",
+    "memoryTriggerConfiguration": "--memory-threshold 80 --memory-trigger-profilingDuration 30 --memory-trigger-cooldown 14400 --memory-trigger-enabled true",
+    "defaultConfiguration": "--sampling-enabled true --sampling-rate 0.05 --sampling-profiling-duration 60",
+    "requestTriggerConfiguration": null,
+    "agentStatusGraph": {
+        "version": "1.0",
+        "statuses": [
+            {
+                "timestamp": "2025-08-15T22:10:53.097Z",
+                "roleName": "unknown_service:SimpleOTelProfiler",
+                "roleInstance": "cpc-saars-wq4eb",
+                "status": 1
+            }
+        ],
+        "defaultStatus": 0
+    },
+    "agentConcurrency": 0,
+    "_rid": "PpozAK+onwIWAAAAAAAAAA==",
+    "_self": "dbs/PpozAA==/colls/PpozAK+onwI=/docs/PpozAK+onwIWAAAAAAAAAA==/",
+    "_etag": "\"4c01d029-0000-0300-0000-689fc2750000\"",
+    "_attachments": "attachments/",
+    "_ts": 1755300469
+}

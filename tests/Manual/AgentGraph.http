@@ -1,0 +1,29 @@
+curl -X 'POST' \
+  'https://localhost:44327/api/apps/294c4d1f-a7a1-458c-a3b4-8882251382ba/agentStatus/profiler?api-version=2025-07-08-preview' \
+  -H 'accept: */*' \
+  -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkpZaEFjVFBNWl9MWDZEQmxPV1E3SG4wTmVYRSIsImtpZCI6IkpZaEFjVFBNWl9MWDZEQmxPV1E3SG4wTmVYRSJ9.eyJhdWQiOiJhcGk6Ly9xdWVyeS5kaWFnbm9zdGljc2VydmljZXMuYXp1cmUuY29tIiwiaXNzIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3LyIsImlhdCI6MTc1NTY0MTAxNCwibmJmIjoxNzU1NjQxMDE0LCJleHAiOjE3NTU2NDYzNzksIl9jbGFpbV9uYW1lcyI6eyJncm91cHMiOiJzcmMxIn0sIl9jbGFpbV9zb3VyY2VzIjp7InNyYzEiOnsiZW5kcG9pbnQiOiJodHRwczovL2dyYXBoLndpbmRvd3MubmV0LzcyZjk4OGJmLTg2ZjEtNDFhZi05MWFiLTJkN2NkMDExZGI0Ny91c2Vycy9lYzZjNTM5NC03NmUyLTQzZmEtYWU4OS0zZWFhYWViMGE4NzQvZ2V0TWVtYmVyT2JqZWN0cyJ9fSwiYWNyIjoiMSIsImFpbyI6IkFkUUFLLzhaQUFBQWwxZTA5LzIzQk5QaGd6cW8zRmRFT1pNMnZ5QklGMUUwbkVESEVkMDRFWk5PZFFHRFlWcUhtK2xxRHFWalREWC9zQUlUWTlnZ1ZTUXYrNFJSY0NvNkR6NFZScEVyTUZkUmZEcTF4cWlNQ0d1bWlvd3YwTU8xM01CdVI2QjZSOXdveUR1YTBKVGh2cWVTYXhJaG0zZjVDQkJCRWhEczBmRzJDRUpVcnZpN3RZTXdnOVJtVWsvTlJVa1g1TlVDRUFQaE1oTmRKNmJmTVl4OGdvWFF6MElXUFVZYXNHZFFrdkFCOG5veERCaFFFSVBQbFlSaEhkWkFGTkRNOW1UNnM4YmJkS01DNitxWm1qUElqRkVyZzlyaENBPT0iLCJhbXIiOlsiZmlkbyIsInJzYSIsIm1mYSJdLCJhcHBpZCI6IjFjYzcyYjYwLTQ3YzAtNGNiYS05ODU2LTY4NjUwZjIzNjkwMyIsImFwcGlkYWNyIjoiMCIsImRldmljZWlkIjoiZGViNzM3MDYtNDBjNC00MTMxLTgzZmItNWY1ODUyMDY3NzM1IiwiZmFtaWx5X25hbWUiOiJTaGVuIiwiZ2l2ZW5fbmFtZSI6IlNhYXIiLCJpcGFkZHIiOiI3MC4zNy4yNi4xMzciLCJuYW1lIjoiU2FhciBTaGVuIiwib2lkIjoiZWM2YzUzOTQtNzZlMi00M2ZhLWFlODktM2VhYWFlYjBhODc0Iiwib25wcmVtX3NpZCI6IlMtMS01LTIxLTIxMjc1MjExODQtMTYwNDAxMjkyMC0xODg3OTI3NTI3LTgxNzMzMjQiLCJyaCI6IjEuQVFFQXY0ajVjdkdHcjBHUnF5MTgwQkhiUjJBcnh4ekFSN3BNbUZab1pROGphUU1hQUVvYUFBLiIsInJvbGVzIjpbIkluc2lnaHRzLlJlYWRlciJdLCJzY3AiOiJ1c2VyX2ltcGVyc29uYXRpb24iLCJzaWQiOiIxYjViNDUyZS02ZDAzLTQ4NzYtYTc5My0wODYxYmIzNjMyMjMiLCJzdWIiOiJXMWhVWGJfS3JIRUt0a015ZUJUTnQyWTQtdHlrOEhFbHphdjNaUlk5QW00IiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidW5pcXVlX25hbWUiOiJzYWFyc0BtaWNyb3NvZnQuY29tIiwidXBuIjoic2FhcnNAbWljcm9zb2Z0LmNvbSIsInV0aSI6ImRibzVWVERrSTBHTjFfZzFBLV9kQUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfZnRkIjoiS2JFZi1adU1HZUtqajIxc2xqdTZnOTZwR1podkc0NGJDNkdnQ0l0cGxDRUJkWE5sWVhOMExXUnpiWE0ifQ.GrWpqTgvxtgr5Dkt4SQO3sNsWZk7BsBwcMewMGiS_N02ehf5Bc96ua5Hs0yUrQ3S126ez1pDfiaIA7oQyt9xexKd9nJqGeqF16crIr5N2pfZPJtrWkrgGSboIKNlkf00-aHn3--Xjew7vshufOmaCXy-Rkiux9YHhudhCrTX5Ps6RUREjmiee2EffCgR37Xo8ZpdrX_0prZ5rGjeHnmmxBDAsgRRQfOhXDJfF3ccFpAHsqykoaxZmMEPzsEBxuaZ1zEX4z4FGd8-LNa3sjTsNTmynYAeXT-g6lm_xBY9MnaK--CZ4zmATvQpB_N9RO6ovqR8qSTBTvd9zQO3eWe78A' \
+  -H 'Content-Type: application/json;odata.metadata=minimal;odata.streaming=true' \
+  -d '{
+  "statuses": [
+    {
+      "timestamp": "2025-08-16T22:40:54.097Z",
+      "roleName": "unknown_service:SimpleOTelProfiler",
+      "roleInstance": "cpc-saars-wq4eb",
+      "status": "Active"
+    }
+  ],
+  "defaultStatus": "Inactive"
+}'
+
+###
+{
+  "statuses": [
+    {
+      "timestamp": "2025-08-16T22:40:54.097Z",
+      "roleName": "simple-otel-profiler-app",
+      "roleInstance": "6e68d795e0ec",
+      "status": "Active"
+    }
+  ],
+  "defaultStatus": "Inactive"
+}
