@@ -19,6 +19,8 @@
 
     <dependencies>
       <group targetFramework="$targetFramework$">
+        <!-- Azure.Core is used directly; Azure.Identity only requires >= 1.27.0 which is too low for our compiled reference -->
+        <dependency id="Azure.Core" version="$AzureCoreVersion$" exclude="Build,Analyzers" />
         <dependency id="Azure.Identity" version="$AzureIdentityVersion$" exclude="Build,Analyzers" />
         <dependency id="CommandLineParser" version="$CommandLineParserVersion$" exclude="Build,Analyzers" />
         <dependency id="Microsoft.ApplicationInsights.AspNetCore" version="[$MicrosoftApplicationInsightsAspNetCoreVersion$,3.0.0)" exclude="Build,Analyzers" />

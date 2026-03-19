@@ -36,6 +36,7 @@ packageTags=$(PackageTags);
 targetFramework=$(TargetFramework);
 version=$(Version);
 AzureIdentityVersion=$(_AzureIdentityVersion);
+AzureCoreVersion=$(_AzureCoreVersion);
 CommandLineParserVersion=$(_CommandLineParserVersion);
 MicrosoftApplicationInsightsAspNetCoreVersion=$(_MicrosoftApplicationInsightsSdkVersion);
 MicrosoftApplicationInsightsVersion=$(_MicrosoftApplicationInsightsSdkVersion);
