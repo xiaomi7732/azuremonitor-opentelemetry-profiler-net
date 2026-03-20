@@ -5,6 +5,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +41,32 @@ internal class OutOfProcCaller : IOutOfProcCaller
     public int ExecuteAndWait(ProcessPriorityClass processPriorityClass = ProcessPriorityClass.Normal)
     {
         using Process p = ExecuteImp(processPriorityClass);
+        // Read stdout and stderr asynchronously to avoid deadlock when pipe buffers fill.
+        object outputLock = new();
+        StringBuilder stderrBuilder = new();
+        StringBuilder stdoutBuilder = new();
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) { lock (outputLock) { stderrBuilder.AppendLine(e.Data); } } };
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) { lock (outputLock) { stdoutBuilder.AppendLine(e.Data); } } };
+        p.BeginErrorReadLine();
+        p.BeginOutputReadLine();
         p.WaitForExit();
+
+        string stdout = stdoutBuilder.ToString();
+        string stderr = stderrBuilder.ToString();
+
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            _logger.LogDebug("Uploader stdout: {stdout}", stdout);
+        }
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            _logger.LogError("Uploader stderr: {stderr}", stderr);
+        }
+        if (p.ExitCode != 0)
+        {
+            _logger.LogError("Uploader process exited with code {exitCode}.", p.ExitCode);
+        }
+
         return p.ExitCode;
     }
 
@@ -48,7 +74,16 @@ internal class OutOfProcCaller : IOutOfProcCaller
     private Process ExecuteImp(ProcessPriorityClass processPriorityClass)
     {
         _logger.LogDebug("Calling execute out of proc on {fileName} with arguments: {arguments}. Intended priority: {intendedPriority}", _fileName, _arguments, processPriorityClass);
-        Process process = Process.Start(_fileName, _arguments);
+
+        ProcessStartInfo startInfo = new ProcessStartInfo(_fileName, _arguments)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        Process process = Process.Start(startInfo);
         try
         {
             process.PriorityClass = processPriorityClass;

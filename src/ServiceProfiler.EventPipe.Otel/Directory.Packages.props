@@ -17,6 +17,7 @@
   <PropertyGroup>
     <NuspecProperties><![CDATA[
 AzureIdentityVersion=$(_AzureIdentityVersion);
+AzureCoreVersion=$(_AzureCoreVersion);
 AzureMonitorOpenTelemetryExporterVersion=$(_AzureMonitorOpenTelemetryExporterVersion);
 CommandlineParserVersion=$(_CommandLineParserVersion);
 MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);

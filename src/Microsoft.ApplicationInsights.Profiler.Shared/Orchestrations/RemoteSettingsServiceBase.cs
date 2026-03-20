@@ -99,6 +99,13 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
             _logger.LogError(ex, "{errorMessage}", ex.Message);
             _logger.LogTrace(ex, "{fullError}", ex.ToString());
         }
+        catch (Exception ex) when (ex.Message.Contains("Entra authentication", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogError(ex, "The Application Insights resource requires Entra (AAD) authentication but no valid credentials were provided. "
+                + "Configure Entra authentication for the profiler or enable local authentication on the Application Insights resource. "
+                + "For details, see https://learn.microsoft.com/en-us/azure/azure-monitor/app/profiler-overview.");
+        }
 #pragma warning disable CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.
         catch (Exception ex)
 #pragma warning restore CA1031 // Only to allow for getting the value for the next iteration. The exception will be logged.

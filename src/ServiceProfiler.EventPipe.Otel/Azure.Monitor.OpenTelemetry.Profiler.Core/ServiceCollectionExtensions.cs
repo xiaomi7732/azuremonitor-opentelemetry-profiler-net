@@ -148,14 +148,14 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<CpuTriggerSettings>();
         services.AddSingleton<MemoryTriggerSettings>();
 
-        services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            services.AddKeyedSingleton<IMetricsProvider, ProcessInfoCPUMetricsProvider>(MetricsProviderCategory.CPU);
             services.AddKeyedSingleton<IMetricsProvider, WindowsMemoryMetricsProvider>(MetricsProviderCategory.Memory);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
+            services.AddKeyedSingleton<IMetricsProvider, CgroupCpuMetricsProvider>(MetricsProviderCategory.CPU);
             services.AddSingleton<MemInfoItemParser>();
             services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
             services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
