@@ -37,7 +37,19 @@ On Linux (including Azure App Service containers), the profiler reads CPU usage 
 - **cgroup v2**: reads `usage_usec` from `/sys/fs/cgroup/cpu.stat`
 - **cgroup v1** (fallback): reads from `/sys/fs/cgroup/cpuacct/cpuacct.usage`
 
-The sampler runs on a dedicated background thread to ensure accurate readings even when the application is under heavy CPU load.
+CPU percentage is calculated as:
+
+```
+CPU% = (cpuTimeDelta / (wallTimeDelta × effectiveCpuCount)) × 100
+```
+
+The **effective CPU count** is derived from the container's cgroup CPU quota rather than `Environment.ProcessorCount` (which may return the host's total core count). This prevents CPU% from being under-reported in containers with CPU limits:
+
+- **cgroup v2**: reads quota and period from `/sys/fs/cgroup/cpu.max`
+- **cgroup v1**: reads `cpu.cfs_quota_us` / `cpu.cfs_period_us`
+- **Fallback**: `Environment.ProcessorCount` when no quota is configured
+
+The sampler runs on a dedicated background thread to ensure accurate readings even when the application is under heavy CPU load. If a sampling iteration fails (e.g., transient IO error), it logs an error and retries on the next 1-second interval.
 
 ## Baseline Tracking (Sliding Window)
 
@@ -111,6 +123,9 @@ Logging__LogLevel__Microsoft.ApplicationInsights.Profiler=Debug
 
 Key log messages to look for:
 - `"CPU sample: X%"` or `"CPU sample (cgroup): X%"` — raw 1-second samples
+- `"Effective CPU count from cgroup v2 quota: N"` or `"Effective CPU count from cgroup v1 quota: N"` — container CPU limit detected
+- `"Using cgroup v2 CPU metrics from ..."` or `"Using cgroup v1 CPU metrics from ..."` — cgroup version detected
+- `"No cgroup CPU stats found. CPU monitoring will report 0."` — cgroup files not available
 - `"Baseline update: metric=X, old=Y, new=Z"` — 30-second rolling average updates
 - `"Getting current CPU usage: X"` — the value the scheduling policy sees
 - `"CPUMonitoringSchedulingPolicy request delay for ... StartProfilingSession"` — threshold exceeded, profiling triggered

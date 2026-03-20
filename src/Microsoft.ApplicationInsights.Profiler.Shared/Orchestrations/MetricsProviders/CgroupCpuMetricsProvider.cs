@@ -22,6 +22,11 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     private const string CgroupV2CpuStatPath = "/sys/fs/cgroup/cpu.stat";
     // cgroup v1
     private const string CgroupV1CpuUsagePath = "/sys/fs/cgroup/cpuacct/cpuacct.usage";
+    // cgroup v2 CPU quota
+    private const string CgroupV2CpuMaxPath = "/sys/fs/cgroup/cpu.max";
+    // cgroup v1 CPU quota
+    private const string CgroupV1CpuCfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us";
+    private const string CgroupV1CpuCfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us";
 
     private static readonly TimeSpan UpdateInterval = TimeSpan.FromSeconds(1);
 
@@ -35,10 +40,70 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     private long _lastUsageMicroseconds;
     private long _lastTimestampMs;
 
+    /// <summary>
+    /// Derives the effective CPU count from cgroup quota/period settings.
+    /// In containers with CPU limits, Environment.ProcessorCount may return the host's
+    /// total core count, which causes CPU% to be significantly under-reported.
+    /// </summary>
+    private static int GetEffectiveCpuCount(ILogger logger)
+    {
+        try
+        {
+            // cgroup v2: cpu.max -> "<quota> <period>" or "max <period>"
+            if (File.Exists(CgroupV2CpuMaxPath))
+            {
+                string content = File.ReadAllText(CgroupV2CpuMaxPath).Trim();
+                if (!string.IsNullOrEmpty(content))
+                {
+                    string[] parts = content.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2 && !string.Equals(parts[0], "max", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (long.TryParse(parts[0], out long quota) &&
+                            long.TryParse(parts[1], out long period) &&
+                            quota > 0 && period > 0)
+                        {
+                            int cpus = (int)Math.Ceiling((double)quota / period);
+                            if (cpus > 0)
+                            {
+                                logger.LogDebug("Effective CPU count from cgroup v2 quota: {cpuCount}", cpus);
+                                return cpus;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // cgroup v1: cpu.cfs_quota_us / cpu.cfs_period_us
+            if (File.Exists(CgroupV1CpuCfsQuotaPath) && File.Exists(CgroupV1CpuCfsPeriodPath))
+            {
+                string quotaText = File.ReadAllText(CgroupV1CpuCfsQuotaPath).Trim();
+                string periodText = File.ReadAllText(CgroupV1CpuCfsPeriodPath).Trim();
+
+                if (long.TryParse(quotaText, out long quota) &&
+                    long.TryParse(periodText, out long period) &&
+                    quota > 0 && period > 0)
+                {
+                    int cpus = (int)Math.Ceiling((double)quota / period);
+                    if (cpus > 0)
+                    {
+                        logger.LogDebug("Effective CPU count from cgroup v1 quota: {cpuCount}", cpus);
+                        return cpus;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not read cgroup CPU quota. Falling back to Environment.ProcessorCount.");
+        }
+
+        return Environment.ProcessorCount;
+    }
+
     public CgroupCpuMetricsProvider(ILogger<CgroupCpuMetricsProvider> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _cpuCount = Environment.ProcessorCount;
+        _cpuCount = GetEffectiveCpuCount(logger);
 
         if (File.Exists(CgroupV2CpuStatPath))
         {
@@ -74,11 +139,7 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     {
         try
         {
-            // Take initial snapshot
-            _lastUsageMicroseconds = ReadCpuUsageMicroseconds();
-            _lastTimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            _cts.Token.WaitHandle.WaitOne(UpdateInterval);
+            bool isFirstIteration = true;
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -87,16 +148,24 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
                     long currentUsage = ReadCpuUsageMicroseconds();
                     long currentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                    long usageDelta = currentUsage - _lastUsageMicroseconds;
-                    long wallDeltaMs = currentMs - _lastTimestampMs;
-
-                    if (wallDeltaMs > 0 && usageDelta >= 0)
+                    if (isFirstIteration)
                     {
-                        // usageDelta is in microseconds, wallDeltaMs is in milliseconds
-                        // CPU% = (usageDelta_us / 1000) / (wallDelta_ms * cpuCount) * 100
-                        double cpuPercent = (usageDelta / 1000.0) / (wallDeltaMs * _cpuCount) * 100.0;
-                        _nextValue = (float)Math.Min(cpuPercent, 100.0);
-                        _logger.LogDebug("CPU sample (cgroup): {CpuPercent:F2}%", _nextValue);
+                        // First iteration: take initial snapshot, skip delta calculation.
+                        isFirstIteration = false;
+                    }
+                    else
+                    {
+                        long usageDelta = currentUsage - _lastUsageMicroseconds;
+                        long wallDeltaMs = currentMs - _lastTimestampMs;
+
+                        if (wallDeltaMs > 0 && usageDelta >= 0)
+                        {
+                            // usageDelta is in microseconds, wallDeltaMs is in milliseconds
+                            // CPU% = (usageDelta_us / 1000) / (wallDelta_ms * cpuCount) * 100
+                            double cpuPercent = (usageDelta / 1000.0) / (wallDeltaMs * _cpuCount) * 100.0;
+                            _nextValue = (float)Math.Min(cpuPercent, 100.0);
+                            _logger.LogDebug("CPU sample (cgroup): {CpuPercent:F2}%", _nextValue);
+                        }
                     }
 
                     _lastUsageMicroseconds = currentUsage;
@@ -167,10 +236,13 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     public void Dispose()
     {
         _cts.Cancel();
-        if (_samplingThread != null && _samplingThread.Join(TimeSpan.FromSeconds(5)))
+
+        if (_samplingThread != null && !_samplingThread.Join(TimeSpan.FromSeconds(5)))
         {
-            _cts.Dispose();
+            _logger.LogWarning("CPU metrics sampling thread did not terminate within the timeout.");
         }
+
+        _cts.Dispose();
     }
 
     private enum CgroupVersion

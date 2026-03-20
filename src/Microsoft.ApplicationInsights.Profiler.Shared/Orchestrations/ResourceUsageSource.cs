@@ -141,7 +141,9 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
                     }
                     // Dispose any previous trackers defensively before creating new ones.
                     _cpuBaselineTracker?.Dispose();
+                    _cpuBaselineTracker = null;
                     _memoryBaselineTracker?.Dispose();
+                    _memoryBaselineTracker = null;
                     // Start or resume the baseline trackers.
                     _cpuBaselineTracker = CreateAndStartCPUBaselineTracker(_cpuTriggerSettings, _cpuMetricsProvider);
                     _memoryBaselineTracker = CreateAndStartMemoryBaselineTracker(_memoryMetricsProvider, _memoryTriggerSettings);
@@ -156,7 +158,9 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
                         return;  // already inactive
                     }
                     _cpuBaselineTracker?.Dispose();
+                    _cpuBaselineTracker = null;
                     _memoryBaselineTracker?.Dispose();
+                    _memoryBaselineTracker = null;
                     _running = false;
                     _logger.LogInformation("Resource usage monitoring paused because agent status changed to Inactive for the reason of {reason}.", reason);
                     break;
@@ -223,7 +227,9 @@ internal sealed class ResourceUsageSource : IResourceUsageSource
         if (!_disposed)
         {
             _cpuBaselineTracker?.Dispose();
+            _cpuBaselineTracker = null;
             _memoryBaselineTracker?.Dispose();
+            _memoryBaselineTracker = null;
             _agentStatusService.StatusChanged -= OnAgentStatusChanged;
             _statusChangeSemaphore.Dispose();
             _disposed = true;

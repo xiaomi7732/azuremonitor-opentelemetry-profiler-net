@@ -5,6 +5,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -41,13 +42,17 @@ internal class OutOfProcCaller : IOutOfProcCaller
     {
         using Process p = ExecuteImp(processPriorityClass);
         // Read stdout and stderr asynchronously to avoid deadlock when pipe buffers fill.
-        string stderr = string.Empty;
-        string stdout = string.Empty;
-        p.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr += e.Data + Environment.NewLine; };
-        p.OutputDataReceived += (_, e) => { if (e.Data != null) stdout += e.Data + Environment.NewLine; };
+        object outputLock = new();
+        StringBuilder stderrBuilder = new();
+        StringBuilder stdoutBuilder = new();
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) { lock (outputLock) { stderrBuilder.AppendLine(e.Data); } } };
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) { lock (outputLock) { stdoutBuilder.AppendLine(e.Data); } } };
         p.BeginErrorReadLine();
         p.BeginOutputReadLine();
         p.WaitForExit();
+
+        string stdout = stdoutBuilder.ToString();
+        string stderr = stderrBuilder.ToString();
 
         if (!string.IsNullOrWhiteSpace(stdout))
         {

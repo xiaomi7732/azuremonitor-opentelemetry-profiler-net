@@ -160,7 +160,16 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
             return result;
         }
 
-        _logger.LogError("Failed to deserialize named pipe message as {type}. Raw payload: {payload}", typeof(T).FullName, payload);
+        const int maxLoggedPayloadLength = 1024;
+        string loggedPayload = payload.Length <= maxLoggedPayloadLength
+            ? payload
+            : payload.Substring(0, maxLoggedPayloadLength);
+
+        _logger.LogError(
+            "Failed to deserialize named pipe message as {type}. Raw payload (truncated to {maxLength} chars): {payload}",
+            typeof(T).FullName,
+            maxLoggedPayloadLength,
+            loggedPayload);
         throw new UnsupportedPayloadTypeException($"Can't deserialize message over the named pipe. Expected type: {typeof(T).FullName}");
     }
 
