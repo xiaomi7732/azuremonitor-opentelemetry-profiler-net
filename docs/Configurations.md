@@ -37,9 +37,9 @@ This document summarizes configuration options exposed via `UserConfigurationBas
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | RandomProfilingOverhead | float | 0.01 (1%) | Target average time spent profiling per hour. Effective number of sessions per hour ≈ (60 * overhead) / DurationMinutes. |
-| CPUTriggerThreshold | float | 80 | Avg CPU (%) threshold to start a CPU-triggered session. |
+| CPUTriggerThreshold | float | 80 | Avg CPU (%) threshold to start a CPU-triggered session. See [CPU Usage Monitoring](CpuUsageMonitoring.md). |
 | CPUTriggerCooldown | TimeSpan | (default per CpuTriggerSettings) | Minimum wait after a CPU-triggered session. |
-| MemoryTriggerThreshold | float | 80 | Avg memory usage (%) threshold to start a memory-triggered session. |
+| MemoryTriggerThreshold | float | 80 | Avg memory usage (%) threshold to start a memory-triggered session. See [Memory Usage Monitoring](MemoryUsageMonitoring.md). |
 | MemoryTriggerCooldown | TimeSpan | (default per MemoryTriggerSettings) | Minimum wait after memory-triggered session. |
 
 ## Advanced / Extensibility
@@ -109,7 +109,7 @@ Example: overhead=0.01, duration=0.5 min (30s) → (60 * 0.01)/0.5 = 1.2 session
 | Few or no profiles | Lower thresholds, slightly raise RandomProfilingOverhead |
 | High overhead | Shorter Duration, reduce CustomEventPipeProviders |
 | Large disk usage | Disable PreserveTraceFile, tighten scavenger options |
-| Missing triggers | Verify thresholds below observed steady-state levels |
+| Missing triggers | Verify thresholds below observed steady-state levels. See [CPU](CpuUsageMonitoring.md) and [Memory](MemoryUsageMonitoring.md) monitoring docs for diagnostic logging. |
 
 ## Versioning / Evolution
 
