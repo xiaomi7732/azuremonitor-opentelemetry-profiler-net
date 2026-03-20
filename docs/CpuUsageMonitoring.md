@@ -43,7 +43,7 @@ CPU percentage is calculated as:
 CPU% = (cpuTimeDelta / (wallTimeDelta × effectiveCpuCount)) × 100
 ```
 
-The **effective CPU count** is derived from the container's cgroup CPU quota rather than `Environment.ProcessorCount` (which may return the host's total core count). This prevents CPU% from being under-reported in containers with CPU limits:
+The **effective CPU count** is derived from the container's cgroup CPU quota rather than `Environment.ProcessorCount` (which may return the host's total core count). This prevents CPU% from being under-reported in containers with CPU limits. Fractional quotas (e.g., 1.5 cores from Kubernetes `cpu: "1500m"`) are preserved as-is for accurate normalization:
 
 - **cgroup v2**: reads quota and period from `/sys/fs/cgroup/cpu.max`
 - **cgroup v1**: reads `cpu.cfs_quota_us` / `cpu.cfs_period_us`

@@ -31,7 +31,7 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     private static readonly TimeSpan UpdateInterval = TimeSpan.FromSeconds(1);
 
     private readonly ILogger _logger;
-    private readonly int _cpuCount;
+    private readonly double _cpuCount;
     private readonly CgroupVersion _version;
     private readonly Thread? _samplingThread;
     private readonly CancellationTokenSource _cts = new();
@@ -45,7 +45,7 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
     /// In containers with CPU limits, Environment.ProcessorCount may return the host's
     /// total core count, which causes CPU% to be significantly under-reported.
     /// </summary>
-    private static int GetEffectiveCpuCount(ILogger logger)
+    private static double GetEffectiveCpuCount(ILogger logger)
     {
         try
         {
@@ -62,12 +62,9 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
                             long.TryParse(parts[1], out long period) &&
                             quota > 0 && period > 0)
                         {
-                            int cpus = (int)Math.Ceiling((double)quota / period);
-                            if (cpus > 0)
-                            {
-                                logger.LogDebug("Effective CPU count from cgroup v2 quota: {cpuCount}", cpus);
-                                return cpus;
-                            }
+                            double cpus = (double)quota / period;
+                            logger.LogDebug("Effective CPU count from cgroup v2 quota: {cpuCount:F2}", cpus);
+                            return cpus;
                         }
                     }
                 }
@@ -83,12 +80,9 @@ internal sealed class CgroupCpuMetricsProvider : IMetricsProvider, IDisposable
                     long.TryParse(periodText, out long period) &&
                     quota > 0 && period > 0)
                 {
-                    int cpus = (int)Math.Ceiling((double)quota / period);
-                    if (cpus > 0)
-                    {
-                        logger.LogDebug("Effective CPU count from cgroup v1 quota: {cpuCount}", cpus);
-                        return cpus;
-                    }
+                    double cpus = (double)quota / period;
+                    logger.LogDebug("Effective CPU count from cgroup v1 quota: {cpuCount:F2}", cpus);
+                    return cpus;
                 }
             }
         }
