@@ -23,16 +23,13 @@ description: >
    - Run `git add ServiceProfiler`
    - Run `git commit -m "Bump ServiceProfiler submodule reference"`
 
-4. **Tag the ServiceProfiler repo:**
-   - Get the short commit hash: `git -C ServiceProfiler rev-parse --short HEAD`
-   - Create the tag: `git -C ServiceProfiler tag otel-profiler-ref-<short-hash>`
-   - Example: if commit is `d55da67`, tag is `otel-profiler-ref-d55da67`
-
-5. **Push the tag:**
-   - Run `git -C ServiceProfiler push origin otel-profiler-ref-<short-hash>`
+4. **Tag and push using the script:**
+   - On Windows: `& .github/skills/bump-submodule-ref/scripts/tag-submodule.ps1`
+   - On Linux/macOS: `bash .github/skills/bump-submodule-ref/scripts/tag-submodule.sh`
+   - The script validates the submodule is clean, creates tag `otel-profiler-ref-<short-hash>`, and pushes it.
 
 ## Notes
 
 - Always confirm with the user before committing or pushing.
-- The tag format is `otel-profiler-ref-<short-hash>` (not `olte-`).
+- The tag format is `otel-profiler-ref-<short-hash>`.
 - The repo root is `C:\AIR\fork-otel-profiler`.
