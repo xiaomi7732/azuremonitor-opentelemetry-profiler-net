@@ -22,7 +22,8 @@ The profiler supports both **random sampling** (periodic snapshots) and **trigge
 - **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
 - **Azure Monitor OpenTelemetry**: This profiler works with the [Azure Monitor OpenTelemetry distro](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore).
 
-> **Note:** If you are using the classic `Microsoft.ApplicationInsights.AspNetCore` SDK instead of OpenTelemetry, see [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead.
+> **Note:** If you are using the classic `Microsoft.ApplicationInsights.AspNetCore` 2.x SDK, see [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead.
+> For `Microsoft.ApplicationInsights.AspNetCore` 3.x (which is an OpenTelemetry wrapper), see [Experimental: App Insights 3.x support](#experimental-app-insights-3x-support) below.
 
 ### Walkthrough
 
@@ -105,6 +106,24 @@ Assuming you are building an **ASP.NET Core application**:
 As an alternative to the manual walkthrough above, you can use Copilot to enable the profiler automatically:
 
 - [Enable Profiler using Copilot](./docs/AddAzureMonitorProfilerWithCoPilot.md)
+
+## Experimental: App Insights 3.x Support
+
+`Microsoft.ApplicationInsights.AspNetCore` 3.x is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler directly on `IServiceCollection` without calling `AddOpenTelemetry()`:
+
+```csharp
+using Azure.Monitor.OpenTelemetry.Profiler;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddAzureMonitorProfiler();   // Enable profiler directly
+
+var app = builder.Build();
+app.Run();
+```
+
+> ⚠️ **Experimental** — This integration is under active development. Please [report any issues](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/issues/new) you encounter.
 
 ## Next
 
