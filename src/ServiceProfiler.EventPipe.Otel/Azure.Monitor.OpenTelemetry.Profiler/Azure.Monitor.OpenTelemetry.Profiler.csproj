@@ -17,4 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.Tests" Key="$(TestPublicKey)" />
+  </ItemGroup>
 </Project>
