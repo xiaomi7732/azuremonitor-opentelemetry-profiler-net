@@ -20,10 +20,23 @@ Setting up a proper role name helps organize profiling sessions effectively. For
       OTEL_SERVICE_NAME="simple-otel-profiler"
       ```
 
-    * **Using code**:  
+    * **Using code (Azure Monitor OpenTelemetry distro)**:  
+
+      If you are using `Azure.Monitor.OpenTelemetry.AspNetCore` ([Option A](../README.md#option-a-azure-monitor-opentelemetry-distro)):
 
       ```csharp
       builder.Services.AddOpenTelemetry().UseAzureMonitor();
+      builder.Services.ConfigureOpenTelemetryTracerProvider((_, b) => 
+          b.ConfigureResource(resourceBuilder => resourceBuilder.AddService("service-name"))  // Set service.name to `service-name`
+      );
+      ```
+
+    * **Using code (Application Insights 3.x)**:  
+
+      If you are using `Microsoft.ApplicationInsights.AspNetCore` 3.x ([Option B](../README.md#option-b-application-insights-aspnet-core-3x-experimental)):
+
+      ```csharp
+      builder.Services.AddApplicationInsightsTelemetry();
       builder.Services.ConfigureOpenTelemetryTracerProvider((_, b) => 
           b.ConfigureResource(resourceBuilder => resourceBuilder.AddService("service-name"))  // Set service.name to `service-name`
       );

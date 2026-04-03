@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+pr.draft.md
 
 # User-specific files
 *.rsuser
