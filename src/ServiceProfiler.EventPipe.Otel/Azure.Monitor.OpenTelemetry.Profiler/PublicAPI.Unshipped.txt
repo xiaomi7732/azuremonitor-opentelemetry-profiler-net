@@ -1,2 +1,3 @@
 #nullable enable
-
+Azure.Monitor.OpenTelemetry.Profiler.ServiceCollectionExtensions
+static Azure.Monitor.OpenTelemetry.Profiler.ServiceCollectionExtensions.AddAzureMonitorProfiler(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Azure.Monitor.OpenTelemetry.Profiler.Core.ServiceProfilerOptions!>? configureServiceProfiler = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
