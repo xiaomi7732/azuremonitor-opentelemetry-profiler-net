@@ -2,6 +2,8 @@
 
 This is an example app to enable Azure Monitor Profiler in ASP.NET Core WebAPI with [Azure Monitor OpenTelemetry distro](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore).
 
+> **Using Application Insights ASP.NET Core 3.x instead?** See the [aspnetcore-aisdk3](../aspnetcore-aisdk3/) example.
+
 Here are the steps to build this example step to step.
 
 ## Create an application

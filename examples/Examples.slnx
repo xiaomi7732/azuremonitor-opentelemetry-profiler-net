@@ -2,4 +2,7 @@
   <Folder Name="/aspnetcore-webapi/">
     <Project Path="aspnetcore-webapi/SimpleApp.csproj" />
   </Folder>
+  <Folder Name="/aspnetcore-aisdk3/">
+    <Project Path="aspnetcore-aisdk3/AISDK3App.csproj" />
+  </Folder>
 </Solution>

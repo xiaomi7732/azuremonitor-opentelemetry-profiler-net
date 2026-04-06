@@ -16,16 +16,27 @@ The profiler supports both **random sampling** (periodic snapshots) and **trigge
 
 ## Get Started
 
-### Prerequisites
+### Which Application Insights SDK are you using?
+
+Choose the path that matches your project:
+
+| SDK | Path |
+|-----|------|
+| **Azure Monitor OpenTelemetry distro** (`Azure.Monitor.OpenTelemetry.AspNetCore`) | [Option A](#option-a-azure-monitor-opentelemetry-distro) |
+| **Application Insights ASP.NET Core 3.x** (`Microsoft.ApplicationInsights.AspNetCore` 3.x) | [Option B](#option-b-application-insights-aspnet-core-3x-experimental) |
+| **Application Insights ASP.NET Core 2.x** (classic SDK) | Use [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead |
+
+---
+
+### Option A: Azure Monitor OpenTelemetry Distro
+
+#### Prerequisites
 
 - **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
 - **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
 - **Azure Monitor OpenTelemetry**: This profiler works with the [Azure Monitor OpenTelemetry distro](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore).
 
-> **Note:** If you are using the classic `Microsoft.ApplicationInsights.AspNetCore` 2.x SDK, see [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead.
-> For `Microsoft.ApplicationInsights.AspNetCore` 3.x (which is an OpenTelemetry wrapper), see [Experimental: App Insights 3.x support](#experimental-app-insights-3x-support) below.
-
-### Walkthrough
+#### Walkthrough
 
 Assuming you are building an **ASP.NET Core application**:
 
@@ -71,7 +82,7 @@ Assuming you are building an **ASP.NET Core application**:
     ...
     ```
 
-- Run Your Application
+5. **Run Your Application**
 
     Run your application and verify the profiler starts. Look for this in the log output:
 
@@ -95,35 +106,109 @@ Assuming you are building an **ASP.NET Core application**:
     ...
     ```
 
-- View Profiler Data
+6. **View Profiler Data**
 
     After a few minutes, profiler traces will appear in Application Insights. Follow [these instructions](https://learn.microsoft.com/azure/azure-monitor/profiler/profiler-data) to view them.
 
     ![sample trace](./images/sample-trace.png)
 
-### Let Copilot enable the Profiler for you
+📖 **Full example:** [aspnetcore-webapi](./examples/aspnetcore-webapi)
 
-As an alternative to the manual walkthrough above, you can use Copilot to enable the profiler automatically:
+---
 
-- [Enable Profiler using Copilot](./docs/AddAzureMonitorProfilerWithCoPilot.md)
-
-## Experimental: App Insights 3.x Support
-
-`Microsoft.ApplicationInsights.AspNetCore` 3.x is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler directly on `IServiceCollection` without calling `AddOpenTelemetry()`:
-
-```csharp
-using Azure.Monitor.OpenTelemetry.Profiler;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddApplicationInsightsTelemetry();
-builder.Services.AddAzureMonitorProfiler();   // Enable profiler directly
-
-var app = builder.Build();
-app.Run();
-```
+### Option B: Application Insights ASP.NET Core 3.x (Experimental)
 
 > ⚠️ **Experimental** — This integration is under active development. Please [report any issues](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/issues/new) you encounter.
+
+`Microsoft.ApplicationInsights.AspNetCore` 3.x is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler **without** adding `Azure.Monitor.OpenTelemetry.AspNetCore` or calling `UseAzureMonitor()`.
+
+#### Prerequisites
+
+- **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
+- **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
+- **Application Insights ASP.NET Core 3.x**: Your project must reference [`Microsoft.ApplicationInsights.AspNetCore`](https://www.nuget.org/packages/Microsoft.ApplicationInsights.AspNetCore/) version **3.x or later**.
+
+#### Walkthrough
+
+1. **Add NuGet Packages**
+
+    ```sh
+    dotnet add package Microsoft.ApplicationInsights.AspNetCore --version "3.*-*"
+    dotnet add package Azure.Monitor.OpenTelemetry.Profiler --prerelease
+    ```
+
+    Or in your `.csproj`:
+
+    ```xml
+    <ItemGroup>
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="[3.*-*, 4.0.0)" />
+        <PackageReference Include="Azure.Monitor.OpenTelemetry.Profiler" Version="[1.*-*, 2.0.0)" />
+    </ItemGroup>
+    ```
+
+2. **Enable the Profiler**
+
+    The code differs slightly depending on which version of `Azure.Monitor.OpenTelemetry.Profiler` you are using:
+
+    **`Azure.Monitor.OpenTelemetry.Profiler` 1.0.0-beta10 and later** — a single fluent chain:
+
+    ```csharp
+    using Azure.Monitor.OpenTelemetry.Profiler;
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Services.AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();
+
+    var app = builder.Build();
+    app.Run();
+    ```
+
+    **`Azure.Monitor.OpenTelemetry.Profiler` 1.0.0-beta9 and earlier** — separate calls:
+
+    ```csharp
+    using Azure.Monitor.OpenTelemetry.Profiler;
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Services.AddApplicationInsightsTelemetry();
+    builder.Services.AddOpenTelemetry().AddAzureMonitorProfiler();
+
+    var app = builder.Build();
+    app.Run();
+    ```
+
+3. **Set up the connection string**
+
+    Refer to the [connection string section](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=aspnetcore#paste-the-connection-string-in-your-environment) for all options. For local testing in PowerShell:
+
+    ```powershell
+    $env:APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=5d..."
+    ```
+
+4. **Run & Verify**
+
+    ```sh
+    dotnet run
+    ```
+
+    Look for profiler startup log messages like:
+
+    ```
+    info: Azure.Monitor.OpenTelemetry.Profiler.ServiceProfilerAgentBootstrap[0]
+        Starting application insights profiler with connection string: InstrumentationKey=5d…
+    ```
+
+    After a few minutes, traces will appear in Application Insights — see [how to view profiler data](https://learn.microsoft.com/azure/azure-monitor/profiler/profiler-data).
+
+📖 **Full example:** [aspnetcore-aisdk3](./examples/aspnetcore-aisdk3)
+
+---
+
+### Let Copilot enable the Profiler for you
+
+As an alternative to the manual walkthrough above, you can use Copilot to enable the profiler automatically (works for both Option A and Option B):
+
+- [Enable Profiler using Copilot](./docs/AddAzureMonitorProfilerWithCoPilot.md)
 
 ## Next
 
@@ -158,7 +243,8 @@ If you're still experiencing issues, please [open an issue](https://github.com/A
 
 Learn more by following the examples:
 
-- [Enable Azure Monitor OpenTelemetry Profiler in an ASP.NET Core WebAPI](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/tree/main/examples/aspnetcore-webapi)
+- [Azure Monitor OpenTelemetry Distro + Profiler (ASP.NET Core WebAPI)](./examples/aspnetcore-webapi) — for [Option A](#option-a-azure-monitor-opentelemetry-distro)
+- [Application Insights ASP.NET Core 3.x + Profiler](./examples/aspnetcore-aisdk3) — for [Option B](#option-b-application-insights-aspnet-core-3x-experimental)
 
 ## Contributing
 
