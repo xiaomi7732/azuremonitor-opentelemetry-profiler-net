@@ -228,6 +228,11 @@ internal class TraceSessionListener : EventListener
             _logger.LogWarning("Failed to add started activity. Activity by id {id} already exists? Please report a bug.", id);
         }
 
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
+        }
+        EventSource.SetCurrentThreadActivityId(currentActivityId);
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
             name: requestName,
             id: id,
@@ -238,9 +243,11 @@ internal class TraceSessionListener : EventListener
     private void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
     {
         bool isDebugLoggingEnabled = _logger.IsEnabled(LogLevel.Debug);
+        Guid currentActivityId = eventData.ActivityId;
+
         if (isDebugLoggingEnabled)
         {
-            _logger.LogDebug("Request stopped: Activity Id: {activityId}", eventData.ActivityId);
+            _logger.LogDebug("Request stopped: Activity Id: {activityId}", currentActivityId);
         }
 
         if (!_startedActivityIds.TryRemove(id, out _))
@@ -257,9 +264,12 @@ internal class TraceSessionListener : EventListener
         if (isDebugLoggingEnabled)
         {
             _logger.LogDebug("Interesting activity found. Name: {name}, id: {id}", requestName, id);
+            _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
         }
 
         // Interesting start activity was captured, relay this stop activity.
+        EventSource.SetCurrentThreadActivityId(currentActivityId);
+
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
             name: requestName, id: id, requestId: requestId, operationId: operationId);
 
@@ -292,13 +302,13 @@ internal class TraceSessionListener : EventListener
     private static (string operationId, string requestId) ExtractKeyIds(string id)
     {
         string[] tokens = id.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
-        
+
         // It at least contains 3 parts.
         if (tokens.Length < 3)
         {
             throw new InvalidDataException(FormattableString.Invariant($"Id shall have at least 3 sections separated by `-`. Actual id: {id}"));
         }
-        
+
         return (tokens[1], tokens[2]);
     }
 
@@ -317,7 +327,7 @@ internal class TraceSessionListener : EventListener
                 }
             }
         }
-        
+
         return string.Empty;
     }
 }
