@@ -1,8 +1,7 @@
-#define CONSOLE_LOGGING
-#undef CONSOLE_LOGGING    // Comment out this line for traces before the finishing of the constructor
+// Uncomment the following line to enable Console-based fallback logging for early ctor traces.
+// #define CONSOLE_LOGGING
 
 using Microsoft.ApplicationInsights.Profiler.Shared.Samples;
-using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.Tracing;
 
@@ -16,19 +15,21 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 internal class TraceSessionListener : EventListener
 {
     // Kept here as the public surface relied on by DiagnosticsClientTraceConfiguration and similar.
+    // Note: SDK casing preserved for backward compatibility with existing references.
     public const string OpenTelemetrySDKEventSourceName = OpenTelemetrySdkEventSourceHandler.EventSourceName;
     public const string DiagnosticSourceEventSourceName = DiagnosticSourceEventSourceHandler.EventSourceName;
 
-    private readonly ISerializationProvider _serializer;
     private readonly SampleCollector _sampleCollector;
     private readonly ILogger<TraceSessionListener> _logger;
-    private readonly IReadOnlyList<IEventSourceHandler> _handlers;
+    // Typed as array (not IReadOnlyList<>) so the foreach in OnEventWritten uses the no-alloc
+    // array enumerator — this is a hot path.
+    private readonly IEventSourceHandler[] _handlers;
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
+    private volatile bool _disposed;
 
     public SampleActivityContainer? SampleActivities => _sampleCollector?.SampleActivities;
 
     public TraceSessionListener(
-        ISerializationProvider serializer,
         SampleCollector sampleCollector,
         IEnumerable<IEventSourceHandler> handlers,
         ILogger<TraceSessionListener> logger)
@@ -36,7 +37,6 @@ internal class TraceSessionListener : EventListener
         logger.LogTrace("Trace session listener ctor.");
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _sampleCollector = sampleCollector ?? throw new ArgumentNullException(nameof(sampleCollector));
         _handlers = (handlers ?? throw new ArgumentNullException(nameof(handlers))).ToArray();
         _ctorWaitHandle.Set();
@@ -47,18 +47,18 @@ internal class TraceSessionListener : EventListener
     {
         // This event might trigger before the constructor is done.
         TryLogDebug($"Event source creating: {eventSource.Name}");
-        // Dispatch onto a different thread to avoid holding the thread that is finishing the constructor.
-        Task.Run(() =>
-        {
-            _ = HandleEventSourceCreatedAsync(eventSource).ConfigureAwait(false);
-        });
+        // HandleEventSourceCreatedAsync detaches from this thread on its first await; no Task.Run needed.
+        // The method swallows all its own exceptions, so the discarded Task can't escape unobserved.
+        _ = HandleEventSourceCreatedAsync(eventSource);
         TryLogDebug($"Event source created: {eventSource.Name}");
     }
 
+    /// <summary>
+    /// Dispatches each event to the first handler whose <see cref="IEventSourceHandler.CanHandle"/>
+    /// returns true. EventSource names are unique, so first-match is sufficient.
+    /// </summary>
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
-        _logger.LogTrace("OnEventWritten by {eventSource}", eventData.EventSource.Name);
-
         try
         {
             // Handlers are few; a linear scan is cheaper than a dictionary lookup.
@@ -81,11 +81,20 @@ internal class TraceSessionListener : EventListener
 
     private async Task HandleEventSourceCreatedAsync(EventSource eventSource)
     {
-        // This has to be the very first statement to ensure handlers/logger are constructed.
-        _ctorWaitHandle.Wait();
-
         try
         {
+            // Wait until the constructor is finished — but bail out cheaply if we've been disposed
+            // before the handle is signaled (avoids ObjectDisposedException on the wait handle).
+            if (_disposed)
+            {
+                return;
+            }
+            _ctorWaitHandle.Wait();
+            if (_disposed)
+            {
+                return;
+            }
+
             _logger.LogDebug("Got manual trigger for source: {name}", eventSource.Name);
 
             await Task.Yield();
@@ -99,14 +108,27 @@ internal class TraceSessionListener : EventListener
                 }
             }
         }
+        catch (ObjectDisposedException)
+        {
+            // Raced with Dispose() — ignore.
+        }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error enabling event source: {name}", eventSource.Name);
+            _logger.LogError(ex, "Error enabling event source: {name}", eventSource.Name);
         }
     }
 
     public override void Dispose()
     {
+        _disposed = true;
+        // Signal any waiter so it can observe _disposed and exit promptly.
+        try
+        {
+            _ctorWaitHandle.Set();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
         _ctorWaitHandle.Dispose();
         base.Dispose();
     }
