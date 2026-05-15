@@ -11,6 +11,19 @@ internal class TraceSessionListenerFactory
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
-    public TraceSessionListener Create() 
-        => ActivatorUtilities.CreateInstance<TraceSessionListener>(_serviceProvider);
+    public TraceSessionListener Create()
+    {
+        // One RequestActivityRelay per listener lifetime, shared across this listener's handlers so that
+        // a Start emitted by one source can correlate with a Stop emitted by another.
+        RequestActivityRelay relay = ActivatorUtilities.CreateInstance<RequestActivityRelay>(_serviceProvider);
+
+        IEventSourceHandler[] handlers =
+        [
+            ActivatorUtilities.CreateInstance<OpenTelemetrySdkEventSourceHandler>(_serviceProvider, relay),
+            ActivatorUtilities.CreateInstance<DiagnosticSourceEventSourceHandler>(_serviceProvider, relay),
+            ActivatorUtilities.CreateInstance<TplEventSourceHandler>(_serviceProvider),
+        ];
+
+        return ActivatorUtilities.CreateInstance<TraceSessionListener>(_serviceProvider, (IEnumerable<IEventSourceHandler>)handlers);
+    }
 }
