@@ -24,6 +24,9 @@ internal class TraceSessionListener : EventListener
     // Typed as array (not IReadOnlyList<>) so the foreach in OnEventWritten uses the no-alloc
     // array enumerator — this is a hot path.
     private readonly IEventSourceHandler[] _handlers;
+    // Field initializer (runs before the base EventListener ctor) — important because the base
+    // ctor synchronously dispatches OnEventSourceCreated for every existing EventSource, and
+    // those callbacks rely on this handle being non-null.
     private readonly ManualResetEventSlim _ctorWaitHandle = new(false);
     private volatile bool _disposed;
 
@@ -81,10 +84,16 @@ internal class TraceSessionListener : EventListener
 
     private async Task HandleEventSourceCreatedAsync(EventSource eventSource)
     {
+        // Yield FIRST so we detach from the caller's thread before doing anything that could
+        // block. The caller may be the base EventListener ctor (enumerating pre-existing
+        // EventSources synchronously) — blocking on _ctorWaitHandle on that thread would
+        // deadlock, since only our derived ctor body (which hasn't run yet) can Set the handle.
+        await Task.Yield();
+
         try
         {
-            // Wait until the constructor is finished — but bail out cheaply if we've been disposed
-            // before the handle is signaled (avoids ObjectDisposedException on the wait handle).
+            // Wait until the derived constructor is finished — but bail out cheaply if we've been
+            // disposed before the handle is signaled (avoids ObjectDisposedException on the wait).
             if (_disposed)
             {
                 return;
@@ -97,10 +106,13 @@ internal class TraceSessionListener : EventListener
 
             _logger.LogDebug("Got manual trigger for source: {name}", eventSource.Name);
 
-            await Task.Yield();
-
             foreach (IEventSourceHandler handler in _handlers)
             {
+                // Re-check before each Enable — Dispose may race with us and tear down the listener.
+                if (_disposed)
+                {
+                    return;
+                }
                 if (handler.CanHandle(eventSource))
                 {
                     handler.Enable(this, eventSource);
