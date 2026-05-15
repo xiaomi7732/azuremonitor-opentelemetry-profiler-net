@@ -42,7 +42,7 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
     //
     // The ActivitySource name is "Microsoft.AspNetCore" (NOT "Microsoft.AspNetCore.Hosting" —
     // that's the ActivityName / OperationName, e.g. "Microsoft.AspNetCore.Hosting.HttpRequestIn").
-    private const string FilterAndPayloadSpecs = "[AS]Microsoft.AspNetCore/";
+    internal const string FilterAndPayloadSpecs = "[AS]Microsoft.AspNetCore/";
 
     private readonly RequestActivityRelay _relay;
     private readonly ILogger<DiagnosticSourceEventSourceHandler> _logger;
@@ -99,7 +99,7 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
             return;
         }
 
-        (string operationId, string requestId) = RequestActivityRelay.ExtractKeyIds(id);
+        (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);
 
         if (eventName.EndsWith("Start", StringComparison.Ordinal))
         {

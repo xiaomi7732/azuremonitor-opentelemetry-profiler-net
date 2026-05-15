@@ -47,7 +47,7 @@ internal sealed class OpenTelemetrySdkEventSourceHandler : IEventSourceHandler
         string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
         string id = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
 
-        (string operationId, string requestId) = RequestActivityRelay.ExtractKeyIds(id);
+        (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);
 
         if (eventData.EventId == RequestStartEventId)
         {

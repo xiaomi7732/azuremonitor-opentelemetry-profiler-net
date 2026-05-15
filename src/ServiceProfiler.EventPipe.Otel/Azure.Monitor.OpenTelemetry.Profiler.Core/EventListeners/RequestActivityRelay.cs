@@ -115,8 +115,9 @@ internal sealed class RequestActivityRelay
         }
     }
 
-    // id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
-    public static (string operationId, string requestId) ExtractKeyIds(string id)
+    // W3C Trace Context id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
+    //                                ver  trace-id (operationId)         span-id (requestId) flags
+    public static (string requestId, string operationId) ExtractKeyIds(string id)
     {
         string[] tokens = id.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
 
@@ -125,6 +126,6 @@ internal sealed class RequestActivityRelay
             throw new InvalidDataException(FormattableString.Invariant($"Id shall have at least 3 sections separated by `-`. Actual id: {id}"));
         }
 
-        return (tokens[1], tokens[2]);
+        return (requestId: tokens[2], operationId: tokens[1]);
     }
 }
