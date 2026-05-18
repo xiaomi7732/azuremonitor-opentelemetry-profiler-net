@@ -41,9 +41,15 @@ internal class TraceSessionListener : EventListener
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sampleCollector = sampleCollector ?? throw new ArgumentNullException(nameof(sampleCollector));
-        _handlers = (handlers ?? throw new ArgumentNullException(nameof(handlers))).ToArray();
-        _ctorWaitHandle.Set();
-        logger.LogTrace("Trace session listener created.");
+        try
+        {
+            _handlers = (handlers ?? throw new ArgumentNullException(nameof(handlers))).ToArray();
+            logger.LogTrace("Trace session listener created.");
+        }
+        finally
+        {
+            _ctorWaitHandle.Set();
+        }
     }
 
     protected override void OnEventSourceCreated(EventSource eventSource)
