@@ -21,7 +21,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Hashing;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -105,8 +107,9 @@ internal class TraceUploader : ITraceUploader
         {
             ProfilerClient profilerClient = CreateProfilerClient(extendedContext);
 
-            // Use session start time as a deterministic artifact ID so retries don't create duplicates.
-            Guid artifactId = DeriveArtifactId(context.SessionId);
+            // Use session start time + machine name as a deterministic artifact ID so retries
+            // don't create duplicates, while avoiding collisions across machines.
+            Guid artifactId = DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
             Logger.LogDebug("Uploading artifact {artifactId}", artifactId);
 
             Uri blobUri = await profilerClient.GetProfilerArtifactUploadTokenAsync(artifactId, cancellationToken).ConfigureAwait(false);
@@ -178,14 +181,21 @@ internal class TraceUploader : ITraceUploader
     }
 
     /// <summary>
-    /// Derives a stable artifact ID from the session timestamp so that retries don't create duplicate artifacts.
+    /// Derives a stable artifact ID from the session timestamp and machine name so that
+    /// retries produce the same ID (idempotent) while different machines won't collide.
     /// </summary>
-    private static Guid DeriveArtifactId(DateTimeOffset sessionId)
+    private static Guid DeriveArtifactId(DateTimeOffset sessionId, string machineName)
     {
-        byte[] bytes = new byte[16];
-        BitConverter.GetBytes(sessionId.UtcTicks).CopyTo(bytes, 0);
-        BitConverter.GetBytes(sessionId.Offset.Ticks).CopyTo(bytes, 8);
-        return new Guid(bytes);
+        int size = sizeof(long) + sizeof(long) + machineName.Length * sizeof(char);
+        Span<byte> input = size <= 256 ? stackalloc byte[size] : new byte[size];
+
+        BitConverter.TryWriteBytes(input, sessionId.UtcTicks);
+        BitConverter.TryWriteBytes(input.Slice(8), sessionId.Offset.Ticks);
+        Encoding.Unicode.GetBytes(machineName, input.Slice(16));
+
+        Span<byte> hash = stackalloc byte[16];
+        XxHash128.Hash(input, hash);
+        return new Guid(hash);
     }
 
 
