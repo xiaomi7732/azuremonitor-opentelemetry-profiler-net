@@ -119,7 +119,7 @@ internal class TraceUploader : ITraceUploader
             Azure.Response<BlobContentInfo> uploadResponse = await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
 
             // Set metadata on the blob itself so that downstream ingestion can read it.
-            Dictionary<string, string> metadata = CreateMetadata(extendedContext);
+            Dictionary<string, string> metadata = CreateMetadata(extendedContext, artifactId);
             Azure.Response<BlobInfo> metadataResponse = await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Use the ETag from the metadata response (which is the latest after metadata was set).
@@ -199,16 +199,18 @@ internal class TraceUploader : ITraceUploader
     }
 
 
-    private Dictionary<string, string> CreateMetadata(UploadContextExtension extendedContext)
+    private Dictionary<string, string> CreateMetadata(UploadContextExtension extendedContext, Guid artifactId)
     {
         UploadContext context = extendedContext.UploadContext;
         Dictionary<string, string> metadata = new()
         {
             [BlobMetadataConstants.DataCubeMetaName] = BlobMetadata.GetDataCubeNameString(extendedContext.VerifiedAppId),
+            [BlobMetadataConstants.ArtifactId] = StoragePathContract.GetArtifactIdString(artifactId),
             // Notice, the machine name on the metadata needs to include the iis name suffix when running in antares.
             // Otherwise, the blob won't be located and approved by the frontend.
             [BlobMetadataConstants.MachineNameMetaName] = EnvironmentUtilities.MachineName,
             [BlobMetadataConstants.StartTimeMetaName] = TimestampContract.TimestampToString(context.SessionId),
+            [BlobMetadataConstants.TriggerTime] = TimestampContract.TimestampToString(context.SessionId),
             [BlobMetadataConstants.ProgrammingLanguageMetaName] = ProgramLanguages.CSharp,
             [BlobMetadataConstants.OSPlatformMetaName] = _osPlatformProvider.GetOSPlatformDescription(),
             [BlobMetadataConstants.TraceFileFormatMetaName] = context.TraceFileFormat,
