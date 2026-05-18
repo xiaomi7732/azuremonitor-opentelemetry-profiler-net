@@ -36,7 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.ServiceProfiler.Agent.Ingestion\Microsoft.ServiceProfiler.Agent.Ingestion.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler\src\Azure.Monitor.Diagnostics.Profiler\Azure.Monitor.Diagnostics.Profiler.csproj" />
+    <ProjectReference Include="..\Azure.Monitor.Diagnostics.Profiler\Azure.Monitor.Diagnostics.Profiler.csproj" />
     <ProjectReference Include="..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
   </ItemGroup>
   <ItemGroup>
