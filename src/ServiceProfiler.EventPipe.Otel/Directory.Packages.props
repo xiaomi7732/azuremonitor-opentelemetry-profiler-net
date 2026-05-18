@@ -23,6 +23,7 @@ CommandlineParserVersion=$(_CommandLineParserVersion);
 MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
 MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
 MicrosoftExtensionsConfigurationVersion=$(_MicrosoftExtensionsVersion);
+MicrosoftExtensionsConfigurationBinderVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsHostingAbstractionsVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsLoggingVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsVersion);
