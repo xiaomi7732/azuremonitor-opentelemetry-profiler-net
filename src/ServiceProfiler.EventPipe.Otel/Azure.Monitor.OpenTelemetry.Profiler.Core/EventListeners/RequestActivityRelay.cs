@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
+using System.Threading;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
@@ -18,7 +19,7 @@ internal sealed class RequestActivityRelay
 
     private readonly ILogger<RequestActivityRelay> _logger;
     private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
-    private volatile bool _hasActivityReported;
+    private int _hasActivityReported;
 
     public RequestActivityRelay(ILogger<RequestActivityRelay> logger)
     {
@@ -70,12 +71,14 @@ internal sealed class RequestActivityRelay
         {
             _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
         }
+        Guid previousActivityId = EventSource.CurrentThreadActivityId;
         EventSource.SetCurrentThreadActivityId(currentActivityId);
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
             name: requestName,
             id: id,
             requestId: requestId,
             operationId: operationId);
+        EventSource.SetCurrentThreadActivityId(previousActivityId);
     }
 
     public void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
@@ -104,14 +107,15 @@ internal sealed class RequestActivityRelay
             _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
         }
 
+        Guid previousActivityId = EventSource.CurrentThreadActivityId;
         EventSource.SetCurrentThreadActivityId(currentActivityId);
         AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
             name: requestName, id: id, requestId: requestId, operationId: operationId);
+        EventSource.SetCurrentThreadActivityId(previousActivityId);
 
-        if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
+        if (Interlocked.CompareExchange(ref _hasActivityReported, 1, 0) == 0 && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("Activity detected.");
-            _hasActivityReported = true;
         }
     }
 
@@ -119,11 +123,11 @@ internal sealed class RequestActivityRelay
     //                                ver  trace-id (operationId)         span-id (requestId) flags
     public static (string requestId, string operationId) ExtractKeyIds(string id)
     {
-        string[] tokens = id.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
+        string[] tokens = id.Split('-');
 
-        if (tokens.Length < 3)
+        if (tokens.Length != 4 || string.IsNullOrEmpty(tokens[1]) || string.IsNullOrEmpty(tokens[2]))
         {
-            throw new InvalidDataException(FormattableString.Invariant($"Id shall have at least 3 sections separated by `-`. Actual id: {id}"));
+            throw new InvalidDataException(FormattableString.Invariant($"Id shall have exactly 4 sections separated by `-` with non-empty trace-id and span-id. Actual id: {id}"));
         }
 
         return (requestId: tokens[2], operationId: tokens[1]);
