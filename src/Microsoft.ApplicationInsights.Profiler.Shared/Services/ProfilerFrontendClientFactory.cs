@@ -3,29 +3,29 @@
 // -----------------------------------------------------------------------------
 
 using Azure.Core;
+using Azure.Monitor.Diagnostics.Profiler;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Utilities;
 using System;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 /// <summary>
-/// This helper function simplifies the registration process for the <see cref="IProfilerFrontendClient" />.
-/// Please do NOT inject this directly. Instead, inject the <see cref="IProfilerFrontendClient"/>.
+/// Creates a <see cref="ProfilerClient"/> instance from the current service context.
+/// Please do NOT inject this directly. Instead, inject <see cref="ProfilerClient"/>.
 /// </summary>
-internal class ProfilerFrontendClientFactory
+internal class ProfilerClientFactory
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly UserConfigurationBase _userConfiguration;
 
-    public ProfilerFrontendClientFactory(
+    public ProfilerClientFactory(
         IServiceProvider serviceProvider,
         IServiceProfilerContext serviceProfilerContext,
         IOptions<UserConfigurationBase> userConfiguration)
@@ -35,7 +35,7 @@ internal class ProfilerFrontendClientFactory
         _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
     }
 
-    public IProfilerFrontendClient CreateProfilerFrontendClient()
+    public ProfilerClient CreateProfilerClient()
     {
         IAuthTokenProvider authTokenProvider = _serviceProvider.GetRequiredService<IAuthTokenProvider>();
 
@@ -43,16 +43,14 @@ internal class ProfilerFrontendClientFactory
             ActivatorUtilities.CreateInstance<AADAuthTokenCredential>(_serviceProvider) :
             null;
 
-        // ActivatorUtilities is not used for creating ProfilerFrontendClient due to its limitation in handling nullable parameters.
-        // For example, when credential is null, it will throw InvalidOperationException:
-        // A suitable constructor for type 'Microsoft.ServiceProfiler.Agent.FrontendClient.ProfilerFrontendClient' could not be located.
-        // Because CreateProfilerFrontendClient method is only called in ServiceCollectionExtensions, it will be disposed by the service provider.
-        return new ProfilerFrontendClient(_serviceProfilerContext.StampFrontendEndpointUrl,
-            _serviceProfilerContext.AppInsightsInstrumentationKey,
-            _serviceProfilerContext.MachineName,
-            "1.0.0",
-            FormattableString.Invariant($"ServiceProfilerEventPipeAgent/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
-            credential,
-            _userConfiguration.SkipEndpointCertificateValidation);
+        ProfilerClientOptions options = new()
+        {
+            Endpoint = _serviceProfilerContext.StampFrontendEndpointUrl,
+            InstrumentationKey = _serviceProfilerContext.AppInsightsInstrumentationKey.ToString("D"),
+            MachineName = _serviceProfilerContext.MachineName,
+            UserAgent = FormattableString.Invariant($"ServiceProfilerEventPipeAgent/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
+        };
+
+        return new ProfilerClient(options, credential);
     }
 }

@@ -99,7 +99,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         // Client
-        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
+        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerClientFactory>(p).CreateProfilerClient());
 
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();

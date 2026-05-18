@@ -2,7 +2,10 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Azure.Core;
+using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
@@ -10,8 +13,6 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
-using Microsoft.ServiceProfiler.Agent.Exceptions;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Utilities;
@@ -30,7 +31,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader;
 internal class TraceUploader : ITraceUploader
 {
     private readonly IZipUtility _zipUtility;
-    private readonly IProfilerFrontendClientBuilder _stampFrontendClientBuilder;
     private readonly IAppInsightsLogger _telemetryLogger;
     private readonly IOSPlatformProvider _osPlatformProvider;
     private readonly ITraceValidatorFactory _traceValidatorFactory;
@@ -46,7 +46,6 @@ internal class TraceUploader : ITraceUploader
     public TraceUploader(
         IZipUtility zipUtility,
         IBlobClientFactory blobClientFactory,
-        IProfilerFrontendClientBuilder stampFrontendClientBuilder,
         IAppInsightsLogger telemetryLogger,
         IOSPlatformProvider oSPlatformProvider,
         ITraceValidatorFactory traceValidatorFactory,
@@ -59,7 +58,6 @@ internal class TraceUploader : ITraceUploader
     {
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _zipUtility = zipUtility ?? throw new ArgumentNullException(nameof(zipUtility));
-        _stampFrontendClientBuilder = stampFrontendClientBuilder ?? throw new ArgumentNullException(nameof(stampFrontendClientBuilder));
         _telemetryLogger = telemetryLogger ?? throw new ArgumentNullException(nameof(telemetryLogger));
         _osPlatformProvider = oSPlatformProvider ?? throw new ArgumentNullException(nameof(oSPlatformProvider));
         _traceValidatorFactory = traceValidatorFactory ?? throw new ArgumentNullException(nameof(traceValidatorFactory));
@@ -103,73 +101,44 @@ internal class TraceUploader : ITraceUploader
     private async Task UploadAsync(UploadContextExtension extendedContext, string zippedFilePath, CancellationToken cancellationToken)
     {
         UploadContext context = extendedContext.UploadContext;
-        IProfilerFrontendClient? stampFrontendClient = null;
         try
         {
-            stampFrontendClient = _stampFrontendClientBuilder.WithUploadContext(extendedContext).Build();
-            string actualStampId = await stampFrontendClient.GetStampIdAsync(cancellationToken).ConfigureAwait(false);
+            ProfilerClient profilerClient = CreateProfilerClient(extendedContext);
 
-            // The actual stamp id can not be null
-            if (string.IsNullOrEmpty(actualStampId))
-            {
-                throw new InvalidOperationException(FormattableString.Invariant($"Stamp ID is null. This should not happen. Expected: {context.StampId}"));
-            }
+            // Use session start time as a deterministic artifact ID so retries don't create duplicates.
+            Guid artifactId = DeriveArtifactId(context.SessionId);
+            Logger.LogDebug("Uploading artifact {artifactId}", artifactId);
 
-            // If the context.StampId is null, we will set it to the actual stamp id, so that it will not fail the comparison later.
-            if (string.IsNullOrEmpty(context.StampId))
-            {
-                context.StampId = actualStampId;
-            }
+            Uri blobUri = await profilerClient.GetProfilerArtifactUploadTokenAsync(artifactId, cancellationToken).ConfigureAwait(false);
+            Logger.LogDebug("Got upload token for artifact {artifactId}", artifactId);
 
-            // Compare the actual stamp id with the expected one.
-            if (!string.Equals(actualStampId, context.StampId, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(FormattableString.Invariant($"Actual stamp-id of {actualStampId} is different than expected stamp-id: {context.StampId}"));
-            }
+            BlobClient blob = _blobClientFactory.CreateBlobClient(blobUri);
+            Azure.Response<BlobContentInfo> uploadResponse = await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
 
-            BlobAccessPass uploadPass = await stampFrontendClient.GetEtlUploadAccessAsync(
-                context.SessionId,
-                cancellationToken).ConfigureAwait(false);
-
-            if (uploadPass == null)
-            {
-                throw new InvalidOperationException("Failed to get a pass to upload the trace file.");
-            }
-
-            Logger.LogDebug("Uri with SAS Token: {uploadPassValue}", uploadPass.GetUriWithSASToken().AbsoluteUri);
-            BlobClient blob = _blobClientFactory.CreateBlobClient(uploadPass.GetUriWithSASToken());
-            await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
-
-            // Update the blob metadata.
+            // Set metadata on the blob itself so that downstream ingestion can read it.
             Dictionary<string, string> metadata = CreateMetadata(extendedContext);
-            await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
+            Azure.Response<BlobInfo> metadataResponse = await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (await stampFrontendClient.ReportEtlUploadFinishAsync(uploadPass, cancellationToken).ConfigureAwait(false))
-            {
-                Logger.LogDebug("Blob upload finished @ {blobPath}.", blob?.BlobContainerName + '/' + blob?.Name);
-                Logger.LogInformation(TelemetryConstants.TraceUploaded);
-            }
-            else
-            {
-                throw new InvalidOperationException("Failed to commit the uploaded etl file.");
-            }
+            // Use the ETag from the metadata response (which is the latest after metadata was set).
+            ETag etag = metadataResponse.Value.ETag;
+
+            await profilerClient.CommitProfilerArtifactAsync(artifactId, etag, cancellationToken).ConfigureAwait(false);
+
+            Logger.LogDebug("Blob upload committed for artifact {artifactId}.", artifactId);
+            Logger.LogInformation(TelemetryConstants.TraceUploaded);
 
             _telemetryLogger.Flush();
         }
-        catch (InstrumentationKeyInvalidException ikie)
+        catch (Exception ex)
         {
-            Logger.LogError(ikie, "Instrumentation Key is not well formed or empty.");
+            Logger.LogError(ex, "Failed to upload trace artifact.");
         }
         finally
         {
-            (stampFrontendClient as IDisposable)?.Dispose();
-
             if (!string.IsNullOrEmpty(zippedFilePath))
             {
                 if (!context.PreserveTraceFile)
                 {
-                    // Try clean up and wish the best.
-
                     try { File.Delete(zippedFilePath); }
 #pragma warning disable CA1031 // Do not catch general exception types
                     catch
@@ -182,6 +151,41 @@ internal class TraceUploader : ITraceUploader
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ProfilerClient"/> configured for this upload context.
+    /// </summary>
+    protected virtual ProfilerClient CreateProfilerClient(UploadContextExtension extendedContext)
+    {
+        UploadContext context = extendedContext.UploadContext;
+
+        string agentString = FormattableString.Invariant($"EventPipeUploader/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}");
+        if (!string.IsNullOrEmpty(extendedContext.AdditionalData?.AgentString))
+        {
+            agentString = extendedContext.AdditionalData.AgentString;
+        }
+
+        ProfilerClientOptions options = new()
+        {
+            Endpoint = context.HostUrl,
+            InstrumentationKey = context.AIInstrumentationKey.ToString("D"),
+            MachineName = EnvironmentUtilities.MachineName,
+            UserAgent = agentString,
+        };
+
+        return new ProfilerClient(options, extendedContext.TokenCredential);
+    }
+
+    /// <summary>
+    /// Derives a stable artifact ID from the session timestamp so that retries don't create duplicate artifacts.
+    /// </summary>
+    private static Guid DeriveArtifactId(DateTimeOffset sessionId)
+    {
+        byte[] bytes = new byte[16];
+        BitConverter.GetBytes(sessionId.UtcTicks).CopyTo(bytes, 0);
+        BitConverter.GetBytes(sessionId.Offset.Ticks).CopyTo(bytes, 8);
+        return new Guid(bytes);
     }
 
 

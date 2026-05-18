@@ -10,7 +10,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
+using Azure.Monitor.Diagnostics.Profiler;
 
 namespace Microsoft.ApplicationInsights.Profiler.Core;
 
@@ -21,10 +21,10 @@ internal sealed class RemoteProfilerSettingsService : RemoteSettingsServiceBase
 
     public RemoteProfilerSettingsService(
         BootstrapState bootstrap,
-        IProfilerFrontendClient frontendClient,
+        ProfilerClient profilerClient,
         IOptions<UserConfiguration> userConfigurationOptions,
         ILogger<RemoteProfilerSettingsService> logger,
-        IServiceProvider serviceProvider) : base(bootstrap, frontendClient, userConfigurationOptions, logger)
+        IServiceProvider serviceProvider) : base(bootstrap, profilerClient, userConfigurationOptions, logger)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }

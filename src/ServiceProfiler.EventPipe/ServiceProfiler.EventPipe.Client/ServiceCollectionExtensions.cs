@@ -308,7 +308,7 @@ internal static class ServiceCollectionExtensions
 
     private static IServiceCollection AddFrontendClient(this IServiceCollection services)
     {
-        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
+        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerClientFactory>(p).CreateProfilerClient());
         return services;
     }
 
