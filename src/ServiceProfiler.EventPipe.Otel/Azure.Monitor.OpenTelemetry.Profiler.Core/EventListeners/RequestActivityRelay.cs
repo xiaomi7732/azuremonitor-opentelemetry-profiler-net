@@ -1,0 +1,131 @@
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Diagnostics.Tracing;
+
+namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
+
+/// <summary>
+/// Tracks in-flight "interesting" request activities (currently ASP.NET Core HTTP-in) and forwards
+/// matched start/stop pairs onto <see cref="AzureMonitorOpenTelemetryProfilerDataAdapterEventSource"/>.
+///
+/// Lives once per <see cref="TraceSessionListener"/> and is shared by every <see cref="IEventSourceHandler"/>
+/// that produces request activities, so a Start emitted by one source can correlate with (or be deduped
+/// against) a Stop emitted by another.
+/// </summary>
+internal sealed class RequestActivityRelay
+{
+    private const string AspNetCoreHttpRequestInName = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
+
+    private readonly ILogger<RequestActivityRelay> _logger;
+    private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
+    private volatile bool _hasActivityReported;
+
+    public RequestActivityRelay(ILogger<RequestActivityRelay> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// We only capture HTTP-in requests. HTTP-out (e.g. HttpClient) is excluded.
+    /// </summary>
+    private static bool IsInterestingRequest(string requestName)
+        => string.Equals(AspNetCoreHttpRequestInName, requestName, StringComparison.Ordinal);
+
+    public void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
+    {
+        Guid currentActivityId = eventData.ActivityId;
+        bool isDebugLoggingEnabled = _logger.IsEnabled(LogLevel.Debug);
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Request started: Activity Id: {activityId}", currentActivityId);
+        }
+
+        if (!IsInterestingRequest(requestName))
+        {
+            if (isDebugLoggingEnabled)
+            {
+                _logger.LogDebug("Drop uninteresting request by name: {requestName}, id: {id}", requestName, id);
+            }
+            return;
+        }
+
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Interesting start activity, name: {name}, id: {id}", requestName, id);
+        }
+
+        // Note to the started-activities bag, so that when stop happens, it knows to match.
+        // Multiple handlers (e.g. the OpenTelemetry-Sdk and DiagnosticSource bridges) can both observe
+        // the same ASP.NET Core HTTP-in activity. Dedupe so we don't double-emit to the relay EventSource.
+        if (!_startedActivityIds.TryAdd(id, default))
+        {
+            if (isDebugLoggingEnabled)
+            {
+                _logger.LogDebug("Duplicate start for id {id} (already relayed by another handler); skipping.", id);
+            }
+            return;
+        }
+
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
+        }
+        EventSource.SetCurrentThreadActivityId(currentActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStart(
+            name: requestName,
+            id: id,
+            requestId: requestId,
+            operationId: operationId);
+    }
+
+    public void HandleRequestStop(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
+    {
+        bool isDebugLoggingEnabled = _logger.IsEnabled(LogLevel.Debug);
+        Guid currentActivityId = eventData.ActivityId;
+
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Request stopped: Activity Id: {activityId}", currentActivityId);
+        }
+
+        if (!_startedActivityIds.TryRemove(id, out _))
+        {
+            if (isDebugLoggingEnabled)
+            {
+                _logger.LogDebug("No start activity found for this stop activity. Request name: {requestName}, id: {id}", requestName, id);
+            }
+            // No interesting start activity captured, it doesn't make sense to capture the stop alone.
+            return;
+        }
+
+        if (isDebugLoggingEnabled)
+        {
+            _logger.LogDebug("Interesting activity found. Name: {name}, id: {id}", requestName, id);
+            _logger.LogDebug("Set current thread activity id: {activityId}", currentActivityId);
+        }
+
+        EventSource.SetCurrentThreadActivityId(currentActivityId);
+        AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log.RequestStop(
+            name: requestName, id: id, requestId: requestId, operationId: operationId);
+
+        if (!_hasActivityReported && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Activity detected.");
+            _hasActivityReported = true;
+        }
+    }
+
+    // W3C Trace Context id example: 00-4dee62c12eaa9efca3d1f0565f3efda6-b3c470a7ee10c13b-01
+    //                                ver  trace-id (operationId)         span-id (requestId) flags
+    public static (string requestId, string operationId) ExtractKeyIds(string id)
+    {
+        string[] tokens = id.Split(['-'], StringSplitOptions.RemoveEmptyEntries);
+
+        if (tokens.Length < 3)
+        {
+            throw new InvalidDataException(FormattableString.Invariant($"Id shall have at least 3 sections separated by `-`. Actual id: {id}"));
+        }
+
+        return (requestId: tokens[2], operationId: tokens[1]);
+    }
+}
