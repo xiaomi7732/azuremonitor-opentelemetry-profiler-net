@@ -40,6 +40,14 @@ internal class ProfilerClientFactory
 
     public IProfilerClient CreateProfilerClient()
     {
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (_userConfiguration.SkipEndpointCertificateValidation)
+        {
+            _loggerFactory.CreateLogger<ProfilerClientFactory>()
+                .LogWarning("SkipEndpointCertificateValidation is deprecated and no longer supported. The setting will be ignored.");
+        }
+#pragma warning restore CS0618
+
         TokenCredential? credential = _authTokenProvider.IsAADAuthenticateEnabled ?
             new AADAuthTokenCredential(
                 _authTokenProvider,
