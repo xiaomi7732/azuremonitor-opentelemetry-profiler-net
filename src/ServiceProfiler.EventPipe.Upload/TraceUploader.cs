@@ -120,7 +120,7 @@ internal class TraceUploader : ITraceUploader
             Logger.LogDebug("Got upload token for artifact {artifactId}", artifactId);
 
             BlobClient blob = _blobClientFactory.CreateBlobClient(blobUri);
-            await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
+            await blob.UploadAsync(zippedFilePath, overwrite: true, cancellationToken).ConfigureAwait(false);
 
             // Set metadata on the blob itself so that downstream ingestion can read it.
             Dictionary<string, string> metadata = CreateMetadata(extendedContext, artifactId);

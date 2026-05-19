@@ -39,6 +39,11 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             return _onUploadAsync?.Invoke(path, cancellationToken);
         }
 
+        public override Task<Response<BlobContentInfo>> UploadAsync(string path, bool overwrite, CancellationToken cancellationToken = default)
+        {
+            return _onUploadAsync?.Invoke(path, cancellationToken);
+        }
+
         public override Task<Response<BlobInfo>> SetMetadataAsync(IDictionary<string, string> metadata, BlobRequestConditions conditions = null, CancellationToken cancellationToken = default)
         {
             return _onSetMetadataAsync?.Invoke(metadata, conditions, cancellationToken);
