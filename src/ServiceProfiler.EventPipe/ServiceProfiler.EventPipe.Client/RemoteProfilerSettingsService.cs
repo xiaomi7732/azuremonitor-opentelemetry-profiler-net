@@ -21,7 +21,7 @@ internal sealed class RemoteProfilerSettingsService : RemoteSettingsServiceBase
 
     public RemoteProfilerSettingsService(
         BootstrapState bootstrap,
-        ProfilerClient profilerClient,
+        IProfilerClient profilerClient,
         IOptions<UserConfiguration> userConfigurationOptions,
         ILogger<RemoteProfilerSettingsService> logger,
         IServiceProvider serviceProvider) : base(bootstrap, profilerClient, userConfigurationOptions, logger)

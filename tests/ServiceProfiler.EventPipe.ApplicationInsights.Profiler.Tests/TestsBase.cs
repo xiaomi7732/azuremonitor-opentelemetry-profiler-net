@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Azure.Core;
+using Azure.Monitor.Diagnostics.Profiler;
 using Microsoft.ApplicationInsights.Profiler.Core;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.EventListeners;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
 using Moq;
@@ -144,11 +145,9 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 return handler;
             });
 
-            serviceCollection.AddTransient<IProfilerFrontendClient>(provider =>
+            serviceCollection.AddTransient<IProfilerClient>(provider =>
             {
-                _stampFrontendClientMock = new Mock<IProfilerFrontendClient>();
-                _stampFrontendClientMock.Setup(s => s.GetStampIdAsync(It.IsAny<CancellationToken>()))
-                    .Returns(Task.FromResult(_testStampId));
+                _stampFrontendClientMock = new Mock<IProfilerClient>();
                 return _stampFrontendClientMock.Object;
             });
 
@@ -282,7 +281,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         protected static readonly DateTimeOffset _testSessionId = DateTimeOffset.UtcNow;
         protected const string _testTraceFilePath = "/mnt/d/temp/trace.etl.zip";
 
-        internal Mock<IProfilerFrontendClient>? _stampFrontendClientMock;
+        internal Mock<IProfilerClient>? _stampFrontendClientMock;
         internal Mock<IPrioritizedUploaderLocator>? _uploaderLocatorMock;
         internal Mock<ITraceUploader>? _traceUploaderMock;
 

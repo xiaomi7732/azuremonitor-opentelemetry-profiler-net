@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Azure;
 using Azure.Core;
 using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Storage.Blobs;
@@ -105,7 +106,7 @@ internal class TraceUploader : ITraceUploader
         UploadContext context = extendedContext.UploadContext;
         try
         {
-            ProfilerClient profilerClient = CreateProfilerClient(extendedContext);
+            IProfilerClient profilerClient = CreateProfilerClient(extendedContext);
 
             // Use session start time + machine name as a deterministic artifact ID so retries
             // don't create duplicates, while avoiding collisions across machines.
@@ -157,9 +158,9 @@ internal class TraceUploader : ITraceUploader
     }
 
     /// <summary>
-    /// Creates a <see cref="ProfilerClient"/> configured for this upload context.
+    /// Creates a <see cref="IProfilerClient"/> configured for this upload context.
     /// </summary>
-    protected virtual ProfilerClient CreateProfilerClient(UploadContextExtension extendedContext)
+    protected virtual IProfilerClient CreateProfilerClient(UploadContextExtension extendedContext)
     {
         UploadContext context = extendedContext.UploadContext;
 

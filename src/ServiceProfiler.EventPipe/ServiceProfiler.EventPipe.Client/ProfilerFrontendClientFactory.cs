@@ -17,7 +17,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core;
 
 /// <summary>
 /// Creates a <see cref="ProfilerClient"/> instance from the current service context.
-/// Please do NOT inject this directly. Instead, inject <see cref="ProfilerClient"/>.
+/// Please do NOT inject this directly. Instead, inject <see cref="IProfilerClient"/>.
 /// </summary>
 internal class ProfilerClientFactory
 {
@@ -38,7 +38,7 @@ internal class ProfilerClientFactory
         _authTokenProvider = authTokenServiceFactory ?? throw new ArgumentNullException(nameof(authTokenServiceFactory));
     }
 
-    public ProfilerClient CreateProfilerClient()
+    public IProfilerClient CreateProfilerClient()
     {
         TokenCredential? credential = _authTokenProvider.IsAADAuthenticateEnabled ?
             new AADAuthTokenCredential(

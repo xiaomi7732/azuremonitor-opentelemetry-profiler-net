@@ -28,7 +28,7 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
-    private readonly ProfilerClient _profilerClient;
+    private readonly IProfilerClient _profilerClient;
     private readonly TimeSpan _frequency;
     private readonly bool _standaloneMode;
     private readonly bool _isDisabled;
@@ -39,7 +39,7 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
 
     public RemoteSettingsServiceBase(
         BootstrapState bootstrapState,
-        ProfilerClient profilerClient,
+        IProfilerClient profilerClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
         ILogger<RemoteSettingsServiceBase> logger)
         : base(bootstrapState, logger)

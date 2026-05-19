@@ -17,7 +17,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
 /// <summary>
 /// Creates a <see cref="ProfilerClient"/> instance from the current service context.
-/// Please do NOT inject this directly. Instead, inject <see cref="ProfilerClient"/>.
+/// Please do NOT inject this directly. Instead, inject <see cref="IProfilerClient"/>.
 /// </summary>
 internal class ProfilerClientFactory
 {
@@ -35,7 +35,7 @@ internal class ProfilerClientFactory
         _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
     }
 
-    public ProfilerClient CreateProfilerClient()
+    public IProfilerClient CreateProfilerClient()
     {
         IAuthTokenProvider authTokenProvider = _serviceProvider.GetRequiredService<IAuthTokenProvider>();
 
