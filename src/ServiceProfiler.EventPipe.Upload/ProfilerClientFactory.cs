@@ -20,8 +20,11 @@ internal class ProfilerClientFactory : IProfilerClientFactory
 
         UploadContext context = uploadContextExtension.UploadContext;
 
-        string agentString = uploadContextExtension.AdditionalData?.AgentString
-            ?? throw new InvalidOperationException("AgentString must be provided via IPCAdditionalData. The calling agent should set it using IAgentStringProvider.");
+        string? agentString = uploadContextExtension.AdditionalData?.AgentString;
+        if (string.IsNullOrEmpty(agentString))
+        {
+            agentString = FormattableString.Invariant($"EventPipeUploader/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}");
+        }
 
         ProfilerClientOptions options = new()
         {
