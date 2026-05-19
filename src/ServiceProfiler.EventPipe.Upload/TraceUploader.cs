@@ -40,6 +40,7 @@ internal class TraceUploader : ITraceUploader
     private readonly ISampleActivitySerializer _sampleActivitySerializer;
     private readonly ICustomEventsSender _customEventsSender;
     private readonly IBlobClientFactory _blobClientFactory;
+    private readonly IProfilerClientFactory _profilerClientFactory;
 
     protected IAppProfileClientFactory AppProfileClientFactory { get; }
     protected UploadContext UploadContext { get; }
@@ -49,6 +50,7 @@ internal class TraceUploader : ITraceUploader
     public TraceUploader(
         IZipUtility zipUtility,
         IBlobClientFactory blobClientFactory,
+        IProfilerClientFactory profilerClientFactory,
         IAppInsightsLogger telemetryLogger,
         IOSPlatformProvider oSPlatformProvider,
         ITraceValidatorFactory traceValidatorFactory,
@@ -61,6 +63,7 @@ internal class TraceUploader : ITraceUploader
     {
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _zipUtility = zipUtility ?? throw new ArgumentNullException(nameof(zipUtility));
+        _profilerClientFactory = profilerClientFactory ?? throw new ArgumentNullException(nameof(profilerClientFactory));
         _telemetryLogger = telemetryLogger ?? throw new ArgumentNullException(nameof(telemetryLogger));
         _osPlatformProvider = oSPlatformProvider ?? throw new ArgumentNullException(nameof(oSPlatformProvider));
         _traceValidatorFactory = traceValidatorFactory ?? throw new ArgumentNullException(nameof(traceValidatorFactory));
@@ -106,7 +109,7 @@ internal class TraceUploader : ITraceUploader
         UploadContext context = extendedContext.UploadContext;
         try
         {
-            IProfilerClient profilerClient = CreateProfilerClient(extendedContext);
+            IProfilerClient profilerClient = _profilerClientFactory.Create(extendedContext);
 
             // Use session start time + machine name as a deterministic artifact ID so retries
             // don't create duplicates, while avoiding collisions across machines.
@@ -155,30 +158,6 @@ internal class TraceUploader : ITraceUploader
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Creates a <see cref="IProfilerClient"/> configured for this upload context.
-    /// </summary>
-    protected virtual IProfilerClient CreateProfilerClient(UploadContextExtension extendedContext)
-    {
-        UploadContext context = extendedContext.UploadContext;
-
-        string agentString = FormattableString.Invariant($"EventPipeUploader/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}");
-        if (!string.IsNullOrEmpty(extendedContext.AdditionalData?.AgentString))
-        {
-            agentString = extendedContext.AdditionalData.AgentString;
-        }
-
-        ProfilerClientOptions options = new()
-        {
-            Endpoint = context.HostUrl,
-            InstrumentationKey = context.AIInstrumentationKey.ToString("D"),
-            MachineName = EnvironmentUtilities.MachineName,
-            UserAgent = agentString,
-        };
-
-        return new ProfilerClient(options, extendedContext.TokenCredential);
     }
 
     /// <summary>

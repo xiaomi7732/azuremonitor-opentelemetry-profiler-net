@@ -127,9 +127,10 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         }
 
         private TraceUploader CreateTraceUploader(IServiceProvider serviceProvider)
-            => new TestTraceUploader(
+            => new TraceUploader(
                 serviceProvider.GetRequiredService<IZipUtility>(),
                 serviceProvider.GetRequiredService<IBlobClientFactory>(),
+                serviceProvider.GetRequiredService<IProfilerClientFactory>(),
                 serviceProvider.GetRequiredService<IAppInsightsLogger>(),
                 serviceProvider.GetRequiredService<IOSPlatformProvider>(),
                 serviceProvider.GetRequiredService<ITraceValidatorFactory>(),
@@ -138,8 +139,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 serviceProvider.GetRequiredService<IUploadContextValidator>(),
                 serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
                 serviceProvider.GetRequiredService<ICustomEventsSender>(),
-                serviceProvider.GetRequiredService<ILogger<TraceUploader>>(),
-                _profilerClientMock.Object);
+                serviceProvider.GetRequiredService<ILogger<TraceUploader>>());
 
         private ServiceProvider GetTestServiceProvider(
             Action? onCommitProfilerArtifact = null,
@@ -158,7 +158,9 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             _profilerClientMock.Setup(s => s.CommitProfilerArtifactAsync(It.IsAny<Guid>(), It.IsAny<ETag>(), It.IsAny<CancellationToken>()))
                 .Callback(() => onCommitProfilerArtifact?.Invoke())
                 .ReturnsAsync(CreateAcceptedArtifact());
-            services.AddTransient<IProfilerClient>(_ => _profilerClientMock.Object);
+            var profilerClientFactoryMock = new Mock<IProfilerClientFactory>();
+            profilerClientFactoryMock.Setup(f => f.Create(It.IsAny<UploadContextExtension>())).Returns(_profilerClientMock.Object);
+            services.AddTransient<IProfilerClientFactory>(_ => profilerClientFactoryMock.Object);
             services.AddTransient<IAppInsightsLogger>(_ => _telemetryLoggerMock.Object);
 
             var blobClientFactoryMock = new Mock<IBlobClientFactory>();
@@ -256,41 +258,5 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             return uploadContextValidatorMock.Object;
         }
 
-        private sealed class TestTraceUploader : TraceUploader
-        {
-            private readonly IProfilerClient _profilerClient;
-
-            public TestTraceUploader(
-                IZipUtility zipUtility,
-                IBlobClientFactory blobClientFactory,
-                IAppInsightsLogger telemetryLogger,
-                IOSPlatformProvider oSPlatformProvider,
-                ITraceValidatorFactory traceValidatorFactory,
-                ISampleActivitySerializer sampleActivitySerializer,
-                UploadContext uploadContext,
-                IUploadContextValidator uploadContextValidator,
-                IAppProfileClientFactory appProfileClientFactory,
-                ICustomEventsSender customEventsSender,
-                ILogger<TraceUploader> logger,
-                IProfilerClient profilerClient)
-                : base(
-                    zipUtility,
-                    blobClientFactory,
-                    telemetryLogger,
-                    oSPlatformProvider,
-                    traceValidatorFactory,
-                    sampleActivitySerializer,
-                    uploadContext,
-                    uploadContextValidator,
-                    appProfileClientFactory,
-                    customEventsSender,
-                    logger)
-            {
-                _profilerClient = profilerClient;
-            }
-
-            protected override IProfilerClient CreateProfilerClient(UploadContextExtension extendedContext)
-                => _profilerClient;
-        }
     }
 }

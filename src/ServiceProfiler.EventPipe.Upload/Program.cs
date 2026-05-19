@@ -119,6 +119,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
             });
 
             services.TryAddSingleton<IBlobClientFactory, BlobClientFactory>();
+            services.TryAddSingleton<IProfilerClientFactory, ProfilerClientFactory>();
             services.TryAddSingleton<ITraceValidatorFactory, EventPipeTraceValidatorFactory>();
 
             services.AddSingleton<TraceUploaderFactory>();

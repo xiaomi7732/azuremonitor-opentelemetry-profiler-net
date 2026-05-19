@@ -22,6 +22,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
     public TraceUploaderByNamedPipe(
         IZipUtility zipUtility,
         IBlobClientFactory blobClientFactory,
+        IProfilerClientFactory profilerClientFactory,
         IAppInsightsLogger telemetryLogger,
         IOSPlatformProvider oSPlatformProvider,
         ITraceValidatorFactory traceValidatorFactory,
@@ -34,6 +35,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
         ILogger<TraceUploaderByNamedPipe> logger)
         : base(zipUtility,
             blobClientFactory,
+            profilerClientFactory,
             telemetryLogger,
             oSPlatformProvider,
             traceValidatorFactory,
