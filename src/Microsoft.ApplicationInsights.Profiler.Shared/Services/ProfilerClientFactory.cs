@@ -48,7 +48,7 @@ internal class ProfilerClientFactory
             Endpoint = _serviceProfilerContext.StampFrontendEndpointUrl,
             InstrumentationKey = _serviceProfilerContext.AppInsightsInstrumentationKey.ToString("D"),
             MachineName = _serviceProfilerContext.MachineName,
-            UserAgent = FormattableString.Invariant($"ServiceProfilerEventPipeAgent/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
+            UserAgent = FormattableString.Invariant($"ServiceProfilerEventPipeAgent-OTel/{EnvironmentUtilities.ExecutingAssemblyInformationalVersion}"),
         };
 
         return new ProfilerClient(options, credential);
