@@ -82,7 +82,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 Assert.Equal("MockRoleName", metadata[BlobMetadataConstants.RoleName]);
                 Assert.Equal("MockTrigger", metadata[BlobMetadataConstants.TriggerType]);
                 isSetMetadataAsyncCalled = true;
-                return Task.FromResult<Response<BlobInfo>>(null!);
+                return Task.FromResult(CreateBlobInfoResponse());
             });
 
             TraceUploader uploader = CreateTraceUploader(serviceProvider);

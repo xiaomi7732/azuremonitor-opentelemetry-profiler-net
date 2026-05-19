@@ -120,7 +120,7 @@ internal class TraceUploader : ITraceUploader
             Logger.LogDebug("Got upload token for artifact {artifactId}", artifactId);
 
             BlobClient blob = _blobClientFactory.CreateBlobClient(blobUri);
-            Azure.Response<BlobContentInfo> uploadResponse = await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
+            await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
 
             // Set metadata on the blob itself so that downstream ingestion can read it.
             Dictionary<string, string> metadata = CreateMetadata(extendedContext, artifactId);
@@ -139,6 +139,7 @@ internal class TraceUploader : ITraceUploader
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to upload trace artifact.");
+            throw;
         }
         finally
         {
@@ -169,8 +170,16 @@ internal class TraceUploader : ITraceUploader
         int size = sizeof(long) + sizeof(long) + machineName.Length * sizeof(char);
         Span<byte> input = size <= 256 ? stackalloc byte[size] : new byte[size];
 
-        BitConverter.TryWriteBytes(input, sessionId.UtcTicks);
-        BitConverter.TryWriteBytes(input.Slice(8), sessionId.Offset.Ticks);
+        if (!BitConverter.TryWriteBytes(input, sessionId.UtcTicks))
+        {
+            throw new InvalidOperationException("Buffer too small for UtcTicks.");
+        }
+
+        if (!BitConverter.TryWriteBytes(input.Slice(8), sessionId.Offset.Ticks))
+        {
+            throw new InvalidOperationException("Buffer too small for Offset.Ticks.");
+        }
+
         Encoding.Unicode.GetBytes(machineName, input.Slice(16));
 
         Span<byte> hash = stackalloc byte[16];
