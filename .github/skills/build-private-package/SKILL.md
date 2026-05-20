@@ -27,7 +27,7 @@ Two package flavors are available:
 2. Ask the user which configuration to use if not specified. Default to `Debug`.
 3. Run the appropriate build script (see below).
 4. Check output for `Package succeeded :-)` to confirm success.
-5. List the generated `.nupkg` files from the output directories and report full paths.
+5. **List the generated `.nupkg` files** by running `Get-ChildItem` on the output directories. Report the actual full paths from the listing. Do NOT infer filenames from build log timestamps — OTel and Classic builds may have different timestamps even when built together.
 
 ### Classic Package
 
