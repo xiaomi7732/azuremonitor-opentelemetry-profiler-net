@@ -109,9 +109,10 @@ internal class TraceUploader : ITraceUploader
         {
             IProfilerClient profilerClient = _profilerClientFactory.Create(extendedContext);
 
-            // Use session start time + machine name as a deterministic artifact ID so retries
-            // don't create duplicates, while avoiding collisions across machines.
-            Guid artifactId = ArtifactIdDerivation.DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
+            // Prefer the artifact ID from the agent (via IPC) to ensure consistency with custom events.
+            // Fall back to deriving it locally for the non-named-pipe path.
+            Guid artifactId = extendedContext.AdditionalData?.ArtifactId
+                ?? ArtifactIdDerivation.DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
             Logger.LogDebug("Uploading artifact {artifactId}", artifactId);
 
             Uri blobUri = await profilerClient.GetProfilerArtifactUploadTokenAsync(artifactId, cancellationToken).ConfigureAwait(false);
