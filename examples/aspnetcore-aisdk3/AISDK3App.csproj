@@ -8,8 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="[3.*-*, 4.0.0)" />
-    <!-- <PackageReference Include="Azure.Monitor.OpenTelemetry.Profiler" Version="[1.*-*, 2.0.0)" /> -->
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.Profiler" Version="1.0.0-private2605201333debug" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Profiler" Version="[1.*-*, 2.0.0)" />
   </ItemGroup>
 
 </Project>
