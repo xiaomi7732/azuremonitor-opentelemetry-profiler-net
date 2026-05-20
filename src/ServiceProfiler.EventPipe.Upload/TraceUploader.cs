@@ -4,6 +4,7 @@
 
 using Azure;
 using Azure.Core;
+using Azure.Monitor.Diagnostics.Models;
 using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -128,9 +129,13 @@ internal class TraceUploader : ITraceUploader
             // Use the ETag from the metadata response (which is the latest after metadata was set).
             ETag etag = metadataResponse.Value.ETag;
 
-            await profilerClient.CommitProfilerArtifactAsync(artifactId, etag, cancellationToken).ConfigureAwait(false);
+            AcceptedArtifact acceptedArtifact = await profilerClient.CommitProfilerArtifactAsync(artifactId, etag, cancellationToken).ConfigureAwait(false);
 
-            Logger.LogDebug("Blob upload committed for artifact {artifactId}.", artifactId);
+            // The server returns the stamp ID in the commit response — propagate it
+            // so that custom events can reference the correct artifact location.
+            context.StampId = acceptedArtifact.StampId;
+
+            Logger.LogDebug("Blob upload committed for artifact {artifactId} on stamp {stampId}.", artifactId, acceptedArtifact.StampId);
             Logger.LogInformation(TelemetryConstants.TraceUploaded);
 
             _telemetryLogger.Flush();
