@@ -29,6 +29,7 @@ MicrosoftExtensionsLoggingVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsVersion);
 SystemCollectionsImmutableVersion=$(_SystemCollectionsImmutableVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+SystemIOHashingVersion=$(_SystemIOHashingVersion);
 SystemLinqAsyncEnumerableVersion=$(_SystemLinqAsyncEnumerableVersion);
 SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
 SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);

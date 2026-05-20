@@ -52,6 +52,7 @@ MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsVersion);
 SystemDiagnosticsDiagnosticSourceVersion=$(_SystemDiagnosticsDiagnosticSourceVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+SystemIOHashingVersion=$(_SystemIOHashingVersion);
 SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
 SystemLinqAsyncEnumerableVersion=$(_SystemLinqAsyncEnumerableVersion);
 SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
