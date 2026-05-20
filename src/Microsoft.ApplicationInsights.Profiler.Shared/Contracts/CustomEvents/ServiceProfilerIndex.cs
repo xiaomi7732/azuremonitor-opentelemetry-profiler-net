@@ -12,6 +12,9 @@ internal record ServiceProfilerIndex
     public string MachineName { get; init; } = null!;
     public int ProcessId { get; init; }
     public Guid ArtifactId { get; init; }
+    public string ArtifactKind { get; init; } = null!;
+    public string Extension { get; init; } = "";
+    public string ProgrammingLanguage { get; init; } = null!;
 
     public string Source { get; init; } = null!;
 

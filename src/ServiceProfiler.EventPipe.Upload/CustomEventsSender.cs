@@ -152,7 +152,10 @@ internal class CustomEventsSender : ICustomEventsSender
         eventTelemetry.Properties["EtlFileSessionId"] = index.EtlFileSessionId;
         eventTelemetry.Properties["MachineName"] = index.MachineName;
         eventTelemetry.Properties["ProcessId"] = index.ProcessId.ToString(CultureInfo.InvariantCulture);
+        eventTelemetry.Properties["ArtifactKind"] = index.ArtifactKind;
         eventTelemetry.Properties["ArtifactId"] = index.ArtifactId.ToString("N");
+        eventTelemetry.Properties["Extension"] = index.Extension;
+        eventTelemetry.Properties["ProgrammingLanguage"] = index.ProgrammingLanguage;
 
         // More info here.
         eventTelemetry.Properties["Source"] = index.Source;
