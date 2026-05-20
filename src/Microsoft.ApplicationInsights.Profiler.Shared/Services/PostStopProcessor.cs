@@ -202,7 +202,6 @@ internal class PostStopProcessor : IPostStopProcessor
             ConnectionString = _serviceProfilerContext.ConnectionString?.ToString(),
             ArtifactId = artifactId,
             ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
-                fileId: EnvironmentUtilities.CreateSessionId(),
                 stampId: stampId,
                 sessionId: sessionId,
                 appId: appId,

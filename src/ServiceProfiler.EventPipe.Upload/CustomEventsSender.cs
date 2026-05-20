@@ -146,7 +146,6 @@ internal class CustomEventsSender : ICustomEventsSender
             Timestamp = index.Timestamp
         };
 
-        eventTelemetry.Properties["FileId"] = index.FileId;
         eventTelemetry.Properties["StampId"] = index.StampId;
         eventTelemetry.Properties["DataCube"] = index.DataCube;
         eventTelemetry.Properties["EtlFileSessionId"] = index.EtlFileSessionId;

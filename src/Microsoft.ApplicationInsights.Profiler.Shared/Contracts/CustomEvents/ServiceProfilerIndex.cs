@@ -5,7 +5,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 internal record ServiceProfilerIndex
 {
     public DateTime Timestamp { get; init; }
-    public string FileId { get; init; } = null!;
     public string StampId { get; init; } = null!;
     public string DataCube { get; init; } = null!;
     public string EtlFileSessionId { get; init; } = null!;

@@ -39,12 +39,11 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
     }
 
-    public ServiceProfilerIndex CreateServiceProfilerIndex(string fileId, string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource)
+    public ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource)
     {
         ServiceProfilerIndex result = new()
         {
             Timestamp = sessionId.UtcDateTime,
-            FileId = fileId,
             StampId = stampId,
             DataCube = StoragePathContract.GetDataCubeNameString(appId),
             EtlFileSessionId = TimestampContract.TimestampToString(sessionId),
