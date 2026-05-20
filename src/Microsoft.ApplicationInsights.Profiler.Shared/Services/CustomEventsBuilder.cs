@@ -78,6 +78,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             AppId = appId,
             ArtifactId = artifactId,
             Kind = ArtifactKind.Profile,
+            Extension = StoragePathContract.ExtensionFromArtifactKind(ArtifactKind.Profile),
         };
 
         ArtifactLocationProperties traceLocation = new ArtifactLocationProperties(artifactRef, stampId)
