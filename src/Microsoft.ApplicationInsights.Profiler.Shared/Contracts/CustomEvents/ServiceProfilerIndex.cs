@@ -8,8 +8,6 @@ internal record ServiceProfilerIndex
     public string StampId { get; init; } = null!;
     public string DataCube { get; init; } = null!;
     public string EtlFileSessionId { get; init; } = null!;
-    public string MachineName { get; init; } = null!;
-    public int ProcessId { get; init; }
     public Guid ArtifactId { get; init; }
     public string ArtifactKind { get; init; } = null!;
     public string Extension { get; init; } = "";

@@ -47,8 +47,6 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             StampId = stampId,
             DataCube = StoragePathContract.GetDataCubeNameString(appId),
             EtlFileSessionId = TimestampContract.TimestampToString(sessionId),
-            MachineName = _roleInstanceCache ??= _roleInstanceSource.CloudRoleInstance,
-            ProcessId = _processId,
             ArtifactId = artifactId,
             ArtifactKind = ArtifactKind.Profile.ToString(),
             Extension = StoragePathContract.ExtensionFromArtifactKind(ArtifactKind.Profile),

@@ -149,8 +149,6 @@ internal class CustomEventsSender : ICustomEventsSender
         eventTelemetry.Properties["StampId"] = index.StampId;
         eventTelemetry.Properties["DataCube"] = index.DataCube;
         eventTelemetry.Properties["EtlFileSessionId"] = index.EtlFileSessionId;
-        eventTelemetry.Properties["MachineName"] = index.MachineName;
-        eventTelemetry.Properties["ProcessId"] = index.ProcessId.ToString(CultureInfo.InvariantCulture);
         eventTelemetry.Properties["ArtifactKind"] = index.ArtifactKind;
         eventTelemetry.Properties["ArtifactId"] = index.ArtifactId.ToString("N");
         eventTelemetry.Properties["Extension"] = index.Extension;
@@ -162,7 +160,6 @@ internal class CustomEventsSender : ICustomEventsSender
         eventTelemetry.Metrics["AverageCPUUsage"] = index.AverageCPUUsage;
         eventTelemetry.Metrics["AverageMemoryUsage"] = index.AverageMemoryUsage;
         eventTelemetry.Context.Cloud.RoleName ??= index.CloudRoleName;
-        eventTelemetry.Context.Cloud.RoleInstance ??= index.MachineName;
 
         telemetryClient.TrackEvent(eventTelemetry);
     }
