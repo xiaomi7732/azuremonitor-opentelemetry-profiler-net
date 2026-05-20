@@ -39,7 +39,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
     }
 
-    public ServiceProfilerIndex CreateServiceProfilerIndex(string fileId, string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
+    public ServiceProfilerIndex CreateServiceProfilerIndex(string fileId, string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource)
     {
         ServiceProfilerIndex result = new()
         {
@@ -50,6 +50,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             EtlFileSessionId = TimestampContract.TimestampToString(sessionId),
             MachineName = _roleInstanceCache ??= _roleInstanceSource.CloudRoleInstance,
             ProcessId = _processId,
+            ArtifactId = artifactId,
             Source = profilerSource.Source,
             OperatingSystem = Environment.OSVersion.VersionString,
             AverageCPUUsage = _resourceUsageSource.GetAverageCPUUsage(),
@@ -62,17 +63,25 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         return result;
     }
 
-    public IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, DateTimeOffset sessionId, Guid appId)
+    public IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId)
     {
         foreach (SampleActivity sample in samples)
         {
-            yield return CreateServiceProfilerSample(sample, stampId, sessionId, appId);
+            yield return CreateServiceProfilerSample(sample, stampId, sessionId, appId, artifactId);
         }
     }
 
-    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, DateTimeOffset sessionId, Guid appId)
+    private ServiceProfilerSample CreateServiceProfilerSample(SampleActivity sample, string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId)
     {
-        ArtifactLocationProperties traceLocation = sample.ToArtifactLocationProperties(stampId, _processId, sessionId, appId, _serviceProfilerContext.MachineName);
+        ArtifactReference artifactRef = new()
+        {
+            AppId = appId,
+            ArtifactId = artifactId,
+            Kind = ArtifactKind.Profile,
+        };
+
+        ArtifactLocationProperties traceLocation = new ArtifactLocationProperties(artifactRef, stampId)
+            .WithActivity(_processId, sample.StartActivityIdPath, sample.StartTimeUtc, sample.StopTimeUtc);
         return new ServiceProfilerSample()
         {
             Timestamp = sample.StartTimeUtc.UtcDateTime,

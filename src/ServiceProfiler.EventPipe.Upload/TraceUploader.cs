@@ -22,9 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Hashing;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -113,7 +111,7 @@ internal class TraceUploader : ITraceUploader
 
             // Use session start time + machine name as a deterministic artifact ID so retries
             // don't create duplicates, while avoiding collisions across machines.
-            Guid artifactId = DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
+            Guid artifactId = ArtifactIdDerivation.DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
             Logger.LogDebug("Uploading artifact {artifactId}", artifactId);
 
             Uri blobUri = await profilerClient.GetProfilerArtifactUploadTokenAsync(artifactId, cancellationToken).ConfigureAwait(false);
@@ -159,32 +157,6 @@ internal class TraceUploader : ITraceUploader
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Derives a stable artifact ID from the session timestamp and machine name so that
-    /// retries produce the same ID (idempotent) while different machines won't collide.
-    /// </summary>
-    private static Guid DeriveArtifactId(DateTimeOffset sessionId, string machineName)
-    {
-        int size = sizeof(long) + sizeof(long) + machineName.Length * sizeof(char);
-        Span<byte> input = size <= 256 ? stackalloc byte[size] : new byte[size];
-
-        if (!BitConverter.TryWriteBytes(input, sessionId.UtcTicks))
-        {
-            throw new InvalidOperationException("Buffer too small for UtcTicks.");
-        }
-
-        if (!BitConverter.TryWriteBytes(input.Slice(8), sessionId.Offset.Ticks))
-        {
-            throw new InvalidOperationException("Buffer too small for Offset.Ticks.");
-        }
-
-        Encoding.Unicode.GetBytes(machineName, input.Slice(16));
-
-        Span<byte> hash = stackalloc byte[16];
-        XxHash128.Hash(input, hash);
-        return new Guid(hash);
     }
 
 

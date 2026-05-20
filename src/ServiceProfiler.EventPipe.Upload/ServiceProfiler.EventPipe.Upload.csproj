@@ -68,6 +68,7 @@
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\EventPipeProviderItem.cs" Link="Contracts\EventPipeProviderItem.cs" />
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\TraceScavengerOptions.cs" Link="Contracts\TraceScavengerOptions.cs" />
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\CustomEvents\*.cs" />
+    <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Services\ArtifactIdDerivation.cs" Link="ArtifactIdDerivation.cs" />
 
     <Compile Include="..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\TelemetryConfigurationBuilder.cs" Link="TelemetryConfigurationBuilder.cs" />
     <Compile Include="..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Client\Utilities\PreventSamplingTelemetryInitializer.cs" Link="PreventSamplingTelemetryInitializer.cs" />

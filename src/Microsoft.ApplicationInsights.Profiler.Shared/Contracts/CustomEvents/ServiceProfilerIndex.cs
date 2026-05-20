@@ -11,7 +11,7 @@ internal record ServiceProfilerIndex
     public string EtlFileSessionId { get; init; } = null!;
     public string MachineName { get; init; } = null!;
     public int ProcessId { get; init; }
-
+    public Guid ArtifactId { get; init; }
 
     public string Source { get; init; } = null!;
 
