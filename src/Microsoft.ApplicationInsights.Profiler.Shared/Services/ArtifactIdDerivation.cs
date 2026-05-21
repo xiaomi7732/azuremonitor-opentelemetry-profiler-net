@@ -16,20 +16,14 @@ internal static class ArtifactIdDerivation
 {
     public static Guid DeriveArtifactId(DateTimeOffset sessionId, string machineName)
     {
-        int size = sizeof(long) + sizeof(long) + machineName.Length * sizeof(char);
+        const int headerSize = sizeof(long) + sizeof(long); // UtcTicks + Offset.Ticks
+        int machineNameByteCount = machineName.Length * sizeof(char);
+        int size = headerSize + machineNameByteCount;
         Span<byte> input = size <= 256 ? stackalloc byte[size] : new byte[size];
 
-        if (!BitConverter.TryWriteBytes(input, sessionId.UtcTicks))
-        {
-            throw new InvalidOperationException("Buffer too small for UtcTicks.");
-        }
-
-        if (!BitConverter.TryWriteBytes(input.Slice(8), sessionId.Offset.Ticks))
-        {
-            throw new InvalidOperationException("Buffer too small for Offset.Ticks.");
-        }
-
-        Encoding.Unicode.GetBytes(machineName, input.Slice(16));
+        BitConverter.TryWriteBytes(input, sessionId.UtcTicks);
+        BitConverter.TryWriteBytes(input.Slice(sizeof(long)), sessionId.Offset.Ticks);
+        Encoding.Unicode.GetBytes(machineName, input.Slice(headerSize));
 
         Span<byte> hash = stackalloc byte[16];
         XxHash128.Hash(input, hash);
