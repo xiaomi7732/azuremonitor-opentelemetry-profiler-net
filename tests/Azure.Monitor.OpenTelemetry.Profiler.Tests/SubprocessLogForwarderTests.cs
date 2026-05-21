@@ -13,7 +13,7 @@ public class SubprocessLogForwarderTests
     [InlineData("crit:", LogLevel.Critical)]
     [InlineData("fail:", LogLevel.Error)]
     [InlineData("warn:", LogLevel.Warning)]
-    [InlineData("info:", LogLevel.Debug)]
+    [InlineData("info:", LogLevel.Information)]
     [InlineData("dbug:", LogLevel.Debug)]
     [InlineData("trce:", LogLevel.Trace)]
     public void ParseLogLevel_RecognizedPrefix_ReturnsCorrectLevel(string prefix, LogLevel expected)
@@ -77,7 +77,7 @@ public class SubprocessLogForwarderTests
         forwarder.Forward(output);
 
         Assert.Equal(3, logger.Entries.Count);
-        Assert.Equal(LogLevel.Debug, logger.Entries[0].Level);     // info → Debug
+        Assert.Equal(LogLevel.Information, logger.Entries[0].Level);     // info → Information
         Assert.Equal(LogLevel.Warning, logger.Entries[1].Level);
         Assert.Equal(LogLevel.Error, logger.Entries[2].Level);
     }

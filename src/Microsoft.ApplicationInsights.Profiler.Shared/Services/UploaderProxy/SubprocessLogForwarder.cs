@@ -96,7 +96,7 @@ internal sealed class SubprocessLogForwarder
         }
         if (prefix.SequenceEqual("info".AsSpan()))
         {
-            return LogLevel.Debug;
+            return LogLevel.Information;
         }
         if (prefix.SequenceEqual("dbug".AsSpan()))
         {
