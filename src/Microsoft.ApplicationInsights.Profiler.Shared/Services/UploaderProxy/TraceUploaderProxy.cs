@@ -106,7 +106,6 @@ internal class TraceUploaderProxy : ITraceUploader
             PipeName = namedPipeName,
             RoleName = roleName,
             TriggerType = triggerType,
-            Environment = _userConfiguration.UploaderEnvironment,
             TraceFileFormat = _traceFileFormatDefinition.TraceFileFormatName,
         };
 

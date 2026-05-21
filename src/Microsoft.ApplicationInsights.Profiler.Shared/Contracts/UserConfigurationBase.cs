@@ -147,6 +147,7 @@ public abstract class UserConfigurationBase
     /// <summary>
     /// Get or sets the environment for the uploader.
     /// </summary>
+    [Obsolete("UploaderEnvironment is no longer used. Uploader warnings and errors are now always surfaced. Use standard Logging__LogLevel__ configuration for deeper diagnostics. Suppress this warning with #pragma warning disable CS0618.")]
     public string UploaderEnvironment { get; set; } = "Production";
 
     /// <summary>

@@ -18,7 +18,6 @@ internal class UploadContextModel
     private const string PipeNameKeyName = "pipeName";
     private const string RoleNameKeyName = "roleName";
     private const string TriggerTypeKeyName = "trigger";
-    private const string EnvironmentKeyName = "environment";
     private const string TraceFileFormatKeyName = "traceFileFormat";
 
 
@@ -45,8 +44,6 @@ internal class UploadContextModel
     public string? PipeName { get; init; }
 
     public string? RoleName { get; init; }
-
-    public string Environment { get; init; } = "Production";
 
     public string? TriggerType { get; init; }
 
@@ -82,11 +79,6 @@ internal class UploadContextModel
         if (!string.IsNullOrEmpty(TriggerType))
         {
             argumentLine += $@" --{TriggerTypeKeyName} ""{TriggerType}""";
-        }
-
-        if (!string.IsNullOrEmpty(Environment))
-        {
-            argumentLine += $@" --{EnvironmentKeyName} ""{Environment}""";
         }
 
         argumentLine += $@" --{TraceFileFormatKeyName} ""{TraceFileFormat}""";
