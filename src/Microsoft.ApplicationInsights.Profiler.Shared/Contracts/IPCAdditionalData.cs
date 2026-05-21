@@ -9,6 +9,8 @@ internal record IPCAdditionalData
 {
     public string? ConnectionString { get; set; }
 
+    public System.Guid? ArtifactId { get; set; }
+
     public ServiceProfilerIndex ServiceProfilerIndex { get; init; } = default!;
 
     public IEnumerable<ServiceProfilerSample> ServiceProfilerSamples { get; init; } = default!;

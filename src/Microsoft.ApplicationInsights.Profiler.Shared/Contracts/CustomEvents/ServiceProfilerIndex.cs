@@ -5,13 +5,13 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts.CustomEvents;
 internal record ServiceProfilerIndex
 {
     public DateTime Timestamp { get; init; }
-    public string FileId { get; init; } = null!;
     public string StampId { get; init; } = null!;
     public string DataCube { get; init; } = null!;
     public string EtlFileSessionId { get; init; } = null!;
-    public string MachineName { get; init; } = null!;
-    public int ProcessId { get; init; }
-
+    public Guid ArtifactId { get; init; }
+    public string ArtifactKind { get; init; } = null!;
+    public string Extension { get; init; } = "";
+    public string ProgrammingLanguage { get; init; } = null!;
 
     public string Source { get; init; } = null!;
 

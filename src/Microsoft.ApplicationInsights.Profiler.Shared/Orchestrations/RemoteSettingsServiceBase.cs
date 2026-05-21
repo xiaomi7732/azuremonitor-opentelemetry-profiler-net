@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceProfiler.Agent.Exceptions;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
+using Azure.Monitor.Diagnostics.Profiler;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using System;
@@ -28,7 +28,7 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
     private readonly ILogger _logger;
     private readonly TaskCompletionSource<bool> _taskCompletionSource;
     private readonly UserConfigurationBase _userConfiguration;
-    private readonly IProfilerFrontendClient _frontendClient;
+    private readonly IProfilerClient _profilerClient;
     private readonly TimeSpan _frequency;
     private readonly bool _standaloneMode;
     private readonly bool _isDisabled;
@@ -39,14 +39,14 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
 
     public RemoteSettingsServiceBase(
         BootstrapState bootstrapState,
-        IProfilerFrontendClient frontendClient,
+        IProfilerClient profilerClient,
         IOptions<UserConfigurationBase> userConfigurationOptions,
         ILogger<RemoteSettingsServiceBase> logger)
         : base(bootstrapState, logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _userConfiguration = userConfigurationOptions.Value ?? throw new ArgumentNullException(nameof(userConfigurationOptions));
-        _frontendClient = frontendClient ?? throw new ArgumentNullException(nameof(frontendClient));
+        _profilerClient = profilerClient ?? throw new ArgumentNullException(nameof(profilerClient));
         _taskCompletionSource = new TaskCompletionSource<bool>();
         _frequency = _userConfiguration.ConfigurationUpdateFrequency;
         _standaloneMode = _userConfiguration.StandaloneMode;
@@ -77,7 +77,7 @@ internal abstract class RemoteSettingsServiceBase : DependantBackgroundServiceBa
         try
         {
             _logger.LogTrace("Fetching remote settings.");
-            SettingsContract newContract = await _frontendClient.GetProfilerSettingsAsync(cancellationToken).ConfigureAwait(false);
+            SettingsContract? newContract = await _profilerClient.GetProfilerSettingsAsync(cancellationToken).ConfigureAwait(false);
             if (newContract != null)
             {
                 _logger.LogTrace("Remote settings fetched.");

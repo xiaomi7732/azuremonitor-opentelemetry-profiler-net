@@ -52,6 +52,7 @@ MicrosoftExtensionsLoggingDebugVersion=$(_MicrosoftExtensionsVersion);
 MicrosoftExtensionsOptionsVersion=$(_MicrosoftExtensionsVersion);
 SystemDiagnosticsDiagnosticSourceVersion=$(_SystemDiagnosticsDiagnosticSourceVersion);
 SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
+SystemIOHashingVersion=$(_SystemIOHashingVersion);
 SystemIdentityModelTokensJwtVersion=$(_IdentityModelVersion);
 SystemLinqAsyncEnumerableVersion=$(_SystemLinqAsyncEnumerableVersion);
 SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
@@ -85,7 +86,7 @@ $(NuspecProperties)]]>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ServiceProfiler.Agent.Profiler.FrontendClient.Profiler\Microsoft.ServiceProfiler.Agent.FrontendClient.Profiler.csproj" />
+    <ProjectReference Include="..\..\Azure.Monitor.Diagnostics.Profiler\Azure.Monitor.Diagnostics.Profiler.csproj" />
     <ProjectReference Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.Utilities\ServiceProfiler.Utilities.csproj" />
     <ProjectReference Include="..\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />

@@ -8,6 +8,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Monitor.Diagnostics.Models;
+using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
@@ -21,7 +23,6 @@ using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceProfiler.Agent;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Moq;
@@ -41,19 +42,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             });
 
             IServiceProvider serviceProvider = GetTestServiceProvider();
-            TraceUploader uploader = new TraceUploader(
-                serviceProvider.GetService<IZipUtility>(),
-                serviceProvider.GetService<IBlobClientFactory>(),
-                serviceProvider.GetService<IProfilerFrontendClientBuilder>(),
-                serviceProvider.GetService<IAppInsightsLogger>(),
-                serviceProvider.GetService<IOSPlatformProvider>(),
-                serviceProvider.GetService<ITraceValidatorFactory>(),
-                serviceProvider.GetService<ISampleActivitySerializer>(),
-                serviceProvider.GetRequiredService<UploadContext>(),
-                serviceProvider.GetRequiredService<IUploadContextValidator>(),
-                serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
-                serviceProvider.GetRequiredService<ICustomEventsSender>(),
-                serviceProvider.GetService<ILogger<TraceUploader>>());
+            TraceUploader uploader = CreateTraceUploader(serviceProvider);
 
             Assert.False(isZipCalled);
             await uploader.UploadAsync(CancellationToken.None);
@@ -70,22 +59,10 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             IServiceProvider serviceProvider = GetTestServiceProvider(null, (path, cancellationToken) =>
             {
                 isBlobUploadCalled = true;
-                return Task.FromResult<Response<BlobContentInfo>>(null);
+                return Task.FromResult<Response<BlobContentInfo>>(null!);
             });
 
-            TraceUploader uploader = new TraceUploader(
-                serviceProvider.GetService<IZipUtility>(),
-                serviceProvider.GetService<IBlobClientFactory>(),
-                serviceProvider.GetService<IProfilerFrontendClientBuilder>(),
-                serviceProvider.GetService<IAppInsightsLogger>(),
-                serviceProvider.GetService<IOSPlatformProvider>(),
-                serviceProvider.GetService<ITraceValidatorFactory>(),
-                serviceProvider.GetService<ISampleActivitySerializer>(),
-                serviceProvider.GetRequiredService<UploadContext>(),
-                serviceProvider.GetRequiredService<IUploadContextValidator>(),
-                serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
-                serviceProvider.GetRequiredService<ICustomEventsSender>(),
-                serviceProvider.GetService<ILogger<TraceUploader>>());
+            TraceUploader uploader = CreateTraceUploader(serviceProvider);
 
             Assert.False(isBlobUploadCalled);
             await uploader.UploadAsync(CancellationToken.None);
@@ -105,22 +82,10 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
                 Assert.Equal("MockRoleName", metadata[BlobMetadataConstants.RoleName]);
                 Assert.Equal("MockTrigger", metadata[BlobMetadataConstants.TriggerType]);
                 isSetMetadataAsyncCalled = true;
-                return Task.FromResult<Response<BlobInfo>>(null);
+                return Task.FromResult(CreateBlobInfoResponse());
             });
 
-            TraceUploader uploader = new TraceUploader(
-                serviceProvider.GetService<IZipUtility>(),
-                serviceProvider.GetService<IBlobClientFactory>(),
-                serviceProvider.GetService<IProfilerFrontendClientBuilder>(),
-                serviceProvider.GetService<IAppInsightsLogger>(),
-                serviceProvider.GetService<IOSPlatformProvider>(),
-                serviceProvider.GetService<ITraceValidatorFactory>(),
-                serviceProvider.GetService<ISampleActivitySerializer>(),
-                serviceProvider.GetRequiredService<UploadContext>(),
-                serviceProvider.GetRequiredService<IUploadContextValidator>(),
-                serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
-                serviceProvider.GetRequiredService<ICustomEventsSender>(),
-                serviceProvider.GetService<ILogger<TraceUploader>>());
+            TraceUploader uploader = CreateTraceUploader(serviceProvider);
 
             Assert.False(isSetMetadataAsyncCalled);
             await uploader.UploadAsync(CancellationToken.None);
@@ -128,30 +93,18 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
         }
 
         [Fact]
-        public async Task ShouldReportEtlUploadFinishAsync()
+        public async Task ShouldCommitProfilerArtifactAsync()
         {
-            bool isReportEtlUploadFinishAsyncCalled = false;
+            bool isCommitProfilerArtifactAsyncCalled = false;
             IServiceProvider serviceProvider = GetTestServiceProvider(() =>
             {
-                isReportEtlUploadFinishAsyncCalled = true;
+                isCommitProfilerArtifactAsyncCalled = true;
             });
-            TraceUploader uploader = new TraceUploader(
-                serviceProvider.GetService<IZipUtility>(),
-                serviceProvider.GetService<IBlobClientFactory>(),
-                serviceProvider.GetService<IProfilerFrontendClientBuilder>(),
-                serviceProvider.GetService<IAppInsightsLogger>(),
-                serviceProvider.GetService<IOSPlatformProvider>(),
-                serviceProvider.GetService<ITraceValidatorFactory>(),
-                serviceProvider.GetService<ISampleActivitySerializer>(),
-                serviceProvider.GetRequiredService<UploadContext>(),
-                serviceProvider.GetRequiredService<IUploadContextValidator>(),
-                serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
-                serviceProvider.GetRequiredService<ICustomEventsSender>(),
-                serviceProvider.GetService<ILogger<TraceUploader>>());
+            TraceUploader uploader = CreateTraceUploader(serviceProvider);
 
-            Assert.False(isReportEtlUploadFinishAsyncCalled);
+            Assert.False(isCommitProfilerArtifactAsyncCalled);
             await uploader.UploadAsync(CancellationToken.None);
-            Assert.True(isReportEtlUploadFinishAsyncCalled);
+            Assert.True(isCommitProfilerArtifactAsyncCalled);
         }
 
         [Fact]
@@ -173,67 +126,76 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             }
         }
 
+        private TraceUploader CreateTraceUploader(IServiceProvider serviceProvider)
+            => new TraceUploader(
+                serviceProvider.GetRequiredService<IZipUtility>(),
+                serviceProvider.GetRequiredService<IBlobClientFactory>(),
+                serviceProvider.GetRequiredService<IProfilerClientFactory>(),
+                serviceProvider.GetRequiredService<IAppInsightsLogger>(),
+                serviceProvider.GetRequiredService<IOSPlatformProvider>(),
+                serviceProvider.GetRequiredService<ITraceValidatorFactory>(),
+                serviceProvider.GetRequiredService<ISampleActivitySerializer>(),
+                serviceProvider.GetRequiredService<UploadContext>(),
+                serviceProvider.GetRequiredService<IUploadContextValidator>(),
+                serviceProvider.GetRequiredService<IAppProfileClientFactory>(),
+                serviceProvider.GetRequiredService<ICustomEventsSender>(),
+                serviceProvider.GetRequiredService<ILogger<TraceUploader>>());
+
         private ServiceProvider GetTestServiceProvider(
-            Action onReportEtlUploadFinished = null,
-            Func<string, CancellationToken, Task<Response<BlobContentInfo>>> onBlobClientUploadAsync = null,
-            Func<IDictionary<string, string>, BlobRequestConditions, CancellationToken, Task<Response<BlobInfo>>> onBlobClientSetMetadataAsync = null,
-            Func<UploadContext> uploadContextFactory = null,
-            Func<IUploadContextValidator> uploadContextValidatorFactory = null,
-            Func<ITraceValidator> traceValidatorFactory = null)
+            Action? onCommitProfilerArtifact = null,
+            Func<string, CancellationToken, Task<Response<BlobContentInfo>>>? onBlobClientUploadAsync = null,
+            Func<IDictionary<string, string>, BlobRequestConditions, CancellationToken, Task<Response<BlobInfo>>>? onBlobClientSetMetadataAsync = null,
+            Func<UploadContext>? uploadContextFactory = null,
+            Func<IUploadContextValidator>? uploadContextValidatorFactory = null,
+            Func<ITraceValidator>? traceValidatorFactory = null)
         {
             ServiceCollection services = new ServiceCollection();
             services.AddLogging();
-            services.AddTransient<IZipUtility>(p => _zipUtilityMock.Object);
-            _stampFrontendClientMock.Setup(s => s.GetStampIdAsync(It.IsAny<CancellationToken>()))
-                .Returns(() => Task.FromResult("test-stamp-id"));
-            _stampFrontendClientMock.Setup(s => s.GetEtlUploadAccessAsync(It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
-                .Returns(() => Task.FromResult(_testBlobAccessPass));
-            _stampFrontendClientMock.Setup(s => s.ReportEtlUploadFinishAsync(It.IsAny<StampBlobUri>(), It.IsAny<CancellationToken>()))
-                .Callback(() => onReportEtlUploadFinished?.Invoke())
-                .ReturnsAsync(true);
+            services.AddTransient<IZipUtility>(_ => _zipUtilityMock.Object);
 
-            services.AddTransient<IProfilerFrontendClient>(p => _stampFrontendClientMock.Object);
-            services.AddTransient<IProfilerFrontendClientBuilder>(p =>
-            {
-                Mock<IProfilerFrontendClientBuilder> builderMock = new Mock<IProfilerFrontendClientBuilder>();
-                builderMock.Setup(b => b.WithUploadContext(It.IsAny<UploadContextExtension>())).Returns(builderMock.Object);
-                builderMock.Setup(b => b.Build()).Returns(p.GetRequiredService<IProfilerFrontendClient>());
-                return builderMock.Object;
-            });
-            services.AddTransient<IAppInsightsLogger>(p => _telemetryLoggerMock.Object);
+            _profilerClientMock.Setup(s => s.GetProfilerArtifactUploadTokenAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Uri(_testBlobUrl));
+            _profilerClientMock.Setup(s => s.CommitProfilerArtifactAsync(It.IsAny<Guid>(), It.IsAny<ETag>(), It.IsAny<CancellationToken>()))
+                .Callback(() => onCommitProfilerArtifact?.Invoke())
+                .ReturnsAsync(CreateAcceptedArtifact());
+            var profilerClientFactoryMock = new Mock<IProfilerClientFactory>();
+            profilerClientFactoryMock.Setup(f => f.Create(It.IsAny<UploadContextExtension>())).Returns(_profilerClientMock.Object);
+            services.AddTransient<IProfilerClientFactory>(_ => profilerClientFactoryMock.Object);
+            services.AddTransient<IAppInsightsLogger>(_ => _telemetryLoggerMock.Object);
 
             var blobClientFactoryMock = new Mock<IBlobClientFactory>();
-            blobClientFactoryMock.Setup(f => f.CreateBlobClient(It.IsAny<Uri>())).Returns(new MockBlobClient(new Uri(_testBlobUrl), onBlobClientUploadAsync, onBlobClientSetMetadataAsync));
-            services.AddTransient<IBlobClientFactory>(p => blobClientFactoryMock.Object);
+            blobClientFactoryMock.Setup(f => f.CreateBlobClient(It.IsAny<Uri>())).Returns(new MockBlobClient(
+                new Uri(_testBlobUrl),
+                onBlobClientUploadAsync,
+                onBlobClientSetMetadataAsync ?? ((metadata, conditions, cancellationToken) => Task.FromResult(CreateBlobInfoResponse()))));
+            services.AddTransient<IBlobClientFactory>(_ => blobClientFactoryMock.Object);
             services.AddSingleton<IOSPlatformProvider, OSPlatformProvider>();
 
             Mock<ITraceValidatorFactory> traceValidatorFactoryMock = new Mock<ITraceValidatorFactory>();
             traceValidatorFactoryMock.Setup(f => f.Create(It.IsAny<string>())).Returns(traceValidatorFactory?.Invoke() ?? new AlwaysPassValidator());
-            services.AddTransient<ITraceValidatorFactory>(p => traceValidatorFactoryMock.Object);
+            services.AddTransient<ITraceValidatorFactory>(_ => traceValidatorFactoryMock.Object);
 
             services.AddTransient<IPayloadSerializer, HighPerfJsonSerializationProvider>();
 
             Mock<ISampleActivitySerializer> sampleActivitySerializerMock = new Mock<ISampleActivitySerializer>();
+            sampleActivitySerializerMock.Setup(s => s.DeserializeFromFileAsync(It.IsAny<string>())).ReturnsAsync(new[] { new SampleActivity() });
             sampleActivitySerializerMock.Setup(s => s.SerializeToFileAsync(It.IsAny<IEnumerable<SampleActivity>>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-            services.AddTransient<ISampleActivitySerializer>(p => sampleActivitySerializerMock.Object);
+            services.AddTransient<ISampleActivitySerializer>(_ => sampleActivitySerializerMock.Object);
 
             uploadContextFactory ??= CreateTestUploadContext;
-            services.AddTransient<UploadContext>(p =>
-            {
-                return uploadContextFactory();
-            });
+            services.AddTransient<UploadContext>(_ => uploadContextFactory());
 
-            services.AddTransient<IUploadContextValidator>(p =>
+            services.AddTransient<IUploadContextValidator>(_ =>
             {
-                uploadContextValidatorFactory = uploadContextValidatorFactory ?? (() => CreateUploadContextValidator(null));
+                uploadContextValidatorFactory ??= (() => CreateUploadContextValidator());
                 return uploadContextValidatorFactory();
             });
 
-            services.AddTransient<IAppProfileClient>(p =>
+            services.AddTransient<IAppProfileClient>(_ =>
             {
                 Mock<IAppProfileClient> appProfileMock = new Mock<IAppProfileClient>();
                 appProfileMock.Setup(m => m.GetAppProfileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                    .Returns(() => Task.FromResult(new AppProfileResponse() { AppId = TraceUploaderTests._testAppId }));
+                    .ReturnsAsync(new AppProfileResponse() { AppId = _testAppId });
                 return appProfileMock.Object;
             });
 
@@ -250,15 +212,28 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             return services.BuildServiceProvider();
         }
 
+        private static AcceptedArtifact CreateAcceptedArtifact() => new()
+        {
+            AcceptedTime = DateTime.UtcNow,
+            BlobUri = new Uri(_testBlobUrl),
+            CorrelationId = "test-correlation-id",
+            StampId = "test-stamp-id",
+            ArtifactLocationId = "test-artifact-location",
+            DownloadUri = new Uri(_testBlobUrl),
+        };
+
+        private static Response<BlobInfo> CreateBlobInfoResponse()
+            => Response.FromValue(
+                BlobsModelFactory.BlobInfo(new ETag("\"test-etag\""), DateTimeOffset.UtcNow),
+                Mock.Of<Response>());
+
         private readonly Mock<IZipUtility> _zipUtilityMock = new Mock<IZipUtility>();
-        private readonly Mock<IProfilerFrontendClient> _stampFrontendClientMock = new Mock<IProfilerFrontendClient>();
+        private readonly Mock<IProfilerClient> _profilerClientMock = new Mock<IProfilerClient>();
         private readonly Mock<IAppInsightsLogger> _telemetryLoggerMock = new Mock<IAppInsightsLogger>();
-        private const string _testSASToken = "this_is_a_test_sas_token";
         private const string _testBlobUrl = "https://this_is_blob_url";
 
         private const string _traceFilePath = "balabala";
         private static readonly Guid _testAppId = Guid.NewGuid();
-        private BlobAccessPass _testBlobAccessPass = new BlobAccessPass { SASToken = _testSASToken, BlobUri = new Uri(_testBlobUrl) };
 
         private UploadContext CreateTestUploadContext()
         {
@@ -271,16 +246,17 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             };
         }
 
-        private IUploadContextValidator CreateUploadContextValidator(Action<Mock<IUploadContextValidator>> mockConfigure = null)
+        private IUploadContextValidator CreateUploadContextValidator(Action<Mock<IUploadContextValidator>>? mockConfigure = null)
         {
             Mock<IUploadContextValidator> uploadContextValidatorMock = new Mock<IUploadContextValidator>();
-            mockConfigure = mockConfigure ?? (mock =>
+            mockConfigure ??= mock =>
             {
                 mock.Setup(m => m.Validate(It.IsAny<UploadContext>())).Returns(string.Empty);
-            });
-            mockConfigure?.Invoke(uploadContextValidatorMock);
+            };
+            mockConfigure(uploadContextValidatorMock);
 
             return uploadContextValidatorMock.Object;
         }
+
     }
 }

@@ -12,12 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Option 1: Azure.Monitor.OpenTelemetry.Profiler 1.0.0-beta10 and later ---
 // A single fluent chain:
-// builder.Services.AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();
+builder.Services.AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();
 
 // --- Option 2: Azure.Monitor.OpenTelemetry.Profiler 1.0.0-beta9 and earlier ---
 // Separate calls:
-builder.Services.AddApplicationInsightsTelemetry();
-builder.Services.AddOpenTelemetry().AddAzureMonitorProfiler();
+// builder.Services.AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();
+// builder.Services.AddOpenTelemetry().AddAzureMonitorProfiler();
 
 var app = builder.Build();
 

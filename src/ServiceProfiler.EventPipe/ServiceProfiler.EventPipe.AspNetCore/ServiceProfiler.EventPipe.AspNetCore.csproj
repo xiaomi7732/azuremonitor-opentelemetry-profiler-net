@@ -46,7 +46,6 @@ $(NuspecProperties)]]>
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
-        <ProjectReference Include="..\..\ServiceProfiler.Agent.FrontendClient\Microsoft.ServiceProfiler.Agent.FrontendClient.csproj" />
         <ProjectReference Include="..\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
     </ItemGroup>
     <ItemGroup>

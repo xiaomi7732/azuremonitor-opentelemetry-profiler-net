@@ -97,6 +97,11 @@ public abstract class UserConfigurationBase
     /// with the Endpoint.
     /// Optional, default value is false.
     /// </summary>
+    /// <remarks>
+    /// Deprecated. This option is no longer supported by the new ProfilerClient pipeline.
+    /// Setting this to true will log a warning but have no effect.
+    /// </remarks>
+    [Obsolete("SkipEndpointCertificateValidation is no longer supported by the ProfilerClient pipeline.")]
     public bool SkipEndpointCertificateValidation { get; set; } = false;
 
     /// <summary>

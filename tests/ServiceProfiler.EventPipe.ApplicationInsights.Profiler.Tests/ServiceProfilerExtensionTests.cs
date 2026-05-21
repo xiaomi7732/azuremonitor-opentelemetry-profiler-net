@@ -2,6 +2,7 @@
 // Copyright(c) Microsoft Corporation.All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Azure.Monitor.Diagnostics.Profiler;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
@@ -18,7 +19,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using Microsoft.ServiceProfiler.Utilities;
 using Moq;
@@ -256,8 +257,8 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                     return handler;
                 });
 
-                var stampFrontendClientMock = new Mock<IProfilerFrontendClient>();
-                serviceCollection.AddTransient<IProfilerFrontendClient>(provider => stampFrontendClientMock.Object);
+                var stampFrontendClientMock = new Mock<IProfilerClient>();
+                serviceCollection.AddTransient<IProfilerClient>(provider => stampFrontendClientMock.Object);
 
                 serviceCollection.AddTransient<AppInsightsProfileFetcher>(provider => CreateTestAppInsightsProfileFetcher());
 

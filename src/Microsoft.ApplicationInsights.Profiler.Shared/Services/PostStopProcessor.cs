@@ -148,7 +148,8 @@ internal class PostStopProcessor : IPostStopProcessor
                 }
 
                 // Contract with Upload, sending additional data
-                IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, e.ProfilerSource);
+                Guid artifactId = ArtifactIdDerivation.DeriveArtifactId(e.SessionId, _serviceProfilerContext.MachineName);
+                IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, artifactId, e.ProfilerSource);
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("Sending additional data for the uploader to use.");
@@ -195,21 +196,23 @@ internal class PostStopProcessor : IPostStopProcessor
 
     private IPCAdditionalData CreateAdditionalData(
         IReadOnlyCollection<SampleActivity> samples,
-        string stampId, DateTimeOffset sessionId, Guid appId, IProfilerSource profilerSource)
+        string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource)
         => new()
         {
             ConnectionString = _serviceProfilerContext.ConnectionString?.ToString(),
+            ArtifactId = artifactId,
             ServiceProfilerIndex = _customEventsBuilder.CreateServiceProfilerIndex(
-                fileId: EnvironmentUtilities.CreateSessionId(),
                 stampId: stampId,
                 sessionId: sessionId,
                 appId: appId,
+                artifactId: artifactId,
                 profilerSource: profilerSource),
             ServiceProfilerSamples = _customEventsBuilder.CreateServiceProfilerSamples(
                 samples: samples,
                 stampId: stampId,
                 sessionId: sessionId,
-                appId: appId),
+                appId: appId,
+                artifactId: artifactId),
             AgentString = _agentStringProvider.AgentString,
         };
 

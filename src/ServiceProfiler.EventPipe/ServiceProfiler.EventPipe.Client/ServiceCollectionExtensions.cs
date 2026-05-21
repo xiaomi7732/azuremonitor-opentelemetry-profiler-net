@@ -1,3 +1,4 @@
+using Azure.Monitor.Diagnostics.Profiler;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
@@ -308,7 +309,7 @@ internal static class ServiceCollectionExtensions
 
     private static IServiceCollection AddFrontendClient(this IServiceCollection services)
     {
-        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
+        services.AddSingleton<IProfilerClient>(p => ActivatorUtilities.CreateInstance<ProfilerClientFactory>(p).CreateProfilerClient());
         return services;
     }
 

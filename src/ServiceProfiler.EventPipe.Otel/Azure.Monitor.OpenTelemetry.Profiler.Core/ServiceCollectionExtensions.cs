@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Services;
@@ -99,7 +100,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         // Client
-        services.AddSingleton(p => ActivatorUtilities.CreateInstance<ProfilerFrontendClientFactory>(p).CreateProfilerFrontendClient());
+        services.AddSingleton<IProfilerClient>(p => ActivatorUtilities.CreateInstance<ProfilerClientFactory>(p).CreateProfilerClient());
 
         // Token
         services.AddSingleton<IAuthTokenProvider, AuthTokenProvider>();

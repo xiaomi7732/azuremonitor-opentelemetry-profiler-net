@@ -118,8 +118,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                 return logger;
             });
 
-            services.TryAddTransient<IProfilerFrontendClientBuilder, ProfilerFrontendClientBuilder>();
             services.TryAddSingleton<IBlobClientFactory, BlobClientFactory>();
+            services.TryAddSingleton<IProfilerClientFactory, ProfilerClientFactory>();
             services.TryAddSingleton<ITraceValidatorFactory, EventPipeTraceValidatorFactory>();
 
             services.AddSingleton<TraceUploaderFactory>();

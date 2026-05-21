@@ -6,11 +6,13 @@
   </PropertyGroup>
   <PropertyGroup>
     <_SystemDiagnosticsDiagnosticSourceVersion>9.0.8</_SystemDiagnosticsDiagnosticSourceVersion>
+    <_SystemIOHashingVersion>9.0.0</_SystemIOHashingVersion>
     <_SystemMemoryDataVersion>9.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>9.0.0</_SystemSecurityCryptographyProtectedDataVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
+    <PackageVersion Include="System.IO.Hashing" Version="$(_SystemIOHashingVersion)" />
     <PackageVersion Update="System.Memory.Data" Version="$(_SystemMemoryDataVersion)" />
     <PackageVersion Update="System.Security.Cryptography.ProtectedData" Version="$(_SystemSecurityCryptographyProtectedDataVersion)" />
   </ItemGroup>

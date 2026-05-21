@@ -2,7 +2,12 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using Azure;
+using Azure.Core;
+using Azure.Monitor.Diagnostics.Models;
+using Azure.Monitor.Diagnostics.Profiler;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
@@ -10,8 +15,6 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
-using Microsoft.ServiceProfiler.Agent.Exceptions;
-using Microsoft.ServiceProfiler.Agent.FrontendClient;
 using Microsoft.ServiceProfiler.Contract;
 using Microsoft.ServiceProfiler.Contract.Agent;
 using Microsoft.ServiceProfiler.Utilities;
@@ -30,13 +33,13 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader;
 internal class TraceUploader : ITraceUploader
 {
     private readonly IZipUtility _zipUtility;
-    private readonly IProfilerFrontendClientBuilder _stampFrontendClientBuilder;
     private readonly IAppInsightsLogger _telemetryLogger;
     private readonly IOSPlatformProvider _osPlatformProvider;
     private readonly ITraceValidatorFactory _traceValidatorFactory;
     private readonly ISampleActivitySerializer _sampleActivitySerializer;
     private readonly ICustomEventsSender _customEventsSender;
     private readonly IBlobClientFactory _blobClientFactory;
+    private readonly IProfilerClientFactory _profilerClientFactory;
 
     protected IAppProfileClientFactory AppProfileClientFactory { get; }
     protected UploadContext UploadContext { get; }
@@ -46,7 +49,7 @@ internal class TraceUploader : ITraceUploader
     public TraceUploader(
         IZipUtility zipUtility,
         IBlobClientFactory blobClientFactory,
-        IProfilerFrontendClientBuilder stampFrontendClientBuilder,
+        IProfilerClientFactory profilerClientFactory,
         IAppInsightsLogger telemetryLogger,
         IOSPlatformProvider oSPlatformProvider,
         ITraceValidatorFactory traceValidatorFactory,
@@ -59,7 +62,7 @@ internal class TraceUploader : ITraceUploader
     {
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _zipUtility = zipUtility ?? throw new ArgumentNullException(nameof(zipUtility));
-        _stampFrontendClientBuilder = stampFrontendClientBuilder ?? throw new ArgumentNullException(nameof(stampFrontendClientBuilder));
+        _profilerClientFactory = profilerClientFactory ?? throw new ArgumentNullException(nameof(profilerClientFactory));
         _telemetryLogger = telemetryLogger ?? throw new ArgumentNullException(nameof(telemetryLogger));
         _osPlatformProvider = oSPlatformProvider ?? throw new ArgumentNullException(nameof(oSPlatformProvider));
         _traceValidatorFactory = traceValidatorFactory ?? throw new ArgumentNullException(nameof(traceValidatorFactory));
@@ -103,73 +106,51 @@ internal class TraceUploader : ITraceUploader
     private async Task UploadAsync(UploadContextExtension extendedContext, string zippedFilePath, CancellationToken cancellationToken)
     {
         UploadContext context = extendedContext.UploadContext;
-        IProfilerFrontendClient? stampFrontendClient = null;
         try
         {
-            stampFrontendClient = _stampFrontendClientBuilder.WithUploadContext(extendedContext).Build();
-            string actualStampId = await stampFrontendClient.GetStampIdAsync(cancellationToken).ConfigureAwait(false);
+            IProfilerClient profilerClient = _profilerClientFactory.Create(extendedContext);
 
-            // The actual stamp id can not be null
-            if (string.IsNullOrEmpty(actualStampId))
-            {
-                throw new InvalidOperationException(FormattableString.Invariant($"Stamp ID is null. This should not happen. Expected: {context.StampId}"));
-            }
+            // Prefer the artifact ID from the agent (via IPC) to ensure consistency with custom events.
+            // Fall back to deriving it locally for the non-named-pipe path.
+            Guid artifactId = extendedContext.AdditionalData?.ArtifactId
+                ?? ArtifactIdDerivation.DeriveArtifactId(context.SessionId, EnvironmentUtilities.MachineName);
+            Logger.LogDebug("Uploading artifact {artifactId}", artifactId);
 
-            // If the context.StampId is null, we will set it to the actual stamp id, so that it will not fail the comparison later.
-            if (string.IsNullOrEmpty(context.StampId))
-            {
-                context.StampId = actualStampId;
-            }
+            Uri blobUri = await profilerClient.GetProfilerArtifactUploadTokenAsync(artifactId, cancellationToken).ConfigureAwait(false);
+            Logger.LogDebug("Got upload token for artifact {artifactId}", artifactId);
 
-            // Compare the actual stamp id with the expected one.
-            if (!string.Equals(actualStampId, context.StampId, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(FormattableString.Invariant($"Actual stamp-id of {actualStampId} is different than expected stamp-id: {context.StampId}"));
-            }
+            BlobClient blob = _blobClientFactory.CreateBlobClient(blobUri);
+            await blob.UploadAsync(zippedFilePath, overwrite: true, cancellationToken).ConfigureAwait(false);
 
-            BlobAccessPass uploadPass = await stampFrontendClient.GetEtlUploadAccessAsync(
-                context.SessionId,
-                cancellationToken).ConfigureAwait(false);
+            // Set metadata on the blob itself so that downstream ingestion can read it.
+            Dictionary<string, string> metadata = CreateMetadata(extendedContext, artifactId);
+            Azure.Response<BlobInfo> metadataResponse = await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (uploadPass == null)
-            {
-                throw new InvalidOperationException("Failed to get a pass to upload the trace file.");
-            }
+            // Use the ETag from the metadata response (which is the latest after metadata was set).
+            ETag etag = metadataResponse.Value.ETag;
 
-            Logger.LogDebug("Uri with SAS Token: {uploadPassValue}", uploadPass.GetUriWithSASToken().AbsoluteUri);
-            BlobClient blob = _blobClientFactory.CreateBlobClient(uploadPass.GetUriWithSASToken());
-            await blob.UploadAsync(zippedFilePath, cancellationToken).ConfigureAwait(false);
+            AcceptedArtifact acceptedArtifact = await profilerClient.CommitProfilerArtifactAsync(artifactId, etag, cancellationToken).ConfigureAwait(false);
 
-            // Update the blob metadata.
-            Dictionary<string, string> metadata = CreateMetadata(extendedContext);
-            await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken).ConfigureAwait(false);
+            // The server returns the stamp ID in the commit response — propagate it
+            // so that custom events can reference the correct artifact location.
+            context.StampId = acceptedArtifact.StampId;
 
-            if (await stampFrontendClient.ReportEtlUploadFinishAsync(uploadPass, cancellationToken).ConfigureAwait(false))
-            {
-                Logger.LogDebug("Blob upload finished @ {blobPath}.", blob?.BlobContainerName + '/' + blob?.Name);
-                Logger.LogInformation(TelemetryConstants.TraceUploaded);
-            }
-            else
-            {
-                throw new InvalidOperationException("Failed to commit the uploaded etl file.");
-            }
+            Logger.LogDebug("Blob upload committed for artifact {artifactId} on stamp {stampId}.", artifactId, acceptedArtifact.StampId);
+            Logger.LogInformation(TelemetryConstants.TraceUploaded);
 
             _telemetryLogger.Flush();
         }
-        catch (InstrumentationKeyInvalidException ikie)
+        catch (Exception ex)
         {
-            Logger.LogError(ikie, "Instrumentation Key is not well formed or empty.");
+            Logger.LogError(ex, "Failed to upload trace artifact.");
+            throw;
         }
         finally
         {
-            (stampFrontendClient as IDisposable)?.Dispose();
-
             if (!string.IsNullOrEmpty(zippedFilePath))
             {
                 if (!context.PreserveTraceFile)
                 {
-                    // Try clean up and wish the best.
-
                     try { File.Delete(zippedFilePath); }
 #pragma warning disable CA1031 // Do not catch general exception types
                     catch
@@ -185,16 +166,18 @@ internal class TraceUploader : ITraceUploader
     }
 
 
-    private Dictionary<string, string> CreateMetadata(UploadContextExtension extendedContext)
+    private Dictionary<string, string> CreateMetadata(UploadContextExtension extendedContext, Guid artifactId)
     {
         UploadContext context = extendedContext.UploadContext;
         Dictionary<string, string> metadata = new()
         {
             [BlobMetadataConstants.DataCubeMetaName] = BlobMetadata.GetDataCubeNameString(extendedContext.VerifiedAppId),
+            [BlobMetadataConstants.ArtifactId] = StoragePathContract.GetArtifactIdString(artifactId),
             // Notice, the machine name on the metadata needs to include the iis name suffix when running in antares.
             // Otherwise, the blob won't be located and approved by the frontend.
             [BlobMetadataConstants.MachineNameMetaName] = EnvironmentUtilities.MachineName,
             [BlobMetadataConstants.StartTimeMetaName] = TimestampContract.TimestampToString(context.SessionId),
+            [BlobMetadataConstants.TriggerTime] = TimestampContract.TimestampToString(context.SessionId),
             [BlobMetadataConstants.ProgrammingLanguageMetaName] = ProgramLanguages.CSharp,
             [BlobMetadataConstants.OSPlatformMetaName] = _osPlatformProvider.GetOSPlatformDescription(),
             [BlobMetadataConstants.TraceFileFormatMetaName] = context.TraceFileFormat,
