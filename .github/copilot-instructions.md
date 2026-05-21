@@ -74,6 +74,7 @@ Test projects use **xUnit** with **Moq** for mocking.
 - **InternalsVisibleTo** — test projects access internals via `InternalsVisibleTo` with a test signing key.
 - **Symbolic links** — the repo uses symlinks. On Windows, clone with `git config core.symlinks true` and run `git reset --hard` in an admin prompt.
 - **Git workflow** — never amend commits; always append new commits.
+- **Do not modify `ServiceProfiler/src/ServiceProfiler.EventPipe/`** — this path is inside the ServiceProfiler submodule and contains a legacy copy of the uploader and client code. Both the OTel and classic profiler builds use `src/ServiceProfiler.EventPipe.Upload/` (in the main repo) as the uploader source. Changes under the submodule's `ServiceProfiler.EventPipe` path are almost certainly wrong — the code there is not referenced by either build.
 
 ## Developer Setup
 
