@@ -73,6 +73,7 @@ Test projects use **xUnit** with **Moq** for mocking.
 - **C# 12 / netstandard2.1** — library projects target `netstandard2.1` with `LangVersion` 12.0, nullable enabled.
 - **InternalsVisibleTo** — test projects access internals via `InternalsVisibleTo` with a test signing key.
 - **Symbolic links** — the repo uses symlinks. On Windows, clone with `git config core.symlinks true` and run `git reset --hard` in an admin prompt.
+- **Dependency injection** — all services use constructor injection. Never use `new` to create a service that could be DI-resolved. Services are created via `ActivatorUtilities.CreateInstance` in factories (e.g., `OutOfProcCallerFactory`), which automatically resolves DI-registered dependencies alongside runtime parameters.
 - **Git workflow** — never amend commits; always append new commits.
 - **Do not modify `ServiceProfiler/src/ServiceProfiler.EventPipe/`** — this path is inside the ServiceProfiler submodule and contains a legacy copy of the uploader and client code. Both the OTel and classic profiler builds use `src/ServiceProfiler.EventPipe.Upload/` (in the main repo) as the uploader source. Changes under the submodule's `ServiceProfiler.EventPipe` path are almost certainly wrong — the code there is not referenced by either build.
 
