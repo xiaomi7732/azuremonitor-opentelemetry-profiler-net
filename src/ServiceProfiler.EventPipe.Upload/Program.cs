@@ -45,18 +45,16 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
                 })
                 .ConfigureLogging((context, logging) =>
                 {
-                    // Clear all previously registered providers.
+                    // Use SimpleConsole in single-line mode so the parent process can
+                    // parse each line's prefix (info:/warn:/fail:/etc.) and forward it
+                    // at the correct log level.
                     logging.ClearProviders();
-
-                    if (context.HostingEnvironment.IsDevelopment())
+                    logging.AddSimpleConsole(configure =>
                     {
-                        Console.WriteLine("Uploader Hosting Environment is set to: Development.");
-                        logging.AddSimpleConsole(configure =>
-                        {
-                            configure.SingleLine = true;
-                        }).SetMinimumLevel(LogLevel.Trace);
-                        logging.AddDebug().SetMinimumLevel(LogLevel.Trace);
-                    }
+                        configure.SingleLine = true;
+                    });
+                    logging.SetMinimumLevel(LogLevel.Trace);
+                    logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
                 })
                 .ConfigureServices((hostContext, services) =>
                 {

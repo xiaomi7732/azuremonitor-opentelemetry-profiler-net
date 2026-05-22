@@ -31,9 +31,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         private const char TriggerTypeShortKeyName = 'u';
         private const string TriggerTypeKeyName = "trigger";
 
-        private const char EnvironmentShortKeyName = 'e';
-        private const string EnvironmentKeyName = "environment";
-
         private const char TraceFileFormatShortKeyName = 'f';
         private const string TraceFileFormatKeyName = "traceFileFormat";
 
@@ -73,9 +70,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
         [Option(RoleNameShortKeyName, RoleNameKeyName, Required = false, HelpText = "Cloud role name of the customer app recorded in the telemetry.")]
         public string? RoleName { get; set; }
 
-        [Option(EnvironmentShortKeyName, EnvironmentKeyName, Required = false, HelpText = "Environment for Uploader.", Default = "Production")]
-        public string? Environment { get; set; }
-
         [Option(TriggerTypeShortKeyName, TriggerTypeKeyName, Required = false, HelpText = "Type of trigger that caused the collection of the trace.")]
         public string? TriggerType { get; set; }
 
@@ -112,11 +106,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts
             if (!string.IsNullOrEmpty(TriggerType))
             {
                 argumentLine += $@" --{TriggerTypeKeyName} ""{TriggerType}""";
-            }
-
-            if (!string.IsNullOrEmpty(Environment))
-            {
-                argumentLine += $@" --{EnvironmentKeyName} ""{Environment}"" ";
             }
 
             argumentLine += $@" --{TraceFileFormatKeyName} ""{TraceFileFormat}""";

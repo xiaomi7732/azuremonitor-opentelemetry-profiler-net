@@ -20,7 +20,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 ///         "PreserveTraceFile": false,
 ///         "LocalCacheFolder": "/tmp/",
 ///         "UploadMode": "OnSuccess",
-///         "UploaderEnvironment": "Production",
+///         "UploaderEnvironment": "Production", // Deprecated - no longer used
 ///         "NamedPipe": {
 ///             "ConnectionTimeout": "00:00:30"
 ///         },

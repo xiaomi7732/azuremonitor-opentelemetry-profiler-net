@@ -31,7 +31,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -59,7 +59,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -87,7 +87,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -116,7 +116,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --roleName ""{roleName}"" --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --roleName ""{roleName}"" --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -144,7 +144,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -172,7 +172,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -201,7 +201,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --trigger ""{trigger}"" --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --trigger ""{trigger}"" --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -229,7 +229,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -257,7 +257,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --environment ""Production"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }

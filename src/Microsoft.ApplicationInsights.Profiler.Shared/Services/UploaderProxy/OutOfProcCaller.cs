@@ -14,15 +14,18 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 internal class OutOfProcCaller : IOutOfProcCaller
 {
     private readonly ILogger _logger;
+    private readonly SubprocessLogForwarder _logForwarder;
     private readonly string _fileName;
     private readonly string _arguments;    
 
     public OutOfProcCaller(
         string fileName,
         string arguments,
+        SubprocessLogForwarder logForwarder,
         ILogger<OutOfProcCaller> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logForwarder = logForwarder ?? throw new ArgumentNullException(nameof(logForwarder));
         
         if (string.IsNullOrEmpty(fileName))
         {
@@ -56,7 +59,7 @@ internal class OutOfProcCaller : IOutOfProcCaller
 
         if (!string.IsNullOrWhiteSpace(stdout))
         {
-            _logger.LogDebug("Uploader stdout: {stdout}", stdout);
+            _logForwarder.Forward(stdout);
         }
         if (!string.IsNullOrWhiteSpace(stderr))
         {
