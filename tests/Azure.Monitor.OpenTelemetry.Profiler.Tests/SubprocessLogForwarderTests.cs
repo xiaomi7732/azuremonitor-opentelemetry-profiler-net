@@ -118,7 +118,7 @@ public class SubprocessLogForwarderTests
     /// <summary>
     /// Simple in-memory logger for testing.
     /// </summary>
-    private sealed class FakeLogger : ILogger
+    private sealed class FakeLogger : ILogger<SubprocessLogForwarder>
     {
         public List<(LogLevel Level, string Message)> Entries { get; } = new();
 

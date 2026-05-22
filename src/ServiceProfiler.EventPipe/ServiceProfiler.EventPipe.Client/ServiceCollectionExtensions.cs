@@ -259,6 +259,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IUploaderPathProvider, UploaderPathProvider>();
 
         services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
+        services.AddSingleton<SubprocessLogForwarder>();
 
         services.AddTransient<ITraceUploader, TraceUploaderProxy>();
 

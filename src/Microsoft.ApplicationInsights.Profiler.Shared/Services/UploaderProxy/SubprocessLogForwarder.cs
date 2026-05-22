@@ -25,7 +25,7 @@ internal sealed class SubprocessLogForwarder
 {
     private readonly ILogger _logger;
 
-    public SubprocessLogForwarder(ILogger logger)
+    public SubprocessLogForwarder(ILogger<SubprocessLogForwarder> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }

@@ -21,10 +21,11 @@ internal class OutOfProcCaller : IOutOfProcCaller
     public OutOfProcCaller(
         string fileName,
         string arguments,
+        SubprocessLogForwarder logForwarder,
         ILogger<OutOfProcCaller> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _logForwarder = new SubprocessLogForwarder(logger);
+        _logForwarder = logForwarder ?? throw new ArgumentNullException(nameof(logForwarder));
         
         if (string.IsNullOrEmpty(fileName))
         {
