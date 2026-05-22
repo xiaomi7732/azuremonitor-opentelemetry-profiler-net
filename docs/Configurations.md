@@ -29,8 +29,8 @@ This document summarizes configuration options exposed via `UserConfigurationBas
 | UploadMode | enum | OnSuccess | Options: Never, OnSuccess, Always. Use non-default only for debugging. |
 | PreserveTraceFile | bool | false | Keeps local trace after successful upload. |
 | LocalCacheFolder | string | OS temp path | Override temp directory for trace staging. |
-| SkipEndpointCertificateValidation | bool | false | Disables TLS validation. Only for secure, controlled test environments. |
-| UploaderEnvironment | string | "Production" | Tag to indicate environment (e.g., "Canary"). |
+| SkipEndpointCertificateValidation | bool | false | **Deprecated.** No longer supported by the ProfilerClient pipeline. |
+| UploaderEnvironment | string | "Production" | **Deprecated.** Uploader warnings and errors are now always surfaced automatically. Use standard `Logging__LogLevel__` configuration for deeper diagnostics. |
 
 ## Random / Triggered Profiling
 
@@ -98,7 +98,7 @@ Example: overhead=0.01, duration=0.5 min (30s) → (60 * 0.01)/0.5 = 1.2 session
 ## Safety Checklist
 
 - Production: Keep `AllowsCrash = false`.
-- Do not disable certificate validation outside isolated test networks.
+- Do not use `SkipEndpointCertificateValidation` — it is deprecated and no longer functional.
 - Review storage footprint if `PreserveTraceFile = true`.
 - Validate custom providers in staging before production rollout.
 
