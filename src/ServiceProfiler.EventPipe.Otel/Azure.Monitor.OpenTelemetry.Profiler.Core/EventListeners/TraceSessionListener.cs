@@ -24,6 +24,8 @@ internal class TraceSessionListener : EventListener
     // Typed as array (not IReadOnlyList<>) so the foreach in OnEventWritten uses the no-alloc
     // array enumerator — this is a hot path.
     private readonly IEventSourceHandler[] _handlers;
+    // Owned for disposal — resets EventSource ActivityId for async Service Bus activities.
+    private readonly ServiceBusActivityIdResetListener _resetListener;
     // Field initializer (runs before the base EventListener ctor) — important because the base
     // ctor synchronously dispatches OnEventSourceCreated for every existing EventSource, and
     // those callbacks rely on this handle being non-null.
@@ -35,12 +37,14 @@ internal class TraceSessionListener : EventListener
     public TraceSessionListener(
         SampleCollector sampleCollector,
         IEnumerable<IEventSourceHandler> handlers,
+        ServiceBusActivityIdResetListener resetListener,
         ILogger<TraceSessionListener> logger)
     {
         logger.LogTrace("Trace session listener ctor.");
 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sampleCollector = sampleCollector ?? throw new ArgumentNullException(nameof(sampleCollector));
+        _resetListener = resetListener ?? throw new ArgumentNullException(nameof(resetListener));
         try
         {
             _handlers = (handlers ?? throw new ArgumentNullException(nameof(handlers))).ToArray();
@@ -148,6 +152,7 @@ internal class TraceSessionListener : EventListener
         {
         }
         _ctorWaitHandle.Dispose();
+        _resetListener.Dispose();
         base.Dispose();
     }
 

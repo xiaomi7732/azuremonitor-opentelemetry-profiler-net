@@ -20,6 +20,14 @@ internal class TraceSessionListenerFactory
         RequestSourceMode mode = RequestSourceModeResolver.Resolve(logger);
         logger.LogInformation("Request event source mode: {mode}", mode);
 
+        // Register the Service Bus ActivityId reset listener BEFORE any handler that calls
+        // EnableEvents with FilterAndPayloadSpecs. The bridge's internal ActivityListener is
+        // created during EnableEvents, and ActivityStarted callbacks fire in registration order.
+        // Our listener must fire first to reset the thread-local ActivityId before the bridge
+        // pushes a child under a potentially stale parent (async thread reuse issue).
+        ServiceBusActivityIdResetListener resetListener =
+            ActivatorUtilities.CreateInstance<ServiceBusActivityIdResetListener>(_serviceProvider);
+
         // One RequestActivityRelay per listener lifetime, shared across this listener's handlers so that
         // a Start emitted by one source can correlate with a Stop emitted by another (when in Both mode).
         RequestActivityRelay relay = ActivatorUtilities.CreateInstance<RequestActivityRelay>(_serviceProvider);
@@ -39,6 +47,9 @@ internal class TraceSessionListenerFactory
         // TPL is unrelated to the request-source choice; it just propagates activity IDs.
         handlers.Add(ActivatorUtilities.CreateInstance<TplEventSourceHandler>(_serviceProvider));
 
-        return ActivatorUtilities.CreateInstance<TraceSessionListener>(_serviceProvider, (IEnumerable<IEventSourceHandler>)handlers);
+        return ActivatorUtilities.CreateInstance<TraceSessionListener>(
+            _serviceProvider,
+            (IEnumerable<IEventSourceHandler>)handlers,
+            resetListener);
     }
 }
