@@ -38,8 +38,9 @@ internal class DiagnosticsClientTraceConfiguration : DiagnosticsClientTraceConfi
         }
 
         // Diagnostic Source Event Source — only needed when the DS handler is active.
-        // Narrow FilterAndPayloadSpecs to the exact ASP.NET Core HTTP-in ActivitySource to match the handler;
-        // [AS]* would firehose every ActivitySource in the process (EF Core, HttpClient, custom sources, ...).
+        // Narrow FilterAndPayloadSpecs to the exact ActivitySources we care about (ASP.NET Core HTTP-in
+        // and Azure Service Bus processor) to match the handler; [AS]* would firehose every ActivitySource
+        // in the process (EF Core, HttpClient, custom sources, ...).
         if (mode is RequestSourceMode.DiagnosticSource or RequestSourceMode.Both)
         {
             yield return new EventPipeProvider(TraceSessionListener.DiagnosticSourceEventSourceName, EventLevel.Verbose, keywords: 0xffffffffffff, arguments: new Dictionary<string, string>

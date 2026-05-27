@@ -5,9 +5,9 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 /// <summary>
 /// Handler for the <c>Microsoft-Diagnostics-DiagnosticSource</c> EventSource bridge.
-/// Subscribes to ASP.NET Core HTTP-in start/stop diagnostic events via <c>FilterAndPayloadSpecs</c>,
-/// mapping them onto the bridge's <c>Activity1Start</c>/<c>Activity1Stop</c> EventSource events,
-/// then forwards parsed payloads to the shared <see cref="RequestActivityRelay"/>.
+/// Subscribes to ASP.NET Core HTTP-in and Azure Service Bus processor start/stop diagnostic events
+/// via <c>FilterAndPayloadSpecs</c>, mapping them onto the bridge's <c>Activity1Start</c>/<c>Activity1Stop</c>
+/// EventSource events, then forwards parsed payloads to the shared <see cref="RequestActivityRelay"/>.
 /// </summary>
 internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
 {
@@ -42,7 +42,18 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
     //
     // The ActivitySource name is "Microsoft.AspNetCore" (NOT "Microsoft.AspNetCore.Hosting" —
     // that's the ActivityName / OperationName, e.g. "Microsoft.AspNetCore.Hosting.HttpRequestIn").
-    internal const string FilterAndPayloadSpecs = "[AS]Microsoft.AspNetCore/";
+    //
+    // Azure Service Bus processor ActivitySource names are dynamically constructed by the SDK as
+    // "<DiagnosticNamespace>.<ClientType>", e.g. "Azure.Messaging.ServiceBus.ServiceBusProcessor".
+    // The processor creates activities with ActivityKind.Consumer and names like
+    // "ServiceBusProcessor.ProcessMessage" and "ServiceBusSessionProcessor.ProcessSessionMessage".
+    // ActivitySource is enabled by default in Azure.Core 1.36.0+.
+    //
+    // Multiple specs are newline-separated per DiagnosticSourceEventSource convention.
+    internal const string FilterAndPayloadSpecs =
+        "[AS]Microsoft.AspNetCore/\n" +
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusProcessor/\n" +
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/";
 
     private readonly RequestActivityRelay _relay;
     private readonly ILogger<DiagnosticSourceEventSourceHandler> _logger;
