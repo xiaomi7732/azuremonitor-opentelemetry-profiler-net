@@ -212,6 +212,7 @@ As an alternative to the manual walkthrough above, you can use Copilot to enable
 
 ## Next
 
+- [Profiling Azure Service Bus Applications](./docs/ServiceBusSetup.md)
 - [Setup the Role name](./docs/SetupCloudRoleName.md)
 - [Configuration Guide](./docs/Configurations.md)
 - [CPU Usage Monitoring](./docs/CpuUsageMonitoring.md)
