@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 
 # Language server cache
 *.lscache
+
+# Playwright MCP snapshots
+.playwright-mcp/
