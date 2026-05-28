@@ -35,25 +35,17 @@ internal sealed class ServiceBusActivityIdResetListener : IDisposable
     {
         _listener = new ActivityListener
         {
-            ShouldListenTo = static source =>
+            ShouldListenTo = source =>
                 source.Name == "Azure.Messaging.ServiceBus.ServiceBusProcessor" ||
                 source.Name == "Azure.Messaging.ServiceBus.ServiceBusSessionProcessor",
 
-            // Reset the thread-local EventSource ActivityId in the Sample callback,
-            // NOT in ActivityStarted. The runtime guarantees that ALL Sample callbacks
-            // complete before ANY ActivityStarted callback fires. ActivityStarted
-            // callbacks fire in reverse registration order (last-registered first),
-            // so the bridge's ActivityStarted fires before ours — too late to reset.
-            // Sample callbacks also fire in reverse order, but since the bridge's
-            // Sample has no thread-state side effects, our reset in Sample is
-            // effective regardless of ordering.
-            Sample = static (ref ActivityCreationOptions<ActivityContext> options) =>
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
             {
                 EventSource.SetCurrentThreadActivityId(Guid.Empty);
                 return ActivitySamplingResult.AllDataAndRecorded;
             },
 
-            SampleUsingParentId = static (ref ActivityCreationOptions<string> options) =>
+            SampleUsingParentId = (ref ActivityCreationOptions<string> options) =>
             {
                 EventSource.SetCurrentThreadActivityId(Guid.Empty);
                 return ActivitySamplingResult.AllDataAndRecorded;
@@ -61,7 +53,7 @@ internal sealed class ServiceBusActivityIdResetListener : IDisposable
         };
 
         ActivitySource.AddActivityListener(_listener);
-        logger.LogDebug("Registered ActivityListener to reset EventSource ActivityId for Service Bus processor activities.");
+        logger.LogDebug("Registered ActivityListener for Service Bus processor activities.");
     }
 
     public void Dispose() => _listener.Dispose();

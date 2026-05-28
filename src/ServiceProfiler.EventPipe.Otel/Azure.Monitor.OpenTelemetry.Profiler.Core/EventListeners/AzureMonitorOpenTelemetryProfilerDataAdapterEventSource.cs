@@ -22,13 +22,17 @@ internal class AzureMonitorOpenTelemetryProfilerDataAdapterEventSource : EventSo
     public static AzureMonitorOpenTelemetryProfilerDataAdapterEventSource Log = new();
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
-    [Event(EventId.RequestStart, Keywords = Keywords.Operations)]
+    // Explicit Opcode prevents EventSource from auto-inferring Opcode.Start/Stop
+    // based on method names ending in "Start"/"Stop". Without this, the internal
+    // ActivityTracker would push/pop the thread's ActivityId on each WriteEvent,
+    // causing relay events to appear one level deeper than the bridge events.
+    [Event(EventId.RequestStart, Keywords = Keywords.Operations, Opcode = EventOpcode.Info)]
     public void RequestStart(string name, string id, string requestId, string operationId)
     {
         WriteEvent(EventId.RequestStart, name, id, requestId, operationId);
     }
 
-    [Event(EventId.RequestStop, Keywords = Keywords.Operations)]
+    [Event(EventId.RequestStop, Keywords = Keywords.Operations, Opcode = EventOpcode.Info)]
     public void RequestStop(string name, string id, string requestId, string operationId)
     {
         WriteEvent(EventId.RequestStop, name, id, requestId, operationId);
