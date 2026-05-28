@@ -46,7 +46,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 
         public static ApplicationInsightsDataRelayEventSource Log { get; } = new ApplicationInsightsDataRelayEventSource();
 
-        [Event(EventIds.RequestStart, Keywords = Keywords.Request, Level = EventLevel.Verbose, Opcode = EventOpcode.Start, Task = Tasks.Request, ActivityOptions = EventActivityOptions.None)]
+        [Event(EventIds.RequestStart, Keywords = Keywords.Request, Level = EventLevel.Verbose, Opcode = EventOpcode.Start, Task = Tasks.Request, ActivityOptions = EventActivityOptions.Disable)]
         public void RequestStart(
             string id,
             string name,
@@ -68,7 +68,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
             operationId);
         }
 
-        [Event(EventIds.RequestStop, Keywords = Keywords.Request, Level = EventLevel.Verbose, Opcode = EventOpcode.Stop, Task = Tasks.Request, ActivityOptions = EventActivityOptions.None)]
+        [Event(EventIds.RequestStop, Keywords = Keywords.Request, Level = EventLevel.Verbose, Opcode = EventOpcode.Stop, Task = Tasks.Request, ActivityOptions = EventActivityOptions.Disable)]
         public void RequestStop(
             string id,
             string name,

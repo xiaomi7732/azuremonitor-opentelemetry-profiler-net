@@ -1,63 +1,55 @@
 # PR Title
 
-**Improve uploader logging: always surface errors, deprecate UploaderEnvironment**
+**Add Azure Service Bus processor activity support and fix EventSource ActivityTracker nesting**
 
 # PR Description
 
 ## Summary
 
-Fix uploader logging so that errors and warnings always surface in the parent process logs without requiring any configuration. Deprecate the broken `UploaderEnvironment` setting.
+Adds support for capturing Azure Service Bus processor message activities alongside ASP.NET Core HTTP request activities. Also fixes an EventSource ActivityTracker nesting issue that affected relay event ActivityId paths across all profiler variants.
 
-## Problem
+## Motivation
 
-The uploader runs as a separate process, making it hard to debug. The existing `UploaderEnvironment` setting was intended to control uploader logging but had two compounding issues:
-
-1. In Production mode, `logging.ClearProviders()` removed all providers with no replacement — the uploader produced zero stdout, silently swallowing errors
-2. Even when logging was enabled (via `UploaderEnvironment=Development`), the parent process logged all captured stdout at `LogDebug` level, invisible at the default `Information` threshold
+The profiler previously only captured ASP.NET Core HTTP-in request activities. Applications using Azure Service Bus processors had no visibility into message processing performance. This PR extends the profiler to instrument Service Bus processing events, enabling profiling traces for message-driven workloads.
 
 ## Changes
 
-### New `SubprocessLogForwarder` service
-- Parses SimpleConsole single-line prefixes (`info:`, `warn:`, `fail:`, `crit:`, `dbug:`, `trce:`) and re-emits each line at the matching `LogLevel`
-- Continuation lines (e.g., stack traces) inherit the previous line's level
-- Injected into `OutOfProcCaller` to replace the single `LogDebug` dump
-- Unit tested with 11 test cases covering prefix parsing, multi-line output, continuation lines, and edge cases
+### Service Bus support (OTel profiler)
 
-### Uploader `Program.cs`
-- Always registers `SimpleConsole` with `SingleLine = true` at `Trace` minimum level
-- Suppresses `Microsoft.Hosting.Lifetime` logs (removes misleading "Application is shutting down" noise)
-- Removed `IsDevelopment()` conditional and the `Console.WriteLine` debug message
+- **`ServiceBusActivityIdResetListener`** — New `ActivityListener` that resets the thread-local EventSource `ActivityId` when Service Bus processor activities start, preventing the Service Bus SDK's internal activity from contaminating the relay event's `ActivityId` path
+- **`DiagnosticSourceEventSourceHandler`** — Extended to recognize Service Bus processor activity names
+- **`RequestActivityRelay`** — Generalized to handle both HTTP and Service Bus request activities, with deduplication across event source handlers
+- **`TraceSessionListenerFactory`** — Registers the new `ServiceBusActivityIdResetListener` via DI
+- **`DiagnosticsClientTraceConfiguration`** — Added `Azure.Messaging.ServiceBus` EventSource to the EventPipe provider list
 
-### Deprecation
-- `UserConfigurationBase.UploaderEnvironment` marked with `[Obsolete]`
-- Removed `--environment` CLI argument from the uploader (`UploadContext`, `UploadContextModel`)
-- Removed `Environment` property from `TraceUploaderProxy` upload context construction
+### EventSource ActivityTracker fix (all profilers)
 
-### Copilot Instructions
-- Added warning that `ServiceProfiler/src/ServiceProfiler.EventPipe/` must not be modified — both profiler builds use `src/ServiceProfiler.EventPipe.Upload/` from the main repo
+- **`AzureMonitorOpenTelemetryProfilerDataAdapterEventSource`** (OTel) — Added `Task = Tasks.Request` and `ActivityOptions = EventActivityOptions.Disable` on `RequestStart`/`RequestStop` events, preventing EventSource's `ActivityTracker` from pushing/popping the thread's `ActivityId` during `WriteEvent`
+- **`ApplicationInsightsDataRelayEventSource`** (Classic) — Changed `ActivityOptions` from `None` to `Disable`, matching the v3.0 EventSource pattern
+- **`TraceSessionListener` / `TraceSessionListener30`** (Classic) — Save and restore `CurrentThreadActivityId` around relay calls, matching the pattern used by the OTel `RequestActivityRelay`
+- **`SampleActivity.IsValid`** (Shared) — Updated comment to reflect the new invariant; kept `StartsWith` for backward compatibility
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `SubprocessLogForwarder.cs` | **New** — log-level-aware forwarding service |
-| `OutOfProcCaller.cs` | Uses `SubprocessLogForwarder` instead of `LogDebug` dump |
-| `Program.cs` (uploader) | Always registers SimpleConsole; suppresses hosting lifetime |
-| `UploadContext.cs` (uploader) | Removed `--environment` CLI option |
-| `UploadContextModel.cs` | Removed `Environment` property and serialization |
-| `UserConfigurationBase.cs` | `[Obsolete]` on `UploaderEnvironment` |
-| `TraceUploaderProxy.cs` | Stopped setting `Environment` on upload context |
-| `Profiler.Shared.csproj` | Added `InternalsVisibleTo` for test project |
-| `SubprocessLogForwarderTests.cs` | **New** — 11 test cases |
-| `UploadContextModelTests.cs` | Removed `--environment` from expected strings |
-| `copilot-instructions.md` | Submodule boundary warning |
+| `ServiceBusActivityIdResetListener.cs` | **New** — resets EventSource ActivityId for Service Bus activities |
+| `DiagnosticSourceEventSourceHandler.cs` | Recognize Service Bus activity names |
+| `RequestActivityRelay.cs` | Handle HTTP + Service Bus, deduplicate across handlers |
+| `TraceSessionListenerFactory.cs` (OTel) | Register `ServiceBusActivityIdResetListener` |
+| `DiagnosticsClientTraceConfiguration.cs` | Add Service Bus EventSource provider |
+| `AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.cs` | Add `Tasks`, use `Disable` + `Start/Stop` opcodes |
+| `ApplicationInsightsDataRelayEventSource.cs` (Classic) | `ActivityOptions.None` → `Disable` |
+| `TraceSessionListener.cs` (Classic) | Save/restore `CurrentThreadActivityId` |
+| `TraceSessionListener30.cs` (Classic) | Save/restore `CurrentThreadActivityId` |
+| `SampleActivity.cs` (Shared) | Updated validation comment |
 
 ## Testing
 
-- Both Classic and OTel private packages build successfully
-- All tests pass: 21 (OTel) + 58 (Client) + 20 (Upload) = 99 total
-- Code reviewed across 4 passes using GPT-5.5 and Claude Opus 4.7 (2 clean iterations)
+- OTel private package builds successfully
+- Code reviewed with GPT 5.5 and Claude Opus 4.7 (2 consecutive clean iterations per round)
 
-## Breaking Changes
+## Risk
 
-- `UploaderEnvironment` is deprecated with `[Obsolete]`. Setting it still compiles but has no effect. Users who suppressed `CS0618` globally will see no impact. Users with `TreatWarningsAsErrors` can suppress with `#pragma warning disable CS0618`.
+- **Low** — The `EventActivityOptions.Disable` pattern is proven in `ApplicationInsightsDataRelayEventSource30` (used since .NET Core 3.0). The save/restore of `CurrentThreadActivityId` matches the OTel relay's existing pattern.
+- Classic non-30 EventSource change only affects .NET Core 2.x runtime paths (EOL) plus the multi-listener enumeration path.

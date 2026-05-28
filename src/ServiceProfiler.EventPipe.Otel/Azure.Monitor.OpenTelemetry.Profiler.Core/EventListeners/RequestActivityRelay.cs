@@ -6,8 +6,9 @@ using System.Threading;
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 /// <summary>
-/// Tracks in-flight "interesting" request activities (currently ASP.NET Core HTTP-in) and forwards
-/// matched start/stop pairs onto <see cref="AzureMonitorOpenTelemetryProfilerDataAdapterEventSource"/>.
+/// Tracks in-flight "interesting" request activities (ASP.NET Core HTTP-in and Azure Service Bus
+/// processor messages) and forwards matched start/stop pairs onto
+/// <see cref="AzureMonitorOpenTelemetryProfilerDataAdapterEventSource"/>.
 ///
 /// Lives once per <see cref="TraceSessionListener"/> and is shared by every <see cref="IEventSourceHandler"/>
 /// that produces request activities, so a Start emitted by one source can correlate with (or be deduped
@@ -16,6 +17,8 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 internal sealed class RequestActivityRelay
 {
     private const string AspNetCoreHttpRequestInName = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
+    private const string ServiceBusProcessMessageName = "ServiceBusProcessor.ProcessMessage";
+    private const string ServiceBusProcessSessionMessageName = "ServiceBusSessionProcessor.ProcessSessionMessage";
 
     private readonly ILogger<RequestActivityRelay> _logger;
     private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
@@ -27,10 +30,13 @@ internal sealed class RequestActivityRelay
     }
 
     /// <summary>
-    /// We only capture HTTP-in requests. HTTP-out (e.g. HttpClient) is excluded.
+    /// We capture HTTP-in requests and Service Bus processor messages.
+    /// HTTP-out (e.g. HttpClient) and other Service Bus operations (send, receive) are excluded.
     /// </summary>
     private static bool IsInterestingRequest(string requestName)
-        => string.Equals(AspNetCoreHttpRequestInName, requestName, StringComparison.Ordinal);
+        => string.Equals(AspNetCoreHttpRequestInName, requestName, StringComparison.Ordinal)
+        || string.Equals(ServiceBusProcessMessageName, requestName, StringComparison.Ordinal)
+        || string.Equals(ServiceBusProcessSessionMessageName, requestName, StringComparison.Ordinal);
 
     public void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
     {
