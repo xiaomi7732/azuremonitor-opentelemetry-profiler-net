@@ -212,6 +212,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 
         protected virtual void RelayStopRequest(ApplicationInsightsOperationEvent operationEventData, long startTimeUTCTicks, Guid activityId)
         {
+            Guid previousActivityId = EventSource.CurrentThreadActivityId;
             AlignCurrentThreadActivityId(activityId);
             ApplicationInsightsDataRelayEventSource.Log.RequestStop(
                                         operationEventData.EventId.ToString(CultureInfo.InvariantCulture),
@@ -222,10 +223,12 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
                                         operationName: operationEventData.OperationName,
                                         machineName: Environment.MachineName,
                                         operationId: operationEventData.OperationId);
+            ApplicationInsightsDataRelayEventSource.SetCurrentThreadActivityId(previousActivityId);
         }
 
         protected virtual void RelayStartRequest(ApplicationInsightsOperationEvent operationEventData, Guid activityId)
         {
+            Guid previousActivityId = EventSource.CurrentThreadActivityId;
             AlignCurrentThreadActivityId(activityId);
             ApplicationInsightsDataRelayEventSource.Log.RequestStart(
                 operationEventData.EventId.ToString(CultureInfo.InvariantCulture),
@@ -237,6 +240,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
                 operationName: operationEventData.OperationName,
                 machineName: Environment.MachineName,
                 operationId: operationEventData.OperationId);
+            ApplicationInsightsDataRelayEventSource.SetCurrentThreadActivityId(previousActivityId);
         }
 
         private void AppendSampleActivity(SampleActivity activity)
