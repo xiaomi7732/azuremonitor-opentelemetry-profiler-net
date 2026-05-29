@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\SampleActivity.cs" Link="SampleActivity.cs" />
+    <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\AccessTokenData.cs" Link="Contracts\AccessTokenData.cs" />
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Services\Auth\StaticAccessTokenCredential.cs" Link="StaticAccessTokenCredential.cs" />
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Services\EnumerableUtilities.cs" Link="EnumerableUtilities.cs" />
     <Compile Include="..\Microsoft.ApplicationInsights.Profiler.Shared\Services\HighPerfJsonStringConverter.cs" Link="HighPerfJsonStringConverter.cs" />

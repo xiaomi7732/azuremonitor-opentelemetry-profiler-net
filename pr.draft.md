@@ -1,39 +1,36 @@
 # PR Title
 
-**Fix CI test infrastructure: strong-name signing, deadlocks, and ServiceProvider disposal**
+**Fix IPC serialization robustness and improve diagnostics for trace upload**
 
 # PR Description
 
 ## Summary
 
-Fixes CI test infrastructure issues that caused build failures and indefinite test hangs: strong-name signing for Moq/DynamicProxy, test data deployment, EventListener AB-BA deadlocks, and ServiceProvider disposal leaks.
-
-> **Note:** Service Bus support and EventSource ActivityTracker fixes were merged in #131. This PR contains the follow-up CI/test fixes discovered while validating those changes in CI.
+Fixes a potential `UnsupportedPayloadTypeException` during named pipe IPC between the profiler and uploader, and improves diagnostic logging for serialization failures.
 
 ## Motivation
 
-After merging #131, CI test runs experienced:
-1. **Build failures** — `TypeLoadException` due to `DynamicProxyGenAssembly2` using the wrong strong-name signing key
-2. **Test data missing** — `DirectoryNotFoundException` for TestDeployments in Upload tests
-3. **Test host hangs** — Undisposed `ServiceProvider` instances kept background threads alive, preventing the test host from exiting
-4. **Deadlocks** — AB-BA lock ordering between `EventListener.Dispose()` and `EnableEvents()` caused indefinite hangs
+A user reported repeated upload failures with `UnsupportedPayloadTypeException: Can't serialize the message object` on Windows App Service (OTel profiler, Entra ID auth). The error message provided no information about which type failed or why, making diagnosis impossible.
+
+Investigation revealed two robustness issues:
+1. The profiler serializes the raw `Azure.Core.AccessToken` struct over the named pipe. This struct is external and its properties change across versions (e.g., Azure.Core 1.51+ added `BindingCertificate` of type `X509Certificate2?`, which is not JSON-serializable when non-null).
+2. `TrySerialize` only caught `JsonException`, but `System.Text.Json` can also throw `NotSupportedException` (unsupported types like `X509Certificate2`) and `ArgumentException` (invalid UTF-16 in string data from malformed traces).
 
 ## Changes
 
-### Strong-name signing fix
-- **`src/Directory.Build.props`** — Added `CastleCorePublicKey` with the correct public key from Castle.Core's `DynProxy.snk`, used for `InternalsVisibleTo("DynamicProxyGenAssembly2")` in strong-named builds
-- **5 project files** — Updated `InternalsVisibleTo` for DynamicProxyGenAssembly2 to use `$(CastleCorePublicKey)` instead of the incorrect product signing key
-- **`ServiceProfiler/Signing.props`** (submodule) — Same fix, merged via internal PR
+### Serialization robustness
 
-### Test data deployment fix
-- **`ServiceProfiler.EventPipe.Upload.Tests.csproj`** — Changed `None Include` → `Content Include` with `Link` metadata so TestDeployments files are correctly copied to the output directory in CI builds
+- **`AccessTokenData.cs`** — **New** serialization-safe DTO with only `Token` and `ExpiresOn`, replacing raw `AccessToken` struct serialization over the named pipe
+- **`PostStopProcessor.cs`** — Converts `AccessToken` → `AccessTokenData` before `SendAsync`, eliminating dependency on Azure.Core's evolving struct layout
+- **`HighPerfJsonSerializationProvider.cs`** — Catches `NotSupportedException` and `ArgumentException` alongside `JsonException` in `TrySerialize`/`TryDeserialize`; added `ILogger` (with backward-compatible parameterless constructor) to log caught exceptions
 
-### Solution completeness
-- **`EventPipe.Profilers.All.sln`** — Added missing `Azure.Monitor.OpenTelemetry.Profiler.Tests` project
+### Diagnostics
 
-### EventListener deadlock fix
-- **`TraceSessionListener.cs`** (production) — Fixed AB-BA deadlock between `EventListener.Dispose()` and `EnableEvents()`. Tasks from `OnEventSourceCreated` are now registered under `lock(_pendingTasks)` atomically with `Task.Run()`, ensuring `Dispose()` always sees in-flight tasks. A volatile `_isDisposing` flag prevents new `EnableEvents()` calls after disposal starts, and `Dispose()` drains pending tasks before calling `base.Dispose()`.
-- **`TraceSessionListenerStub.cs`** (test) — Same deadlock fix pattern
+- **`DuplexNamedPipeService.cs`** — `SendAsync` error message now includes `typeof(T).FullName` so the failing type is immediately visible in logs
+
+### Tests
+
+- **`AuthTokenContractTests.cs`** — Added 2 tests verifying `AccessTokenData` → `AccessTokenContract` wire compatibility (populated and default values)
 
 ### ServiceProvider disposal leaks
 - **`ServiceProfilerProviderTests.cs`** — Changed `IServiceProvider` → `ServiceProvider`, wrapped in try/finally with `DisposeAsync()`
@@ -41,14 +38,22 @@ After merging #131, CI test runs experienced:
 - **`TestsBase.cs`** — Temporary `ServiceProvider` for logger wrapped in `using` block
 - **`DiagnosticsClientTraceConfigurationTests.cs`** — Added `using var` for `ServiceProvider`
 
-### Re-enable parallel test execution
-- Reverted `DisableTestParallelization` assembly attribute added during investigation, now that the root cause (deadlock + disposal leaks) is fixed
+| File | Change |
+|------|--------|
+| `Contracts/AccessTokenData.cs` | **New** — serialization-safe DTO for AccessToken |
+| `Services/PostStopProcessor.cs` | Use `AccessTokenData` DTO instead of raw `AccessToken` |
+| `Services/HighPerfJsonSerializationProvider.cs` | Broader exception handling + ILogger |
+| `Services/IPC/DuplexNamedPipeService.cs` | Include type name in error message |
+| `ServiceProfiler.EventPipe.Upload.csproj` | Link `AccessTokenData.cs` |
+| `AuthTokenContractTests.cs` | 2 new wire-compatibility tests |
 
 ## Testing
 
-- All 29 classic profiler unit tests pass locally
+- All 22 uploader tests pass (including 2 new)
+- All 21 OTel profiler tests pass
+- Full solution build succeeds
 - Code reviewed with GPT 5.5 and Claude Opus 4.7 (2 consecutive clean iterations)
 
 ## Risk
 
-- **Low** — Strong-name key fix uses the correct Castle.Core DynProxy.snk public key. Deadlock fix uses standard `volatile` + task draining pattern. ServiceProvider disposal follows .NET best practices.
+- **Low** — The wire format is backward-compatible: `AccessTokenData` serializes the same `Token`/`ExpiresOn` properties the uploader's `AccessTokenContract` already expects. Extra properties from the old `AccessToken` payload were always ignored by the uploader.
