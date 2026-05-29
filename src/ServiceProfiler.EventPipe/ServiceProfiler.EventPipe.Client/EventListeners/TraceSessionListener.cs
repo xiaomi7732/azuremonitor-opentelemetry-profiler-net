@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Globalization;
@@ -50,21 +51,38 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         protected override void OnEventSourceCreated(EventSource eventSource)
         {
             base.OnEventSourceCreated(eventSource);
-            Task.Run(() =>
+            var task = Task.Run(() =>
             {
-                if (_ctorWaitHandle != null)
+                if (_ctorWaitHandle != null && !_isDisposing)
                 {
                     _ctorWaitHandle.Wait();
+                    if (_isDisposing) return;
                     if (string.Equals(eventSource.Name, MicrosoftApplicationInsightsDataEventSourceName, StringComparison.OrdinalIgnoreCase))
                     {
                         EventKeywords keywordsMask =
                             ApplicationInsightsDataRelayEventSource30.Keywords.Request |
                             ApplicationInsightsDataRelayEventSource30.Keywords.Operations;
                         _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
-                        EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
+                        if (!_isDisposing)
+                        {
+                            EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
+                        }
                     }
                 }
-            }).ConfigureAwait(false);
+            });
+
+            lock (_pendingTasks)
+            {
+                _pendingTasks.Add(task);
+            }
+
+            task.ContinueWith(_ =>
+            {
+                lock (_pendingTasks)
+                {
+                    _pendingTasks.Remove(task);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -316,6 +334,8 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         private readonly ISerializationOptionsProvider<JsonSerializerOptions> _serializerOptionsProvider;
         private readonly ILogger _logger;
         private readonly ManualResetEventSlim _ctorWaitHandle = new ManualResetEventSlim(false);
+        private readonly List<Task> _pendingTasks = new List<Task>();
+        private volatile bool _isDisposing;
 
         private ConcurrentDictionary<string, SampleActivity> _sampleActivityBuffer = new ConcurrentDictionary<string, SampleActivity>();
 
@@ -326,6 +346,22 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
 
         public override void Dispose()
         {
+            _isDisposing = true;
+
+            // Drain all pending OnEventSourceCreated tasks before calling base.Dispose().
+            // EventListener.Dispose() acquires internal locks to remove this listener from all
+            // EventSources. If a pending Task.Run is concurrently calling EnableEvents (which
+            // acquires the same locks in a different order), we get an AB-BA deadlock.
+            Task[] pending;
+            lock (_pendingTasks)
+            {
+                pending = _pendingTasks.ToArray();
+            }
+            if (pending.Length > 0)
+            {
+                Task.WaitAll(pending, TimeSpan.FromSeconds(5));
+            }
+
             base.Dispose();
             // Dispose of unmanaged resources.
             Dispose(true);
