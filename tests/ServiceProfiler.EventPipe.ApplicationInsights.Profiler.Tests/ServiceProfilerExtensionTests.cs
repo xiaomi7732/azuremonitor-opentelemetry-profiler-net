@@ -148,14 +148,17 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 options.ProvideAnonymousTelemetry = false;
             });
 
-            using (ServiceProvider tempProvider = serviceCollection.BuildServiceProvider())
+            // Create TelemetryConfiguration directly instead of resolving from a
+            // temporary provider — disposing that provider would also dispose the
+            // singleton instance we intend to re-register, leaving the final
+            // provider with a disposed TelemetryConfiguration.
+            var telemetryConfiguration = new TelemetryConfiguration
             {
-                TelemetryConfiguration telemetryConfiguration = tempProvider.GetRequiredService<TelemetryConfiguration>();
-                telemetryConfiguration.ConnectionString = $"InstrumentationKey={customerIKey}";
-                ServiceDescriptor telemetryConfigurationDescriptor = serviceCollection.First(d => d.ServiceType == typeof(TelemetryConfiguration));
-                serviceCollection.Remove(telemetryConfigurationDescriptor);
-                serviceCollection.AddSingleton<TelemetryConfiguration>(telemetryConfiguration);
-            }
+                ConnectionString = $"InstrumentationKey={customerIKey}",
+            };
+            ServiceDescriptor telemetryConfigurationDescriptor = serviceCollection.First(d => d.ServiceType == typeof(TelemetryConfiguration));
+            serviceCollection.Remove(telemetryConfigurationDescriptor);
+            serviceCollection.AddSingleton<TelemetryConfiguration>(telemetryConfiguration);
 
             // Mock endpoint provider
             ServiceDescriptor? endpointProviderDescriptor = serviceCollection.FirstOrDefault(d => d.ServiceType is IEndpointProvider);
