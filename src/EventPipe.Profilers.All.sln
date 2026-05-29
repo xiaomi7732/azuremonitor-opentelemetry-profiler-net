@@ -65,6 +65,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Monitor.Diagnostics.P
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ServiceProfiler.Contract.Agent.Profiler", "ServiceProfiler.Contract.Agent.Profiler", "{623E01C1-4476-3482-EE36-E1D96B1A5E95}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Monitor.OpenTelemetry.Profiler.Tests", "..\tests\Azure.Monitor.OpenTelemetry.Profiler.Tests\Azure.Monitor.OpenTelemetry.Profiler.Tests.csproj", "{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -351,6 +353,18 @@ Global
 		{D331064F-7A54-46DC-B1FB-2EAC366A5E6B}.Release|x64.Build.0 = Release|Any CPU
 		{D331064F-7A54-46DC-B1FB-2EAC366A5E6B}.Release|x86.ActiveCfg = Release|Any CPU
 		{D331064F-7A54-46DC-B1FB-2EAC366A5E6B}.Release|x86.Build.0 = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|x64.Build.0 = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Debug|x86.Build.0 = Debug|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|x64.ActiveCfg = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|x64.Build.0 = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|x86.ActiveCfg = Release|Any CPU
+		{B4519E9C-D80B-4DDE-9F2D-E1B902D35799}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

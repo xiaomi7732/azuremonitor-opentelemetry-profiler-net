@@ -14,7 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ServiceProfiler.EventPipe.Upload.Tests" Key="$(TestPublicKey)" />
-    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />

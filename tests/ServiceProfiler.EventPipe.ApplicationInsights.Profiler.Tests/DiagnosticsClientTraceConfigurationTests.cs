@@ -16,7 +16,8 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldHaveProperDefaultValues()
         {
-            var target = GetRichServiceCollection().BuildServiceProvider().GetRequiredService<DiagnosticsClientTraceConfiguration>();
+            using var serviceProvider = GetRichServiceCollection().BuildServiceProvider();
+            var target = serviceProvider.GetRequiredService<DiagnosticsClientTraceConfiguration>();
 
             Assert.Equal(250, target.CircularBufferMB);
             Assert.True(target.RequestRundown);

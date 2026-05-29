@@ -42,7 +42,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection = serviceCollection.AddServiceProfiler(serviceCollectionBuilder: new NoIKeyTestServiceCollectionBuilder());
 
-            IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
             ServiceProfilerServices profilerServices = serviceProvider.GetRequiredService<ServiceProfilerServices>();
             profilerServices.ServicesInitialized += (s, e) =>
@@ -59,7 +59,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             IServiceCollection serviceCollection = CreateInitialServiceCollection();
             serviceCollection = serviceCollection.AddServiceProfiler(
                 serviceCollectionBuilder: new TestServiceCollectionBuilder());
-            IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
             ServiceProfilerServices profilerServices = serviceProvider.GetRequiredService<ServiceProfilerServices>();
             profilerServices.ServicesInitialized += (s, e) =>
@@ -81,7 +81,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 options.InitialDelay = TimeSpan.FromSeconds(3);
             });
 
-            IServiceProvider provider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider provider = serviceCollection.BuildServiceProvider();
             DiagnosticsClientTraceConfiguration traceConfiguration = provider.GetRequiredService<DiagnosticsClientTraceConfiguration>();
             Assert.Equal(100, traceConfiguration.CircularBufferMB);
 
@@ -104,7 +104,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection = serviceCollection.AddServiceProfiler(config);
 
-            IServiceProvider provider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider provider = serviceCollection.BuildServiceProvider();
             DiagnosticsClientTraceConfiguration traceConfiguration = provider.GetRequiredService<DiagnosticsClientTraceConfiguration>();
             Assert.Equal(100, traceConfiguration.CircularBufferMB);
 
@@ -129,7 +129,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             serviceCollection = serviceCollection.AddServiceProfiler();
 
-            IServiceProvider provider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider provider = serviceCollection.BuildServiceProvider();
             DiagnosticsClientTraceConfiguration traceConfiguration = provider.GetRequiredService<DiagnosticsClientTraceConfiguration>();
             Assert.Equal(100, traceConfiguration.CircularBufferMB);
 
@@ -148,8 +148,14 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 options.ProvideAnonymousTelemetry = false;
             });
 
-            TelemetryConfiguration telemetryConfiguration = serviceCollection.BuildServiceProvider().GetRequiredService<TelemetryConfiguration>();
-            telemetryConfiguration.ConnectionString = $"InstrumentationKey={customerIKey}";
+            // Create TelemetryConfiguration directly instead of resolving from a
+            // temporary provider — disposing that provider would also dispose the
+            // singleton instance we intend to re-register, leaving the final
+            // provider with a disposed TelemetryConfiguration.
+            var telemetryConfiguration = new TelemetryConfiguration
+            {
+                ConnectionString = $"InstrumentationKey={customerIKey}",
+            };
             ServiceDescriptor telemetryConfigurationDescriptor = serviceCollection.First(d => d.ServiceType == typeof(TelemetryConfiguration));
             serviceCollection.Remove(telemetryConfigurationDescriptor);
             serviceCollection.AddSingleton<TelemetryConfiguration>(telemetryConfiguration);
@@ -165,7 +171,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             serviceCollection.AddTransient<IEndpointProvider>(p => endpointProviderMock.Object);
 
             // Build service provider
-            IServiceProvider provider = serviceCollection.BuildServiceProvider();
+            using ServiceProvider provider = serviceCollection.BuildServiceProvider();
 
             var targetLogger = provider.GetServices<IAppInsightsLogger>().First(l => l.ConnectionString == null || !l.ConnectionString.ToString().Contains(customerIKey));
             Assert.Equal(typeof(NullAppInsightsLogger), targetLogger.GetType());
@@ -227,7 +233,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 IServiceCollection serviceCollection = inCollection ?? new ServiceCollection();
                 serviceCollection.AddLogging(config => config.AddDebug().SetMinimumLevel(LogLevel.Debug));
 
-                ILogger<IServiceProfilerContext>? profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
+                ILogger<IServiceProfilerContext>? profilerLogger;
+                using (ServiceProvider tempProvider = serviceCollection.BuildServiceProvider())
+                {
+                    profilerLogger = tempProvider.GetService<ILogger<IServiceProfilerContext>>();
+                }
 
                 serviceCollection.AddTransient<IEndpointProvider>(p =>
                 {
@@ -244,8 +254,6 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 serviceCollection.AddTransient<ServiceProfilerContext>();
 
                 serviceCollection.AddTransient<DiagnosticsClientTraceConfiguration>();
-
-                IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
                 // HttpClientHandler that  by passes certificate validation for SSL for test purpose.
                 serviceCollection.AddSingleton<HttpClientHandler>(p =>

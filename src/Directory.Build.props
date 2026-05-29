@@ -33,5 +33,10 @@
     <!-- Public Key for unit test projects. This is supposed to be used for exposing internals to unit tests in SDK style projects. -->
     <!-- Look for projects (*.csproj) that has a property named InternalsVisibleTo for how to use it. -->
     <TestPublicKey>$(_TestKeySnkPublicKey)</TestPublicKey>
+
+    <!-- Public key for Castle.Core's DynamicProxyGenAssembly2 (used by Moq at runtime).
+         Castle signs DynamicProxyGenAssembly2 with its embedded DynProxy.snk, not its assembly key.
+         PublicKeyToken: a621a9e7e5c32e69 -->
+    <CastleCorePublicKey>0024000004800000940000000602000000240000525341310004000001000100C547CAC37ABD99C8DB225EF2F6C8A3602F3B3606CC9891605D02BAA56104F4CFC0734AA39B93BF7852F7D9266654753CC297E7D2EDFE0BAC1CDCF9F717241550E0A7B191195B7667BB4F64BCB8E2121380FD1D9D46AD2D92D2D15605093924CCEAF74C4861EFF62ABF69B9291ED0A340E113BE11E6A7D3113E92484CF7045CC7</CastleCorePublicKey>
   </PropertyGroup>
 </Project>

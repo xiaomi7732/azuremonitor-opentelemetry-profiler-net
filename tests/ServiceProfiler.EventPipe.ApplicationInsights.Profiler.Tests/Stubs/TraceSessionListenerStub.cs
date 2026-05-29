@@ -26,6 +26,11 @@ internal sealed class TraceSessionListenerStub : TraceSessionListener
     // Put a event wait handle, set it until ctor is done and make OnEventSourceCreated waiting on it.
     // Potential issue is that the event handle code being dispatched on to a different thread.
     private readonly EventWaitHandle _ctorFinishHandle = new ManualResetEvent(false);
+    // Track pending OnEventSourceCreated tasks to avoid deadlock during dispose.
+    // Dispose must wait for all EnableEvents calls to complete before calling base.Dispose(),
+    // which acquires EventListener locks that conflict with EnableEvents locks.
+    private readonly List<Task> _pendingTasks = new();
+    private volatile bool _isDisposing;
     private List<EventPipeProvider> _eventPipeProviders => _traceConfiguration.BuildEventPipeProviders().ToList();
 
     public TraceSessionListenerStub(
@@ -60,6 +65,28 @@ internal sealed class TraceSessionListenerStub : TraceSessionListener
     }
 
     #region private
+    public override void Dispose()
+    {
+        _isDisposing = true;
+
+        // Wait for all pending OnEventSourceCreated tasks to complete BEFORE calling
+        // base.Dispose(). EventListener.Dispose() acquires internal EventSource locks to
+        // remove this listener from all sources. If a pending Task.Run is concurrently calling
+        // EnableEvents (which acquires the same locks in a different order), we get an AB-BA
+        // deadlock. Draining the tasks first ensures no EnableEvents calls are in flight.
+        Task[] pending;
+        lock (_pendingTasks)
+        {
+            pending = _pendingTasks.ToArray();
+        }
+        if (pending.Length > 0)
+        {
+            Task.WaitAll(pending, TimeSpan.FromSeconds(5));
+        }
+
+        base.Dispose();
+    }
+
     protected override void Dispose(bool isDisposing)
     {
         base.Dispose(isDisposing);
@@ -73,28 +100,43 @@ internal sealed class TraceSessionListenerStub : TraceSessionListener
 
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
-        Task.Run(() =>
+        // Register the task under _pendingTasks lock so Dispose() cannot
+        // snapshot an empty list while the task is already running.
+        lock (_pendingTasks)
         {
-            _ctorFinishHandle.WaitOne();
-            base.OnEventSourceCreated(eventSource);
-            _logger.LogDebug("Candidate EventSource: {0} :: {1:D}", eventSource.Name, eventSource.Guid);
-
-            List<EventPipeProvider> eventPipeProviders = _traceConfiguration.BuildEventPipeProviders().ToList();
-
-            EventPipeProvider? p = _eventPipeProviders.FirstOrDefault(t => t.Name.Equals(eventSource.Name, StringComparison.Ordinal));
-            if (p is not null)
+            var task = Task.Run(() =>
             {
-                if (!eventSource.IsEnabled())
+                _ctorFinishHandle.WaitOne();
+                if (_isDisposing) return;
+
+                base.OnEventSourceCreated(eventSource);
+                _logger.LogDebug("Candidate EventSource: {0} :: {1:D}", eventSource.Name, eventSource.Guid);
+
+                List<EventPipeProvider> eventPipeProviders = _traceConfiguration.BuildEventPipeProviders().ToList();
+
+                EventPipeProvider? p = _eventPipeProviders.FirstOrDefault(t => t.Name.Equals(eventSource.Name, StringComparison.Ordinal));
+                if (p is not null && !_isDisposing)
                 {
-                    EnableEvents(eventSource, (EventLevel)p.EventLevel, (EventKeywords)p.Keywords);
-                    _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
+                    if (!eventSource.IsEnabled())
+                    {
+                        EnableEvents(eventSource, (EventLevel)p.EventLevel, (EventKeywords)p.Keywords);
+                        _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Already enabled event source: {0}", eventSource.Name);
+                    }
                 }
-                else
+            });
+            _pendingTasks.Add(task);
+            task.ContinueWith(_ =>
+            {
+                lock (_pendingTasks)
                 {
-                    _logger.LogDebug("Already enabled event source: {0}", eventSource.Name);
+                    _pendingTasks.Remove(task);
                 }
-            }
-        });
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
     }
     #endregion
 }
