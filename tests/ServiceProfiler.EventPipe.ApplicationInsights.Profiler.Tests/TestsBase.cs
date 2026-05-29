@@ -81,7 +81,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 return hostingEnvironmentMock.Object;
             });
 
-            ILogger<IServiceProfilerContext>? profilerLogger = serviceCollection.BuildServiceProvider().GetService<ILogger<IServiceProfilerContext>>();
+            ILogger<IServiceProfilerContext>? profilerLogger;
+            using (ServiceProvider tempProvider = serviceCollection.BuildServiceProvider())
+            {
+                profilerLogger = tempProvider.GetService<ILogger<IServiceProfilerContext>>();
+            }
 
             // Role name detectors and sources
             Mock<IRoleNameSource> roleNameSourceMock = new();
@@ -133,7 +137,6 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             });
 
             serviceCollection.AddSingleton<DiagnosticsClientTraceConfiguration>();
-            IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
             // HttpClientHandler that  by passes certificate validation for SSL for test purpose.
             serviceCollection.AddSingleton<HttpClientHandler>(p =>
