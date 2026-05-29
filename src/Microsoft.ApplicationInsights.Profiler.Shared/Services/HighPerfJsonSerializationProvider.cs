@@ -41,7 +41,7 @@ internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayl
             obj = JsonSerializer.Deserialize<T>(serialized, s_serializerOptions);
             return true;
         }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or ArgumentException)
         {
             _logger.LogWarning(ex, "Failed to deserialize payload as {typeName}.", typeof(T).FullName);
             return false;
@@ -61,7 +61,7 @@ internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayl
             serialized = JsonSerializer.Serialize<T>(obj, s_serializerOptions);
             return true;
         }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or ArgumentException)
         {
             _logger.LogWarning(ex, "Failed to serialize object of type {typeName}.", typeof(T).FullName);
             return false;
