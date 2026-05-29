@@ -133,9 +133,13 @@ internal class PostStopProcessor : IPostStopProcessor
                 _logger.LogTrace("Finished loading valid samples.");
 
                 // Sending the AccessToken for AAD authentication in case it is enabled.
+                // Serialize via AccessTokenData DTO instead of the raw Azure.Core.AccessToken struct
+                // to avoid failures when the runtime loads an Azure.Core version whose AccessToken
+                // contains non-serializable properties (e.g., X509Certificate2 BindingCertificate).
                 _logger.LogTrace("Sending access token");
                 AccessToken accessToken = await _authTokenProvider.GetTokenAsync(cancellationToken: default).ConfigureAwait(false);
-                await namedPipeClient.SendAsync(accessToken).ConfigureAwait(false);
+                var accessTokenData = new AccessTokenData { Token = accessToken.Token, ExpiresOn = accessToken.ExpiresOn };
+                await namedPipeClient.SendAsync(accessTokenData).ConfigureAwait(false);
                 _logger.LogTrace("Finished sending access token for the uploader to use.");
 
                 // Contract with Uploader: Return app id.

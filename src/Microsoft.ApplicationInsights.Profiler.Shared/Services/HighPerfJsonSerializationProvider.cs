@@ -1,7 +1,10 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 
@@ -11,9 +14,16 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayloadSerializer, ISerializationOptionsProvider<JsonSerializerOptions>
 {
     private static readonly JsonSerializerOptions s_serializerOptions = BuildJsonSerializationOptions();
+    private readonly ILogger _logger;
 
     public HighPerfJsonSerializationProvider()
+        : this(NullLogger<HighPerfJsonSerializationProvider>.Instance)
     {
+    }
+
+    public HighPerfJsonSerializationProvider(ILogger<HighPerfJsonSerializationProvider> logger)
+    {
+        _logger = logger;
     }
 
     public JsonSerializerOptions Options => s_serializerOptions;
@@ -31,8 +41,9 @@ internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayl
             obj = JsonSerializer.Deserialize<T>(serialized, s_serializerOptions);
             return true;
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
+            _logger.LogWarning(ex, "Failed to deserialize payload as {typeName}.", typeof(T).FullName);
             return false;
         }
     }
@@ -50,8 +61,9 @@ internal class HighPerfJsonSerializationProvider : ISerializationProvider, IPayl
             serialized = JsonSerializer.Serialize<T>(obj, s_serializerOptions);
             return true;
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
+            _logger.LogWarning(ex, "Failed to serialize object of type {typeName}.", typeof(T).FullName);
             return false;
         }
     }

@@ -146,7 +146,7 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
             return SendMessageAsync(payload!, timeout, cancellationToken);
         }
 
-        throw new UnsupportedPayloadTypeException("Can't serialize the message object.");
+        throw new UnsupportedPayloadTypeException($"Can't serialize the message object. Type: {typeof(T).FullName}");
     }
 
     /// <inheritdoc />

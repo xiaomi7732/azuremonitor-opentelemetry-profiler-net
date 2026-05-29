@@ -1,9 +1,6 @@
-// -----------------------------------------------------------------------------
-//  Copyright (c) Microsoft Corporation.  All rights reserved.
-// -----------------------------------------------------------------------------
-
 using System;
 using Azure.Core;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Uploader;
@@ -49,6 +46,37 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
 
             Assert.Equal(accessToken, result.Token);
             Assert.Equal(expiresOn, result.ExpiresOn);
+        }
+
+        [Fact]
+        public void AccessTokenData_ShouldDeserializeAsAccessTokenContract()
+        {
+            string token = "test-access-token";
+            DateTimeOffset expiresOn = DateTimeOffset.UtcNow.AddMinutes(10);
+            var accessTokenData = new AccessTokenData { Token = token, ExpiresOn = expiresOn };
+            ISerializationProvider serializer = new HighPerfJsonSerializationProvider();
+
+            bool canSerialize = serializer.TrySerialize(accessTokenData, out string serialized);
+            Assert.True(canSerialize, "AccessTokenData should be serializable.");
+
+            bool canDeserialize = serializer.TryDeserialize<AccessTokenContract>(serialized, out AccessTokenContract contract);
+            Assert.True(canDeserialize, "AccessTokenData should be deserializable as AccessTokenContract.");
+            Assert.Equal(token, contract.Token);
+            Assert.Equal(expiresOn, contract.ExpiresOn);
+        }
+
+        [Fact]
+        public void DefaultAccessTokenData_ShouldDeserializeAsAccessTokenContract()
+        {
+            var accessTokenData = new AccessTokenData();
+            ISerializationProvider serializer = new HighPerfJsonSerializationProvider();
+
+            bool canSerialize = serializer.TrySerialize(accessTokenData, out string serialized);
+            Assert.True(canSerialize, "Default AccessTokenData should be serializable.");
+
+            bool canDeserialize = serializer.TryDeserialize<AccessTokenContract>(serialized, out AccessTokenContract contract);
+            Assert.True(canDeserialize, "Default AccessTokenData should be deserializable as AccessTokenContract.");
+            Assert.Null(contract.Token);
         }
     }
 }
