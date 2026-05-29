@@ -100,43 +100,43 @@ internal sealed class TraceSessionListenerStub : TraceSessionListener
 
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
-        var task = Task.Run(() =>
-        {
-            _ctorFinishHandle.WaitOne();
-            if (_isDisposing) return;
-
-            base.OnEventSourceCreated(eventSource);
-            _logger.LogDebug("Candidate EventSource: {0} :: {1:D}", eventSource.Name, eventSource.Guid);
-
-            List<EventPipeProvider> eventPipeProviders = _traceConfiguration.BuildEventPipeProviders().ToList();
-
-            EventPipeProvider? p = _eventPipeProviders.FirstOrDefault(t => t.Name.Equals(eventSource.Name, StringComparison.Ordinal));
-            if (p is not null && !_isDisposing)
-            {
-                if (!eventSource.IsEnabled())
-                {
-                    EnableEvents(eventSource, (EventLevel)p.EventLevel, (EventKeywords)p.Keywords);
-                    _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
-                }
-                else
-                {
-                    _logger.LogDebug("Already enabled event source: {0}", eventSource.Name);
-                }
-            }
-        });
-
+        // Register the task under _pendingTasks lock so Dispose() cannot
+        // snapshot an empty list while the task is already running.
         lock (_pendingTasks)
         {
-            _pendingTasks.Add(task);
-        }
-
-        task.ContinueWith(_ =>
-        {
-            lock (_pendingTasks)
+            var task = Task.Run(() =>
             {
-                _pendingTasks.Remove(task);
-            }
-        }, TaskContinuationOptions.ExecuteSynchronously);
+                _ctorFinishHandle.WaitOne();
+                if (_isDisposing) return;
+
+                base.OnEventSourceCreated(eventSource);
+                _logger.LogDebug("Candidate EventSource: {0} :: {1:D}", eventSource.Name, eventSource.Guid);
+
+                List<EventPipeProvider> eventPipeProviders = _traceConfiguration.BuildEventPipeProviders().ToList();
+
+                EventPipeProvider? p = _eventPipeProviders.FirstOrDefault(t => t.Name.Equals(eventSource.Name, StringComparison.Ordinal));
+                if (p is not null && !_isDisposing)
+                {
+                    if (!eventSource.IsEnabled())
+                    {
+                        EnableEvents(eventSource, (EventLevel)p.EventLevel, (EventKeywords)p.Keywords);
+                        _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Already enabled event source: {0}", eventSource.Name);
+                    }
+                }
+            });
+            _pendingTasks.Add(task);
+            task.ContinueWith(_ =>
+            {
+                lock (_pendingTasks)
+                {
+                    _pendingTasks.Remove(task);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
     }
     #endregion
 }

@@ -51,38 +51,38 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.EventListeners
         protected override void OnEventSourceCreated(EventSource eventSource)
         {
             base.OnEventSourceCreated(eventSource);
-            var task = Task.Run(() =>
-            {
-                if (_ctorWaitHandle != null && !_isDisposing)
-                {
-                    _ctorWaitHandle.Wait();
-                    if (_isDisposing) return;
-                    if (string.Equals(eventSource.Name, MicrosoftApplicationInsightsDataEventSourceName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        EventKeywords keywordsMask =
-                            ApplicationInsightsDataRelayEventSource30.Keywords.Request |
-                            ApplicationInsightsDataRelayEventSource30.Keywords.Operations;
-                        _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
-                        if (!_isDisposing)
-                        {
-                            EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
-                        }
-                    }
-                }
-            });
-
+            // Register the task under _pendingTasks lock so Dispose() cannot
+            // snapshot an empty list while the task is already running.
             lock (_pendingTasks)
             {
-                _pendingTasks.Add(task);
-            }
-
-            task.ContinueWith(_ =>
-            {
-                lock (_pendingTasks)
+                var task = Task.Run(() =>
                 {
-                    _pendingTasks.Remove(task);
-                }
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                    if (_ctorWaitHandle != null && !_isDisposing)
+                    {
+                        _ctorWaitHandle.Wait();
+                        if (_isDisposing) return;
+                        if (string.Equals(eventSource.Name, MicrosoftApplicationInsightsDataEventSourceName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            EventKeywords keywordsMask =
+                                ApplicationInsightsDataRelayEventSource30.Keywords.Request |
+                                ApplicationInsightsDataRelayEventSource30.Keywords.Operations;
+                            _logger.LogDebug("[{0:O}] Enabling EventSource: {1}", DateTime.Now, eventSource.Name);
+                            if (!_isDisposing)
+                            {
+                                EnableEvents(eventSource, EventLevel.Verbose, keywordsMask);
+                            }
+                        }
+                    }
+                });
+                _pendingTasks.Add(task);
+                task.ContinueWith(_ =>
+                {
+                    lock (_pendingTasks)
+                    {
+                        _pendingTasks.Remove(task);
+                    }
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            }
         }
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
