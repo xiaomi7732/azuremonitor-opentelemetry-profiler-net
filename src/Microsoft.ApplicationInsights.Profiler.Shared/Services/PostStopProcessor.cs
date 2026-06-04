@@ -101,6 +101,7 @@ internal class PostStopProcessor : IPostStopProcessor
         _logger.LogDebug("There are {sampleNumber} samples before validation.", sampleCount);
         if (sampleCount == 0 && uploadMode != UploadMode.Always)
         {
+            _logger.LogWarning("Skip uploading. No samples collected and upload mode is {mode}.", uploadMode);
             return false;
         }
 
