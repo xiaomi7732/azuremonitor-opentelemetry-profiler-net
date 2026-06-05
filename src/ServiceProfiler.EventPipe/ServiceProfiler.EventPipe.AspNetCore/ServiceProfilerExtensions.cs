@@ -11,7 +11,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using AgentStringProvider = Azure.Monitor.OpenTelemetry.Profiler.AgentStringProvider;
+using AgentStringProvider = Microsoft.ApplicationInsights.Profiler.Shared.Services.AgentStringProvider<Microsoft.AspNetCore.Hosting.ServiceProfilerInjection>;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
