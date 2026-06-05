@@ -10,6 +10,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using AgentStringProvider = Microsoft.ApplicationInsights.Profiler.Shared.Services.AgentStringProvider<Azure.Monitor.OpenTelemetry.Profiler.AssemblyMarker>;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler;
 

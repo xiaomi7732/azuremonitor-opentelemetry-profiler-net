@@ -48,7 +48,4 @@ $(NuspecProperties)]]>
         <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
         <ProjectReference Include="..\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
     </ItemGroup>
-    <ItemGroup>
-      <Compile Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler\AgentStringProvider.cs" Link="AgentStringProvider.cs" />
-    </ItemGroup>
 </Project>
