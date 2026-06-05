@@ -51,5 +51,6 @@
     <!-- All files and symbols -->
     <file src="bin\$configuration$\$targetFramework$\*.dll" target="lib/$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\*.pdb" target="lib/$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\*.xml" target="lib/$targetFramework$"></file>
   </files>
 </package>

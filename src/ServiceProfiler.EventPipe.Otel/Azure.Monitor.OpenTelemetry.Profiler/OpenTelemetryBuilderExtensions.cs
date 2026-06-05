@@ -7,6 +7,9 @@ using OpenTelemetry;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler;
 
+/// <summary>
+/// Extension methods for <see cref="IOpenTelemetryBuilder"/> to register Azure Monitor Profiler services.
+/// </summary>
 public static class OpenTelemetryBuilderExtensions
 {
     /// <summary>
