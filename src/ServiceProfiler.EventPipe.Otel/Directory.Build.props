@@ -8,6 +8,8 @@
   <PropertyGroup>
     <!-- Enable Public API Analyzers by default for all projects under this folder and sub folders -->
     <EnablePublicAPIAnalyzers Condition=" '$(EnablePublicAPIAnalyzers)' == '' ">true</EnablePublicAPIAnalyzers>
+    <!-- Generate XML documentation so consumers get IntelliSense from the NuGet package -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- Warning as errors -->

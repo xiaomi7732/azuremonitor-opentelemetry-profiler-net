@@ -3,6 +3,8 @@
   <PropertyGroup>
     <SolutionDir Condition=" '$(SolutionDir)' == '' ">$(MSBuildThisFileDirectory)..\</SolutionDir>
     <Nullable>enable</Nullable>
+    <!-- Generate XML documentation so consumers get IntelliSense from the NuGet package -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!-- Setup Version property. -->
     <MajorVersion>3</MajorVersion>

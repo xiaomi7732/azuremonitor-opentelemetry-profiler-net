@@ -38,6 +38,7 @@
     <!--Assemblies-->
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.dll" target="lib\$targetFramework$"></file>
     <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.pdb" target="lib\$targetFramework$"></file>
+    <file src="bin\$configuration$\$targetFramework$\Microsoft.ApplicationInsights.Profiler.AspNetCore.xml" target="lib\$targetFramework$"></file>
 
     <!--Uploader-->
     <file src="obj\$configuration$\Uploader\Uploader.zip" target="contentFiles\any\any\ServiceProfiler\TraceUpload.zip"></file>
