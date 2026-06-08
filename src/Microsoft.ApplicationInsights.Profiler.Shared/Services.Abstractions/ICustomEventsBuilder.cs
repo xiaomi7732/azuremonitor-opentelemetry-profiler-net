@@ -8,7 +8,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 
 internal interface ICustomEventsBuilder
 {
-    ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource);
+    ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource, float averageCPUUsage, float averageMemoryUsage);
 
     IEnumerable<ServiceProfilerSample> CreateServiceProfilerSamples(IReadOnlyCollection<SampleActivity> samples, string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId);
 }

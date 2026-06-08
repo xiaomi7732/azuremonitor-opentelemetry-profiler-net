@@ -14,12 +14,15 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 {
     internal const string TraceFileExtension = ".nettrace";
     private string? _currentTraceFilePath;
+    private float _sessionCPUUsage;
+    private float _sessionMemoryUsage;
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
     private readonly ITraceControl _traceControl;
     private readonly IUserCacheManager _userCacheManager;
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
     private readonly IPostStopProcessorFactory _postStopProcessorFactory;
     private readonly IServiceProfilerContext _serviceProfilerContext;
+    private readonly IResourceUsageSource _resourceUsageSource;
     private readonly ILogger<OpenTelemetryProfilerProvider> _logger;
 
     private const string StartProfilerTriggered = "StartProfiler triggered.";
@@ -39,12 +42,14 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         TraceSessionListenerFactory traceSessionListenerFactory,
         IPostStopProcessorFactory postStopProcessorFactory,
         IServiceProfilerContext serviceProfilerContext,
+        IResourceUsageSource resourceUsageSource,
         ILogger<OpenTelemetryProfilerProvider> logger)
     {
         _userCacheManager = userCacheManager ?? throw new ArgumentNullException(nameof(userCacheManager));
         _traceSessionListenerFactory = traceSessionListenerFactory ?? throw new ArgumentNullException(nameof(traceSessionListenerFactory));
         _postStopProcessorFactory = postStopProcessorFactory ?? throw new ArgumentNullException(nameof(postStopProcessorFactory));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
+        _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _traceControl = traceControl ?? throw new ArgumentNullException(nameof(traceControl));
     }
@@ -82,6 +87,11 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
         try
         {
+            // Capture resource usage at the beginning of the profiling session, before trace collection starts.
+            _sessionCPUUsage = _resourceUsageSource.GetAverageCPUUsage();
+            _sessionMemoryUsage = _resourceUsageSource.GetAverageMemoryUsage();
+            _logger.LogDebug("Captured resource usage at session start: CPU={cpuUsage}, Memory={memoryUsage}", _sessionCPUUsage, _sessionMemoryUsage);
+
             _logger.LogDebug("Call TraceControl.Enable().");
             await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
 
@@ -138,6 +148,11 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
         try
         {
+            // Copy resource usage values captured at session start before releasing the semaphore,
+            // to avoid a race where a new session could overwrite these fields.
+            float cpuUsage = _sessionCPUUsage;
+            float memoryUsage = _sessionMemoryUsage;
+
             // Notice: Stop trace session listener has to be happen before calling ITraceControl.Disable().
             // Trace control disabling will take a while. We shall not gathering anything events when disable is happening.
             _logger.LogDebug("Disabling {sessionListener}", nameof(_listener));
@@ -155,7 +170,9 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
                 currentSessionId.Value,
                 stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
                 sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                source), cancellationToken).ConfigureAwait(false);
+                source,
+                averageCPUUsage: cpuUsage,
+                averageMemoryUsage: memoryUsage), cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(StopProfilerSucceeded);
 
