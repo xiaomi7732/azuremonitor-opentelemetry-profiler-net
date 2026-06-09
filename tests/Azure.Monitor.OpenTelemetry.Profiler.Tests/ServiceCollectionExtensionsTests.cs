@@ -3,6 +3,7 @@
 
 using Azure.Monitor.OpenTelemetry.Profiler;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Runtime.InteropServices;
