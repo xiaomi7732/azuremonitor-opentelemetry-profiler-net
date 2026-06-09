@@ -28,6 +28,11 @@ public static class ServiceCollectionExtensions
     /// <param name="configureServiceProfiler">An action to customize the behavior of the profiler.</param>
     public static IServiceCollection AddAzureMonitorProfiler(this IServiceCollection services, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
     {
+        if (!PlatformSupport.IsSupportedPlatform())
+        {
+            return services;
+        }
+
         if (!PreCheck(services))
         {
             return services;
@@ -68,11 +73,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddLogging();
         services.AddOptions();
-
-        if (!PlatformSupport.IsSupportedPlatform())
-        {
-            return;
-        }
 
         services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorExporterOptions>>((opt, configuration, azureMonitorOptions) =>
         {
