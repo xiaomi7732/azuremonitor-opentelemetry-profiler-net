@@ -5,6 +5,7 @@ using Azure.Monitor.OpenTelemetry.Profiler;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Runtime.InteropServices;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Tests;
 
@@ -72,5 +73,21 @@ public class ServiceCollectionExtensionsTests
 
         Assert.Same(services, result);
         Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+    }
+
+    [Fact]
+    public void IsSupportedPlatform_ReturnsTrueOnWindowsOrLinux()
+    {
+        bool result = ServiceCollectionExtensions.IsSupportedPlatform();
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Assert.True(result);
+        }
+        else
+        {
+            Assert.False(result);
+        }
     }
 }

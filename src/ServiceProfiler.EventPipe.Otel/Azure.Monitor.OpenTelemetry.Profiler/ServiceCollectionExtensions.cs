@@ -9,7 +9,9 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Runtime.InteropServices;
 using AgentStringProvider = Microsoft.ApplicationInsights.Profiler.Shared.Services.AgentStringProvider<Azure.Monitor.OpenTelemetry.Profiler.AssemblyMarker>;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler;
@@ -68,6 +70,12 @@ public static class ServiceCollectionExtensions
         services.AddLogging();
         services.AddOptions();
 
+        if (!IsSupportedPlatform())
+        {
+            RegisterDisabledProfiler(services);
+            return;
+        }
+
         services.AddOptions<ServiceProfilerOptions>().Configure<IConfiguration, IOptions<AzureMonitorExporterOptions>>((opt, configuration, azureMonitorOptions) =>
         {
             configuration.GetSection("ServiceProfiler").Bind(opt);
@@ -112,6 +120,22 @@ public static class ServiceCollectionExtensions
                 ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
         });
 
+        services.AddHostedService<ProfilerBackgroundService>();
+    }
+
+    internal static bool IsSupportedPlatform()
+        => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        || RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+    private static void RegisterDisabledProfiler(IServiceCollection services)
+    {
+        services.AddSingleton<BootstrapState>();
+        services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
+        {
+            ILogger logger = p.GetRequiredService<ILogger<DisabledAgentBootstrap>>();
+            logger.LogWarning("Azure Monitor Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.", RuntimeInformation.OSDescription);
+            return ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p);
+        });
         services.AddHostedService<ProfilerBackgroundService>();
     }
 

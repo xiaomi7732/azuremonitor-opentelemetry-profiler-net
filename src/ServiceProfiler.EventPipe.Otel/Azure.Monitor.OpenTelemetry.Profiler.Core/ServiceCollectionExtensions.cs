@@ -163,10 +163,21 @@ internal static class ServiceCollectionExtensions
         }
         else
         {
-            throw new NotSupportedException($"Only support {OSPlatform.Windows} and {OSPlatform.Linux}.");
+            // Unsupported platform - skip metrics provider registration.
+            // The public API layer should have already disabled the profiler before reaching
+            // here. This is a defense-in-depth measure.
         }
 
-        services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
+        // Register ResourceUsageSource: full implementation on supported platforms,
+        // no-op on unsupported platforms to avoid DI resolution failures.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
+        }
+        else
+        {
+            services.AddSingleton<IResourceUsageSource, NoOpResourceUsageSource>();
+        }
 
         // Scavengers
         AddTraceScavengerServices(services);
