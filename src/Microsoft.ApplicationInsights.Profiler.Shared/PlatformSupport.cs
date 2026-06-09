@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared;
 
@@ -11,10 +12,21 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared;
 internal static class PlatformSupport
 {
     /// <summary>
-    /// Gets whether the current OS platform is supported for profiling.
+    /// Returns whether the current OS platform is supported for profiling.
     /// Currently only Windows and Linux are supported.
+    /// When the platform is unsupported and a logger is provided, a warning is emitted.
     /// </summary>
-    public static bool IsSupportedPlatform
-        => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-        || RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+    public static bool IsSupportedPlatform(ILogger? logger = null)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return true;
+        }
+
+        logger?.LogWarning(
+            "Application Insights Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.",
+            RuntimeInformation.OSDescription);
+        return false;
+    }
 }

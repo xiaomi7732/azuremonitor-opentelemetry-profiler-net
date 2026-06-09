@@ -53,7 +53,7 @@ internal static class ServiceCollectionExtensions
     /// <param name="services"></param>
     public static IServiceCollection AddProfilerCoreServices(this IServiceCollection services)
     {
-        if (!PlatformSupport.IsSupportedPlatform)
+        if (!PlatformSupport.IsSupportedPlatform())
         {
             return services;
         }

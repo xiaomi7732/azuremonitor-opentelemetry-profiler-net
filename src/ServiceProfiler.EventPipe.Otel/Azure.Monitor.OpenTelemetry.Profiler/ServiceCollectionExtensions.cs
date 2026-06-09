@@ -69,9 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddLogging();
         services.AddOptions();
 
-        if (!PlatformSupport.IsSupportedPlatform)
+        if (!PlatformSupport.IsSupportedPlatform())
         {
-            RegisterDisabledProfiler(services);
             return;
         }
 
@@ -119,18 +118,6 @@ public static class ServiceCollectionExtensions
                 ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
         });
 
-        services.AddHostedService<ProfilerBackgroundService>();
-    }
-
-    private static void RegisterDisabledProfiler(IServiceCollection services)
-    {
-        services.AddSingleton<BootstrapState>();
-        services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
-        {
-            ILogger logger = p.GetRequiredService<ILogger<DisabledAgentBootstrap>>();
-            logger.LogWarning("Azure Monitor Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.", System.Runtime.InteropServices.RuntimeInformation.OSDescription);
-            return ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p);
-        });
         services.AddHostedService<ProfilerBackgroundService>();
     }
 
