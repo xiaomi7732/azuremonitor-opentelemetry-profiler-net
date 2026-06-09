@@ -6,7 +6,9 @@ using System;
 using System.Linq;
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -79,6 +81,15 @@ namespace Microsoft.Extensions.DependencyInjection
                     return serviceCollection;
                 }
 
+                // On unsupported platforms, register only the disabled bootstrap and return.
+                // This guard must run before BuildServiceBase to avoid registering factories
+                // that depend on services only available on supported platforms.
+                if (!PlatformSupport.IsSupportedPlatform)
+                {
+                    RegisterDisabledProfiler(serviceCollection);
+                    return serviceCollection;
+                }
+
                 // Otherwise, start register necessary services and start Service Profiler
                 BuildServiceBase(serviceCollection, context, configuration);
                 serviceCollection.AddSingleton<ServiceProfilerServices>();
@@ -94,6 +105,20 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             return serviceCollection;
+        }
+
+        private static void RegisterDisabledProfiler(IServiceCollection services)
+        {
+            services.AddLogging();
+            services.AddSingleton<BootstrapState>();
+            services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
+            {
+                ILogger logger = p.GetRequiredService<ILogger<DisabledAgentBootstrap>>();
+                logger.LogWarning("Application Insights Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.",
+                    System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                return ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p);
+            });
+            services.AddHostedService<ProfilerBackgroundService>();
         }
 
         private static void BuildServiceBase(
