@@ -34,6 +34,10 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly ITraceControl _traceControl;
     private readonly IEventPipeTelemetryTracker _telemetryTracker;
+    private readonly IResourceUsageSource _resourceUsageSource;
+
+    private float _sessionCPUUsage;
+    private float _sessionMemoryUsage;
 
     private IEnumerator<ITraceSessionListener>? _sessionListeners;
     internal ITraceSessionListener? SessionListener { get; private set; }
@@ -60,6 +64,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         IPostStopProcessorFactory postStopProcessorFactory,
         ITraceFileFormatDefinition traceFileFormatDefinition,
         AppInsightsProfileFetcher appInsightsProfileFetcher,
+        IResourceUsageSource resourceUsageSource,
         ILogger<ServiceProfilerProvider> logger)
     {
         // Required
@@ -75,6 +80,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         _traceSessionListenerFactory = traceSessionListenerFactory ?? throw new ArgumentNullException(nameof(traceSessionListenerFactory));
         _telemetryTracker = telemetryTracker ?? throw new ArgumentNullException(nameof(telemetryTracker));
         _appInsightsSinks = appInsightsSinks ?? throw new ArgumentNullException(nameof(appInsightsSinks));
+        _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
     }
 
     /// <summary>
@@ -113,6 +119,11 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
             try
             {
+                // Capture resource usage at the beginning of the profiling session, before trace collection starts.
+                _sessionCPUUsage = _resourceUsageSource.GetAverageCPUUsage();
+                _sessionMemoryUsage = _resourceUsageSource.GetAverageMemoryUsage();
+                _logger.LogDebug("Captured resource usage at session start: CPU={cpuUsage}, Memory={memoryUsage}", _sessionCPUUsage, _sessionMemoryUsage);
+
                 _logger.LogDebug("Call TraceControl.Enable().");
                 await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
                 profilerStarted = true;
@@ -182,6 +193,11 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
         try
         {
+            // Copy resource usage values captured at session start before releasing the semaphore,
+            // to avoid a race where a new session could overwrite these fields.
+            float cpuUsage = _sessionCPUUsage;
+            float memoryUsage = _sessionMemoryUsage;
+
             // Notice: Stop trace session listener has to be happen before calling ITraceControl.Disable().
             // Trace control disabling will take a while. We shall not gathering anything events when disable is happening.
             _logger.LogDebug("Disabling {sessionListener}", nameof(SessionListener));
@@ -201,7 +217,9 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
                     currentSessionId.Value,
                     stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
                     sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                    source
+                    source,
+                    averageCPUUsage: cpuUsage,
+                    averageMemoryUsage: memoryUsage
                     ), cancellationToken).ConfigureAwait(false);
 
                 _appInsightsSinks.LogInformation(profilerStopped ? StopProfilerSucceeded : StopProfilerFailed);

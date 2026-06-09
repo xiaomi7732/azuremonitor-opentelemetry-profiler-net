@@ -16,6 +16,8 @@ internal class PostStopOptions
         Uri stampFrontendHostUrl,
         IEnumerable<SampleActivity> samples,
         IProfilerSource profilerSource,
+        float averageCPUUsage,
+        float averageMemoryUsage,
         string? uploaderFullPath = null)
     {
         if (string.IsNullOrEmpty(traceFilePath))
@@ -28,6 +30,8 @@ internal class PostStopOptions
         StampFrontendHostUrl = stampFrontendHostUrl;
         Samples = samples ?? throw new ArgumentNullException(nameof(samples));
         ProfilerSource = profilerSource ?? throw new ArgumentNullException(nameof(profilerSource));
+        AverageCPUUsage = averageCPUUsage;
+        AverageMemoryUsage = averageMemoryUsage;
         UploaderFullPath = uploaderFullPath;
     }
 
@@ -35,6 +39,16 @@ internal class PostStopOptions
     public DateTimeOffset SessionId { get; }
     public Uri StampFrontendHostUrl { get; }
     public IProfilerSource ProfilerSource { get; }
+
+    /// <summary>
+    /// Average CPU usage captured at the beginning of the profiling session.
+    /// </summary>
+    public float AverageCPUUsage { get; }
+
+    /// <summary>
+    /// Average memory usage captured at the beginning of the profiling session.
+    /// </summary>
+    public float AverageMemoryUsage { get; }
 
     public string? UploaderFullPath { get; set; }
     public IEnumerable<SampleActivity> Samples { get; set; }

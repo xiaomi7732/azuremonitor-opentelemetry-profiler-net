@@ -20,7 +20,6 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IRoleNameSource _roleNameSource;
     private readonly IRoleInstanceSource _roleInstanceSource;
-    private readonly IResourceUsageSource _resourceUsageSource;
     private readonly ILogger _logger;
     private string? _roleNameCache;
     private string? _roleInstanceCache;
@@ -29,17 +28,15 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
         IServiceProfilerContext serviceProfilerContext,
         IRoleNameSource roleNameSource,
         IRoleInstanceSource roleInstanceSource,
-        IResourceUsageSource resourceUsageSource,
         ILogger<CustomEventsBuilder> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _roleInstanceSource = roleInstanceSource ?? throw new ArgumentNullException(nameof(roleInstanceSource));
-        _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
     }
 
-    public ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource)
+    public ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource, float averageCPUUsage, float averageMemoryUsage)
     {
         ServiceProfilerIndex result = new()
         {
@@ -53,8 +50,8 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             ProgrammingLanguage = ProgramLanguages.CSharp,
             Source = profilerSource.Source,
             OperatingSystem = Environment.OSVersion.VersionString,
-            AverageCPUUsage = _resourceUsageSource.GetAverageCPUUsage(),
-            AverageMemoryUsage = _resourceUsageSource.GetAverageMemoryUsage(),
+            AverageCPUUsage = averageCPUUsage,
+            AverageMemoryUsage = averageMemoryUsage,
             CloudRoleName = _roleNameCache ??= _roleNameSource.CloudRoleName
         };
 
