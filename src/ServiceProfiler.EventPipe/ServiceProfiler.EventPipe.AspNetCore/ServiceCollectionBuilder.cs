@@ -58,6 +58,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static void RegisterDisabledProfiler(IServiceCollection services)
         {
+            services.AddLogging();
             services.AddSingleton<BootstrapState>();
             services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
             {
