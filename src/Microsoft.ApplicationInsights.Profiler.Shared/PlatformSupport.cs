@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +28,11 @@ internal static class PlatformSupport
         logger?.LogWarning(
             "Application Insights Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.",
             RuntimeInformation.OSDescription);
+
+        if (logger is null)
+        {
+            Console.WriteLine($"[Warning] Application Insights Profiler is not supported on the current OS platform ({RuntimeInformation.OSDescription}). The profiler will be disabled.");
+        }
         return false;
     }
 }
