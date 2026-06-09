@@ -20,7 +20,14 @@ public class ServiceCollectionExtensionsTests
 
         services.AddAzureMonitorProfiler();
 
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
+        else
+        {
+            Assert.DoesNotContain(services, d => d.ServiceType == typeof(IHostedService));
+        }
     }
 
     [Fact]
@@ -58,7 +65,10 @@ public class ServiceCollectionExtensionsTests
         // Should not throw when a configure action is provided
         services.AddAzureMonitorProfiler(opt => { });
 
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
     }
 
     [Fact]
@@ -73,7 +83,10 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection result = services.AddAzureMonitorProfiler();
 
         Assert.Same(services, result);
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
     }
 
     [Fact]
