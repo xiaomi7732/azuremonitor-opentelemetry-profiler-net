@@ -7,6 +7,7 @@ using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Services;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
@@ -38,6 +39,11 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddServiceProfilerCore(this IServiceCollection services)
     {
+        if (!PlatformSupport.IsSupportedPlatform)
+        {
+            return services;
+        }
+
         // Utilities
         services.AddConnectionString();
         services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
@@ -161,23 +167,8 @@ internal static class ServiceCollectionExtensions
             services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
             services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
         }
-        else
-        {
-            // Unsupported platform - skip metrics provider registration.
-            // The public API layer should have already disabled the profiler before reaching
-            // here. This is a defense-in-depth measure.
-        }
 
-        // Register ResourceUsageSource: full implementation on supported platforms,
-        // no-op on unsupported platforms to avoid DI resolution failures.
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
-        }
-        else
-        {
-            services.AddSingleton<IResourceUsageSource, NoOpResourceUsageSource>();
-        }
+        services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
 
         // Scavengers
         AddTraceScavengerServices(services);

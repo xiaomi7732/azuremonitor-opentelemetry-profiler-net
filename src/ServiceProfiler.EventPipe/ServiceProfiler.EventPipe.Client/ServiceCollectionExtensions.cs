@@ -7,6 +7,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 using Microsoft.ApplicationInsights.Profiler.Core.TraceControls;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
@@ -52,6 +53,11 @@ internal static class ServiceCollectionExtensions
     /// <param name="services"></param>
     public static IServiceCollection AddProfilerCoreServices(this IServiceCollection services)
     {
+        if (!PlatformSupport.IsSupportedPlatform)
+        {
+            return services;
+        }
+
         // User Connection String
         services.AddSingleton<ConnectionString>(p =>
         {
@@ -225,23 +231,8 @@ internal static class ServiceCollectionExtensions
             services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
             services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
         }
-        else
-        {
-            // Unsupported platform - skip metrics provider registration.
-            // The public API layer catches exceptions, but avoiding the throw
-            // provides a cleaner startup experience.
-        }
 
-        // Register ResourceUsageSource: full implementation on supported platforms,
-        // no-op on unsupported platforms to avoid DI resolution failures.
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
-        }
-        else
-        {
-            services.AddSingleton<IResourceUsageSource, NoOpResourceUsageSource>();
-        }
+        services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();
 
         return services
             .AddFrontendClient()

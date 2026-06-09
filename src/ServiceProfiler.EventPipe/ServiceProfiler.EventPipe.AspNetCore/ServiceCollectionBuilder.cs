@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
@@ -21,6 +22,12 @@ namespace Microsoft.Extensions.DependencyInjection
             if (services is null)
             {
                 throw new ArgumentNullException(nameof(services));
+            }
+
+            if (!PlatformSupport.IsSupportedPlatform)
+            {
+                RegisterDisabledProfiler(services);
+                return services;
             }
 
             // In AppInsights code, there is a check to ensure not inject the service twice:
@@ -47,6 +54,18 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             return services;
+        }
+
+        private static void RegisterDisabledProfiler(IServiceCollection services)
+        {
+            services.AddSingleton<BootstrapState>();
+            services.AddSingleton<IServiceProfilerAgentBootstrap>(p =>
+            {
+                ILogger logger = p.GetRequiredService<ILogger<DisabledAgentBootstrap>>();
+                logger.LogWarning("Application Insights Profiler is not supported on the current OS platform ({OSDescription}). The profiler will be disabled.", System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+                return ActivatorUtilities.CreateInstance<DisabledAgentBootstrap>(p);
+            });
+            services.AddHostedService<ProfilerBackgroundService>();
         }
     }
 }

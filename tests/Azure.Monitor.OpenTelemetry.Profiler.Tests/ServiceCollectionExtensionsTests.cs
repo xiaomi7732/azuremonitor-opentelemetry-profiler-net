@@ -78,7 +78,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void IsSupportedPlatform_ReturnsTrueOnWindowsOrLinux()
     {
-        bool result = ServiceCollectionExtensions.IsSupportedPlatform();
+        bool result = PlatformSupport.IsSupportedPlatform;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
