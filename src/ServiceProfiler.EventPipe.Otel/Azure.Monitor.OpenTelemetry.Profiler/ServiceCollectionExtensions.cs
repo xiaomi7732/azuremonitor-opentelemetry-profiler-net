@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AgentStringProvider = Microsoft.ApplicationInsights.Profiler.Shared.Services.AgentStringProvider<Azure.Monitor.OpenTelemetry.Profiler.AssemblyMarker>;
 
@@ -27,6 +28,11 @@ public static class ServiceCollectionExtensions
     /// <param name="configureServiceProfiler">An action to customize the behavior of the profiler.</param>
     public static IServiceCollection AddAzureMonitorProfiler(this IServiceCollection services, Action<ServiceProfilerOptions>? configureServiceProfiler = null)
     {
+        if (!PlatformSupport.IsSupportedPlatform())
+        {
+            return services;
+        }
+
         if (!PreCheck(services))
         {
             return services;

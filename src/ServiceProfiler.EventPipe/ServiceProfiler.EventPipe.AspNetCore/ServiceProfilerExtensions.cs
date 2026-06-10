@@ -6,7 +6,9 @@ using System;
 using System.Linq;
 using Microsoft.ApplicationInsights.Profiler.AspNetCore;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -75,6 +77,11 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 // If the service already exists, return immediately.
                 if (serviceCollection.Any(descriptor => descriptor.ServiceType == typeof(ServiceProfilerServices)))
+                {
+                    return serviceCollection;
+                }
+
+                if (!PlatformSupport.IsSupportedPlatform())
                 {
                     return serviceCollection;
                 }

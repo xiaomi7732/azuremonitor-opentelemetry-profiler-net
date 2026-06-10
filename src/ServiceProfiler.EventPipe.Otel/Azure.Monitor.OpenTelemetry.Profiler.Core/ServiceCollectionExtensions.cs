@@ -7,6 +7,7 @@ using Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Orchestrations;
 using Azure.Monitor.OpenTelemetry.Profiler.Core.Services;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations;
 using Microsoft.ApplicationInsights.Profiler.Shared.Orchestrations.MetricsProviders;
@@ -38,6 +39,11 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddServiceProfilerCore(this IServiceCollection services)
     {
+        if (!PlatformSupport.IsSupportedPlatform())
+        {
+            return services;
+        }
+
         // Utilities
         services.AddConnectionString();
         services.AddSingleton<ITraceFileFormatDefinition, CurrentTraceFileFormat>();
@@ -160,10 +166,6 @@ internal static class ServiceCollectionExtensions
             services.AddSingleton<MemInfoItemParser>();
             services.AddSingleton<IMemInfoReader, ProcMemInfoReader>();
             services.AddKeyedSingleton<IMetricsProvider, MemInfoFileMemoryMetricsProvider>(MetricsProviderCategory.Memory);
-        }
-        else
-        {
-            throw new NotSupportedException($"Only support {OSPlatform.Windows} and {OSPlatform.Linux}.");
         }
 
         services.AddSingleton<IResourceUsageSource, ResourceUsageSource>();

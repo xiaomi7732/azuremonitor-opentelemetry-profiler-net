@@ -3,8 +3,10 @@
 
 using Azure.Monitor.OpenTelemetry.Profiler;
 using Azure.Monitor.OpenTelemetry.Profiler.Core;
+using Microsoft.ApplicationInsights.Profiler.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Runtime.InteropServices;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Tests;
 
@@ -18,7 +20,14 @@ public class ServiceCollectionExtensionsTests
 
         services.AddAzureMonitorProfiler();
 
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
+        else
+        {
+            Assert.DoesNotContain(services, d => d.ServiceType == typeof(IHostedService));
+        }
     }
 
     [Fact]
@@ -56,7 +65,10 @@ public class ServiceCollectionExtensionsTests
         // Should not throw when a configure action is provided
         services.AddAzureMonitorProfiler(opt => { });
 
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
     }
 
     [Fact]
@@ -71,6 +83,25 @@ public class ServiceCollectionExtensionsTests
         IServiceCollection result = services.AddAzureMonitorProfiler();
 
         Assert.Same(services, result);
-        Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        if (PlatformSupport.IsSupportedPlatform())
+        {
+            Assert.Contains(services, d => d.ServiceType == typeof(IHostedService));
+        }
+    }
+
+    [Fact]
+    public void IsSupportedPlatform_ReturnsTrueOnWindowsOrLinux()
+    {
+        bool result = PlatformSupport.IsSupportedPlatform();
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Assert.True(result);
+        }
+        else
+        {
+            Assert.False(result);
+        }
     }
 }

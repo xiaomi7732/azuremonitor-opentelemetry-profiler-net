@@ -23,6 +23,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(services));
             }
 
+            if (!PlatformSupport.IsSupportedPlatform())
+            {
+                return services;
+            }
+
             // In AppInsights code, there is a check to ensure not inject the service twice:
             // Reference: https://github.com/Microsoft/ApplicationInsights-aspnetcore/blob/3dcab5b92ebddc92e9010fc707cc7062d03f92e4/src/Microsoft.ApplicationInsights.AspNetCore/Extensions/ApplicationInsightsExtensions.cs
             services.AddApplicationInsightsTelemetry();
