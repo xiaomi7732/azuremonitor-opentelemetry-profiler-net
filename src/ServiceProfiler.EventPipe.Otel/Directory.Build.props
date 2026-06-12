@@ -42,16 +42,7 @@
     <Authors>Microsoft</Authors>
     <Owners>microsoft,MicrosoftServiceProfiler</Owners>
     <PackageProjectUrl>https://github.com/Azure/azuremonitor-opentelemetry-profiler-net</PackageProjectUrl>
-    <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes></PackageReleaseNotes>
-    <NuspecProperties><![CDATA[authors=$(Authors);
-copyright=$(Copyright); 
-owners=$(Owners);
-projectUrl=$(PackageProjectUrl); 
-releaseNotes=$(PackageReleaseNotes); 
-requireLicenseAcceptance=$(RequireLicenseAcceptance); 
-version=$(PackageVersion);
-$(NuspecProperties)]]>
-    </NuspecProperties>
   </PropertyGroup>
 </Project>

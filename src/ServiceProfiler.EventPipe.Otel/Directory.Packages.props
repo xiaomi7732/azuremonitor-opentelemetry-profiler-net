@@ -14,28 +14,6 @@
     <_SystemSecurityCryptographyProtectedDataVersion>10.0.0</_SystemSecurityCryptographyProtectedDataVersion>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <NuspecProperties><![CDATA[
-AzureIdentityVersion=$(_AzureIdentityVersion);
-AzureCoreVersion=$(_AzureCoreVersion);
-AzureMonitorOpenTelemetryExporterVersion=$(_AzureMonitorOpenTelemetryExporterVersion);
-CommandlineParserVersion=$(_CommandLineParserVersion);
-MicrosoftBclAsyncInterfacesVersion=$(_MicrosoftBclAsyncInterfacesVersion);
-MicrosoftDiagnosticsNETCoreClientVersion=$(_MicrosoftDiagnosticsNETCoreClientVersion);
-MicrosoftExtensionsConfigurationVersion=$(_MicrosoftExtensionsVersion);
-MicrosoftExtensionsConfigurationBinderVersion=$(_MicrosoftExtensionsVersion);
-MicrosoftExtensionsHostingAbstractionsVersion=$(_MicrosoftExtensionsVersion);
-MicrosoftExtensionsLoggingVersion=$(_MicrosoftExtensionsVersion);
-MicrosoftExtensionsOptionsConfigurationExtensionsVersion=$(_MicrosoftExtensionsVersion);
-SystemCollectionsImmutableVersion=$(_SystemCollectionsImmutableVersion);
-SystemDiagnosticsPerformanceCounterVersion=$(_SystemDiagnosticsPerformanceCounterVersion);
-SystemIOHashingVersion=$(_SystemIOHashingVersion);
-SystemLinqAsyncEnumerableVersion=$(_SystemLinqAsyncEnumerableVersion);
-SystemMemoryDataVersion=$(_SystemMemoryDataVersion);
-SystemSecurityCryptographyProtectedDataVersion=$(_SystemSecurityCryptographyProtectedDataVersion);
-SystemTextJsonVersion=$(_SystemTextJsonVersion);
-$(NuspecProperties)]]></NuspecProperties>
-  </PropertyGroup>
   <ItemGroup>
     <!-- Newly added package compare to the root, notice we use `Include` verb for newly added item. -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="$(_AzureMonitorOpenTelemetryExporterVersion)" />
