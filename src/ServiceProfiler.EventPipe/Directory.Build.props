@@ -27,16 +27,16 @@
     <Authors>Microsoft</Authors>
     <Owners>microsoft,MicrosoftServiceProfiler</Owners>
     <PackageProjectUrl>https://go.microsoft.com/fwlink/?linkid=869443</PackageProjectUrl>
-    <PackageLicenseFileName>EULA.md</PackageLicenseFileName>
-    <PackageIconFileName>icon.png</PackageIconFileName>
-    <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>https://go.microsoft.com/fwlink/?linkid=869445</PackageReleaseNotes>
-    <NuspecProperties>
-      authors=$(Authors); owners=$(Owners); projectUrl=$(PackageProjectUrl); licenseFileName=$(PackageLicenseFileName); iconFileName=$(PackageIconFileName); requireLicenseAcceptance=$(RequireLicenseAcceptance); releaseNotes=$(PackageReleaseNotes); copyright=$(Copyright);
-      $(NuspecProperties)
-    </NuspecProperties>
 
     <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)\Profiler.EventPipe.CodeAnalysis.ruleset</CodeAnalysisRuleSet>
     <NoWarn>$(NoWarn);NU1608;</NoWarn>
+  </PropertyGroup>
+
+  <!-- Symbol Package configuration -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 </Project>
