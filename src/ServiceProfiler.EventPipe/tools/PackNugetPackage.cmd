@@ -60,11 +60,11 @@ IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 ECHO Running xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 
-ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
-dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
+ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
+dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
 
-ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
-dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
+ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
+dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
 
 COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg %TEMP_OUT%\Nuget\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
