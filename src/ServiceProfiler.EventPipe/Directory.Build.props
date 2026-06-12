@@ -21,6 +21,10 @@
     <!-- Otherwise, fallback to default version scheme.  -->
     <Version Condition=" '$(Version)' == '' ">$(DefaultPackageVersion)$(VersionSuffix)</Version>
 
+    <!-- Override PackageVersion to match Version (CommonVersion.props in the submodule
+         sets PackageVersion from ProductVersion, which differs from the EventPipe version scheme) -->
+    <PackageVersion>$(Version)</PackageVersion>
+
     <!--Properties for NuGet package-->
     <!--Refer aka.ms/nuget for Microsoft NuGet packages authoring compliance-->
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
