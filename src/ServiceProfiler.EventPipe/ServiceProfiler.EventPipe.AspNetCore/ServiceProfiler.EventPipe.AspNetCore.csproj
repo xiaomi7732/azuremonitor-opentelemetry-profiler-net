@@ -35,8 +35,8 @@
         <PackageReference Include="Microsoft.AspNetCore.Http" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
-        <ProjectReference Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
+        <ProjectReference Include="..\..\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\..\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\ServiceProfiler.EventPipe.Client\ServiceProfiler.EventPipe.Client.csproj" />
     </ItemGroup>
 
