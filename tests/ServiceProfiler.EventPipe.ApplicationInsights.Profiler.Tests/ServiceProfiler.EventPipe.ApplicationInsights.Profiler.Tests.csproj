@@ -22,6 +22,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.Logging\ServiceProfiler.EventPipe.Logging.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.ServiceProfiler.Orchestration\Microsoft.ServiceProfiler.Orchestration.csproj" />
+    <ProjectReference Include="..\..\src\ServiceProfiler.Contract.Agent.Profiler\Microsoft.ServiceProfiler.Contract.Agent.Profiler.csproj" />
+    <ProjectReference Include="..\..\src\Azure.Monitor.Diagnostics.Profiler\Azure.Monitor.Diagnostics.Profiler.csproj" />
   </ItemGroup>
 
 </Project>
