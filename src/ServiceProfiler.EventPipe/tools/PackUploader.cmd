@@ -20,7 +20,7 @@ IF '%REBUILD%' == 'TRUE' (
 )
 
 del %TEMP_OUT%\TraceUpload*.zip /Q
-powershell -NoProfile -Command "Compress-Archive -Path '%UPLOADER_FOLDER%\bin\%CONFIG%\net8.0\publish\*' -DestinationPath '%TEMP_OUT%\TraceUpload30.zip' -CompressionLevel Optimal -Force"
+pwsh -NoProfile -Command "Compress-Archive -Path '%UPLOADER_FOLDER%\bin\%CONFIG%\net8.0\publish\*' -DestinationPath '%TEMP_OUT%\TraceUpload30.zip' -CompressionLevel Optimal -Force"
 dir %TEMP_OUT%\TraceUpload*.zip
 popd
 
