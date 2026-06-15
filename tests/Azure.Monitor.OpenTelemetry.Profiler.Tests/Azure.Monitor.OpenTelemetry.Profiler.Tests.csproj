@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
+    <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.ApplicationInsights.Profiler.Shared\Microsoft.ApplicationInsights.Profiler.Shared.csproj" />
   </ItemGroup>
 
 </Project>

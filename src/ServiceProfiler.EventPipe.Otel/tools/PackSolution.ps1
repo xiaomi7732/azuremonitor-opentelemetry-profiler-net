@@ -74,8 +74,8 @@ if ($LASTEXITCODE -ne 0) {
 $PackageOutputDir = Join-Path "$BaseDir" "$HeaderProjectName" "bin" $Configuration
 Remove-Item (Join-Path $PackageOutputDir *.*nupkg) -Force
 
-Write-Debug "dotnet pack $(Join-Path $BaseDir "$HeaderProjectName") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration"
-dotnet pack (Join-Path $BaseDir "$HeaderProjectName") --no-build --no-restore --version-suffix $VersionSuffix -c $Configuration
+Write-Debug "dotnet pack $(Join-Path $BaseDir "$HeaderProjectName") --no-restore --version-suffix $VersionSuffix -c $Configuration"
+dotnet pack (Join-Path $BaseDir "$HeaderProjectName") --no-restore --version-suffix $VersionSuffix -c $Configuration
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed creating nuget package: $HeaderProjectName"
     EXIT -102

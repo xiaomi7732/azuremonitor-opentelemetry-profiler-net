@@ -29,13 +29,16 @@ SET TEMP_OUT=%BASE_DIR%\Out
 ECHO Prepare output folder: %TEMP_OUT%
 mkdir %TEMP_OUT% > NUL
 mkdir %TEMP_OUT%\Nuget > NUL
-mkdir %TEMP_OUT%\NugetNoSymbols > NUL
 mkdir %TEMP_OUT%\Nuget.BAK > NUL
 move %TEMP_OUT%\Nuget\*.nupkg %TEMP_OUT%\Nuget.BAK\ > NUL
+move %TEMP_OUT%\Nuget\*.snupkg %TEMP_OUT%\Nuget.BAK\ > NUL
 del %TEMP_OUT%\Nuget\*.nupkg /S /Q /F > NUL
+del %TEMP_OUT%\Nuget\*.snupkg /S /Q /F > NUL
 
 DEL %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg /Q > NUL
+DEL %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.snupkg /Q > NUL
 DEL %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg /Q > NUL
+DEL %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.snupkg /Q > NUL
 
 ECHO Restore nuget packages
 
@@ -57,27 +60,29 @@ IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 ECHO Running xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 xcopy /Y /Q /-I %TEMP_OUT%\TraceUpload30.zip %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\obj\%CONFIG%\Uploader\Uploader.zip > NUL
 
-ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
-dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
+ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
+dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.Client --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
 
-ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
-dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --include-symbols --no-build --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG%
+ECHO dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
+dotnet pack %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore --no-restore --version-suffix -%PKG_TYPE%-%CURRENT_DATE_TIME% -c %CONFIG% /p:AssemblyVersion=%ASSEMBLY_VERSION%
 
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget\
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg %TEMP_OUT%\Nuget\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget\
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.snupkg %TEMP_OUT%\Nuget\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg %TEMP_OUT%\NugetNoSymbols\
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg %TEMP_OUT%\Nuget\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg %TEMP_OUT%\NugetNoSymbols\
-IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
-DEL %TEMP_OUT%\NugetNoSymbols\*.symbols.nupkg /Q > NUL
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.snupkg %TEMP_OUT%\Nuget\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
 mkdir %TEMP_OUT%\Nuget.publish
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget.publish\
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.nupkg %TEMP_OUT%\Nuget.publish\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
-COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.symbols.nupkg %TEMP_OUT%\Nuget.publish\
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.Client\bin\%CONFIG%\*.snupkg %TEMP_OUT%\Nuget.publish\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.nupkg %TEMP_OUT%\Nuget.publish\
+IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
+COPY %BASE_DIR%\ServiceProfiler.EventPipe.AspNetCore\bin\%CONFIG%\*.snupkg %TEMP_OUT%\Nuget.publish\
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
 
 IF '%ERRORLEVEL%' NEQ '0' GOTO ERR
