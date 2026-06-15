@@ -1,0 +1,12 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove(Directory.Packages.props, $(MSBuildThisFileDirectory)..))" />
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Disable transitive pinning so that dotnet pack does not flatten
+         all transitive dependencies as direct deps in the generated nuspec.
+         The old hand-authored .nuspec files only listed top-level deps;
+         keeping this off preserves that minimal dependency footprint. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+</Project>
