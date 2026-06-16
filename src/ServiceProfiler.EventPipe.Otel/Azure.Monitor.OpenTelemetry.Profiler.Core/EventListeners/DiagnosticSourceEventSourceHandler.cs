@@ -43,17 +43,37 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
     // The ActivitySource name is "Microsoft.AspNetCore" (NOT "Microsoft.AspNetCore.Hosting" —
     // that's the ActivityName / OperationName, e.g. "Microsoft.AspNetCore.Hosting.HttpRequestIn").
     //
-    // Azure Service Bus processor ActivitySource names are dynamically constructed by the SDK as
-    // "<DiagnosticNamespace>.<ClientType>", e.g. "Azure.Messaging.ServiceBus.ServiceBusProcessor".
-    // The processor creates activities with ActivityKind.Consumer and names like
-    // "ServiceBusProcessor.ProcessMessage" and "ServiceBusSessionProcessor.ProcessSessionMessage".
+    // Azure Service Bus ActivitySource names are NOT a fixed "<namespace>.<ClientType>" string; the SDK
+    // derives them from the operation name. Azure.Core's DiagnosticScopeFactory.GetActivitySource builds
+    // the source name as "<DiagnosticNamespace>.<operation-name up to the first dot>", where
+    // DiagnosticNamespace is "Azure.Messaging.ServiceBus" and the operation name is one of the
+    // DiagnosticProperty.*ActivityName constants. So, for example:
+    //   "ServiceBusProcessor.ProcessMessage"      -> [AS]Azure.Messaging.ServiceBus.ServiceBusProcessor
+    //   "ServiceBusSessionProcessor.ProcessSessionMessage" -> [AS]...ServiceBusSessionProcessor
+    //   "ServiceBusReceiver.Receive"/".Complete"/".Abandon"/... -> [AS]...ServiceBusReceiver
+    //   "ServiceBusSessionReceiver.RenewSessionLock"/...        -> [AS]...ServiceBusSessionReceiver
+    //
+    // We must subscribe to the receiver sources in addition to the processor sources: Azure Functions
+    // Service Bus triggers (and other receiver-based consumers) drive message consumption through the
+    // receiver, so their consumer activities are emitted under "...ServiceBusReceiver" /
+    // "...ServiceBusSessionReceiver", NOT under the processor sources.
     // ActivitySource is enabled by default in Azure.Core 1.36.0+.
+    //
+    // Azure Functions isolated worker: the .NET isolated worker emits a per-invocation Activity from a
+    // plain ActivitySource named "Microsoft.Azure.Functions.Worker" with the operation name "Invoke"
+    // (Microsoft.Azure.Functions.Worker, TraceConstants.ActivityAttributes). In the isolated model the
+    // Service Bus SDK (processor/receiver) runs in the Functions *host* process, so only this worker-side
+    // invocation Activity is visible to an in-worker profiler. The worker only creates this Activity when
+    // its OpenTelemetry/telemetry integration is wired up; our [AS] subscription satisfies HasListeners().
     //
     // Multiple specs are newline-separated per DiagnosticSourceEventSource convention.
     internal const string FilterAndPayloadSpecs =
         "[AS]Microsoft.AspNetCore/\n" +
         "[AS]Azure.Messaging.ServiceBus.ServiceBusProcessor/\n" +
-        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/";
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/\n" +
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusReceiver/\n" +
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionReceiver/\n" +
+        "[AS]Microsoft.Azure.Functions.Worker/";
 
     private readonly RequestActivityRelay _relay;
     private readonly ILogger<DiagnosticSourceEventSourceHandler> _logger;
