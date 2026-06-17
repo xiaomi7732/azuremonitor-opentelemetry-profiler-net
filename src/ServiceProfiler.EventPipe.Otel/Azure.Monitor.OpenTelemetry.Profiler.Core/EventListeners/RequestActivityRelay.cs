@@ -26,11 +26,21 @@ internal sealed class RequestActivityRelay
     // use the "ServiceBusSessionReceiver" prefix for session lock/state operations, not for receive.
     private const string ServiceBusReceiveName = "ServiceBusReceiver.Receive";
     // Azure Functions isolated worker per-invocation activity (ActivitySource
-    // "Microsoft.Azure.Functions.Worker", operation name "Invoke"). In the isolated model the Service Bus
-    // SDK runs in the host process, so this worker-side invocation span is the only request-like activity
-    // visible to an in-worker profiler. Note: this fires for every trigger type (HTTP, timer, Service Bus,
-    // ...), not just Service Bus.
+    // "Microsoft.Azure.Functions.Worker"). In the isolated model the Service Bus SDK runs in the host
+    // process, so this worker-side invocation span is the only request-like activity visible to an
+    // in-worker profiler. Note: this fires for every trigger type (HTTP, timer, Service Bus, ...), not
+    // just Service Bus.
+    //
+    // The activity's operation name depends on the worker's OpenTelemetry schema version
+    // (Microsoft.Azure.Functions.Worker, TelemetryProvider.GetActivityName):
+    //   - schema <= 1.17.0: the literal "Invoke" (TraceConstants.ActivityAttributes.InvokeActivityName).
+    //   - schema >= 1.37.0: "function <FunctionName>", e.g. "function MySBFuncTest"
+    //     ($"{FunctionActivityName} {FunctionDefinition.Name}", FunctionActivityName == "function").
+    // We match both so the capture is robust across worker versions. The "function " prefix is safe here
+    // because gate 1 (FilterAndPayloadSpecs) only subscribes to this worker source plus ASP.NET Core and
+    // Service Bus, none of which produce "function "-prefixed activity names.
     private const string FunctionsWorkerInvokeName = "Invoke";
+    private const string FunctionsWorkerActivityNamePrefix = "function ";
 
     private readonly ILogger<RequestActivityRelay> _logger;
     private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
@@ -53,7 +63,8 @@ internal sealed class RequestActivityRelay
         || string.Equals(ServiceBusProcessMessageName, requestName, StringComparison.Ordinal)
         || string.Equals(ServiceBusProcessSessionMessageName, requestName, StringComparison.Ordinal)
         || string.Equals(ServiceBusReceiveName, requestName, StringComparison.Ordinal)
-        || string.Equals(FunctionsWorkerInvokeName, requestName, StringComparison.Ordinal);
+        || string.Equals(FunctionsWorkerInvokeName, requestName, StringComparison.Ordinal)
+        || requestName.StartsWith(FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal);
 
     public void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
     {

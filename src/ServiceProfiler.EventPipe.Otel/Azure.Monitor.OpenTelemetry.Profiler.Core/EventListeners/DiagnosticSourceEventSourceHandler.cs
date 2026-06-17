@@ -60,8 +60,9 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
     // ActivitySource is enabled by default in Azure.Core 1.36.0+.
     //
     // Azure Functions isolated worker: the .NET isolated worker emits a per-invocation Activity from a
-    // plain ActivitySource named "Microsoft.Azure.Functions.Worker" with the operation name "Invoke"
-    // (Microsoft.Azure.Functions.Worker, TraceConstants.ActivityAttributes). In the isolated model the
+    // plain ActivitySource named "Microsoft.Azure.Functions.Worker". The operation name varies by the
+    // worker's OpenTelemetry schema version: "Invoke" on older schemas (<= 1.17.0) and
+    // "function <FunctionName>" on schema 1.37.0+ (e.g. "function MySBFuncTest"). In the isolated model the
     // Service Bus SDK (processor/receiver) runs in the Functions *host* process, so only this worker-side
     // invocation Activity is visible to an in-worker profiler. The worker only creates this Activity when
     // its OpenTelemetry/telemetry integration is wired up; our [AS] subscription satisfies HasListeners().

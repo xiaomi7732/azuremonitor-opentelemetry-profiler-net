@@ -17,7 +17,11 @@ public class RequestActivityRelayTests
     // Service Bus batch (receiver) consumption, e.g. Azure Functions batch triggers.
     [InlineData("ServiceBusReceiver.Receive")]
     // Azure Functions isolated worker per-invocation activity.
+    // Older worker schema (<= 1.17.0) uses the literal "Invoke".
     [InlineData("Invoke")]
+    // Worker schema 1.37.0+ uses "function <FunctionName>".
+    [InlineData("function MySBFuncTest")]
+    [InlineData("function SomeOtherFunction")]
     public void IsInterestingRequest_KnownRequestNames_ReturnsTrue(string requestName)
     {
         Assert.True(RequestActivityRelay.IsInterestingRequest(requestName));
@@ -38,6 +42,10 @@ public class RequestActivityRelayTests
     // Case sensitivity: matching is ordinal.
     [InlineData("invoke")]
     [InlineData("servicebusprocessor.processmessage")]
+    // "function " prefix boundary: no trailing space / different word must not match.
+    [InlineData("function")]
+    [InlineData("functional.Thing")]
+    [InlineData("Function MyFunc")]
     // Unrelated / empty.
     [InlineData("")]
     [InlineData("SomeOther.Activity")]
