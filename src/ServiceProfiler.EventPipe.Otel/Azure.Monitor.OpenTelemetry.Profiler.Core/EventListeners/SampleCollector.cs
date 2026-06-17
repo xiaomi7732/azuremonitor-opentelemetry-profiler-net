@@ -34,6 +34,21 @@ internal class SampleCollector : EventListener
         SampleActivities = sampleActivityContainer ?? throw new ArgumentNullException(nameof(sampleActivityContainer));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _ctorWaitHandle.Set();
+
+        // Eagerly construct and synchronously enable our own data-adapter EventSource here, at
+        // construction time (session start), so this listener is guaranteed to be receiving events before
+        // the first request is relayed.
+        //
+        // The relay creates this EventSource lazily, on its first RequestStart write. Relying on the
+        // OnEventSourceCreated -> Task.Run -> EnableEvents path to enable it is racy: a concurrent burst of
+        // requests at that very instant — e.g. an Azure Functions batch Service Bus trigger, where many
+        // invocations start simultaneously the moment the source is first created — runs ahead of the async
+        // enable, so the Start events are dropped and no samples are produced (the uploader then fails trace
+        // validation with "No sample activities to match."). Spread-out requests (ASP.NET Core, Service Bus
+        // single-dispatch) mostly survive the race, which is why this stayed hidden. Accessing .Log
+        // constructs the singleton; EnableEvents on it is synchronous and idempotent with the async path.
+        EnableEvents(AzureMonitorOpenTelemetryProfilerDataAdapterEventSource.Log, EventLevel.Verbose, (EventKeywords)0xfffffffff);
+
         logger.LogTrace("{name} created.", nameof(SampleCollector));
     }
 
