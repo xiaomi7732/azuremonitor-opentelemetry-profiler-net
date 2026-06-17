@@ -11,12 +11,9 @@ public class DiagnosticSourceEventSourceHandlerTests
     [Theory]
     // ASP.NET Core HTTP-in.
     [InlineData("[AS]Microsoft.AspNetCore/")]
-    // Service Bus single-dispatch (processor) sources.
+    // Service Bus single-dispatch (processor) sources — Consumer kind -> request.
     [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusProcessor/")]
     [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/")]
-    // Service Bus batch (receiver) sources.
-    [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusReceiver/")]
-    [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusSessionReceiver/")]
     // Azure Functions isolated worker source.
     [InlineData("[AS]Microsoft.Azure.Functions.Worker/")]
     public void FilterAndPayloadSpecs_SubscribesToExpectedActivitySource(string expectedSpec)
@@ -25,6 +22,18 @@ public class DiagnosticSourceEventSourceHandlerTests
             .Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         Assert.Contains(expectedSpec, specs);
+    }
+
+    [Theory]
+    // Service Bus receiver sources are ActivityKind.Client (dependencies), not requests — not subscribed.
+    [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusReceiver/")]
+    [InlineData("[AS]Azure.Messaging.ServiceBus.ServiceBusSessionReceiver/")]
+    public void FilterAndPayloadSpecs_DoesNotSubscribeToReceiverSources(string unexpectedSpec)
+    {
+        string[] specs = DiagnosticSourceEventSourceHandler.FilterAndPayloadSpecs
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.DoesNotContain(unexpectedSpec, specs);
     }
 
     [Fact]
@@ -36,7 +45,7 @@ public class DiagnosticSourceEventSourceHandlerTests
         // Guard against accidental [AS]* firehose or stray DiagnosticListener specs.
         Assert.All(specs, spec => Assert.StartsWith("[AS]", spec));
         Assert.DoesNotContain("[AS]*", specs);
-        Assert.Equal(6, specs.Length);
+        Assert.Equal(4, specs.Length);
     }
 
     [Theory]

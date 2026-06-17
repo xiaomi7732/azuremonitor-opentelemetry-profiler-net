@@ -20,11 +20,6 @@ internal sealed class RequestActivityRelay
     private const string AspNetCoreHttpRequestInName = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
     private const string ServiceBusProcessMessageName = "ServiceBusProcessor.ProcessMessage";
     private const string ServiceBusProcessSessionMessageName = "ServiceBusSessionProcessor.ProcessSessionMessage";
-    // Receiver-based consumption (Azure Functions batch Service Bus triggers and other consumers that
-    // pump via ServiceBusReceiver.ReceiveMessagesAsync rather than the processor) surfaces as this
-    // activity. The SDK shares this name for both regular and session receivers — session receivers only
-    // use the "ServiceBusSessionReceiver" prefix for session lock/state operations, not for receive.
-    private const string ServiceBusReceiveName = "ServiceBusReceiver.Receive";
     // Azure Functions isolated worker per-invocation activity (ActivitySource
     // "Microsoft.Azure.Functions.Worker"). In the isolated model the Service Bus SDK runs in the host
     // process, so this worker-side invocation span is the only request-like activity visible to an
@@ -38,7 +33,7 @@ internal sealed class RequestActivityRelay
     //     ($"{FunctionActivityName} {FunctionDefinition.Name}", FunctionActivityName == "function").
     // We match both so the capture is robust across worker versions. The "function " prefix is safe here
     // because gate 1 (FilterAndPayloadSpecs) only subscribes to this worker source plus ASP.NET Core and
-    // Service Bus, none of which produce "function "-prefixed activity names.
+    // the Service Bus processor sources, none of which produce "function "-prefixed activity names.
     private const string FunctionsWorkerInvokeName = "Invoke";
     // Shared with DiagnosticSourceEventSourceHandler, which gates the parent-id correlation remap on this
     // same prefix (the schema 1.37.0+ "function <name>" activity is ActivityKind.Internal / a dependency,
@@ -55,17 +50,17 @@ internal sealed class RequestActivityRelay
     }
 
     /// <summary>
-    /// We capture HTTP-in requests, Service Bus processor messages, receiver-based message
-    /// consumption (e.g. Azure Functions batch Service Bus triggers), and Azure Functions isolated
-    /// worker invocations.
-    /// HTTP-out (e.g. HttpClient) and other Service Bus operations (send, settle, peek, lock renewal)
-    /// are excluded.
+    /// We capture HTTP-in requests, Service Bus processor messages, and Azure Functions isolated worker
+    /// invocations — i.e. activities that Azure Monitor records as *requests* (ActivityKind.Server /
+    /// Consumer), or the worker invocation span.
+    /// HTTP-out (e.g. HttpClient) and Service Bus receiver/sender operations (receive, send, settle, peek,
+    /// lock renewal) are excluded: they are ActivityKind.Client/Producer and are recorded as dependencies,
+    /// so they would never correlate to a request.
     /// </summary>
     internal static bool IsInterestingRequest(string requestName)
         => string.Equals(AspNetCoreHttpRequestInName, requestName, StringComparison.Ordinal)
         || string.Equals(ServiceBusProcessMessageName, requestName, StringComparison.Ordinal)
         || string.Equals(ServiceBusProcessSessionMessageName, requestName, StringComparison.Ordinal)
-        || string.Equals(ServiceBusReceiveName, requestName, StringComparison.Ordinal)
         || string.Equals(FunctionsWorkerInvokeName, requestName, StringComparison.Ordinal)
         || requestName.StartsWith(FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal);
 

@@ -11,11 +11,9 @@ public class RequestActivityRelayTests
     [Theory]
     // ASP.NET Core HTTP-in.
     [InlineData("Microsoft.AspNetCore.Hosting.HttpRequestIn")]
-    // Service Bus single-dispatch (processor) consumption.
+    // Service Bus single-dispatch (processor) consumption — ActivityKind.Consumer -> request.
     [InlineData("ServiceBusProcessor.ProcessMessage")]
     [InlineData("ServiceBusSessionProcessor.ProcessSessionMessage")]
-    // Service Bus batch (receiver) consumption, e.g. Azure Functions batch triggers.
-    [InlineData("ServiceBusReceiver.Receive")]
     // Azure Functions isolated worker per-invocation activity.
     // Older worker schema (<= 1.17.0) uses the literal "Invoke".
     [InlineData("Invoke")]
@@ -30,7 +28,8 @@ public class RequestActivityRelayTests
     [Theory]
     // HTTP-out is explicitly excluded.
     [InlineData("System.Net.Http.HttpRequestOut")]
-    // Non-consumption Service Bus receiver operations are excluded.
+    // Service Bus receiver operations are ActivityKind.Client (dependencies), not requests — excluded.
+    [InlineData("ServiceBusReceiver.Receive")]
     [InlineData("ServiceBusReceiver.Complete")]
     [InlineData("ServiceBusReceiver.Abandon")]
     [InlineData("ServiceBusReceiver.Peek")]
