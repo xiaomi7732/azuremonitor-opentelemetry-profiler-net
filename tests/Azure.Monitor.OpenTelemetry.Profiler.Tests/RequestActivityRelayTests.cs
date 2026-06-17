@@ -76,4 +76,32 @@ public class RequestActivityRelayTests
     {
         Assert.Throws<InvalidDataException>(() => RequestActivityRelay.ExtractKeyIds(id));
     }
+
+    [Fact]
+    public void TryExtractKeyIds_ValidW3CId_ReturnsTrueWithSpanAndTraceId()
+    {
+        bool ok = RequestActivityRelay.TryExtractKeyIds(
+            "00-10a36f22b23e6acb788d5412acd510c7-aca3108a6da34543-01",
+            out string requestId,
+            out string operationId);
+
+        Assert.True(ok);
+        Assert.Equal("aca3108a6da34543", requestId);                  // span-id (parent → request id)
+        Assert.Equal("10a36f22b23e6acb788d5412acd510c7", operationId); // trace-id
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("00-traceid-spanid")]          // only 3 sections
+    [InlineData("00--spanid-01")]              // empty trace-id
+    [InlineData("00-traceid--01")]             // empty span-id
+    public void TryExtractKeyIds_InvalidId_ReturnsFalse(string? id)
+    {
+        bool ok = RequestActivityRelay.TryExtractKeyIds(id, out string requestId, out string operationId);
+
+        Assert.False(ok);
+        Assert.Equal(string.Empty, requestId);
+        Assert.Equal(string.Empty, operationId);
+    }
 }

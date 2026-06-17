@@ -166,4 +166,30 @@ internal sealed class RequestActivityRelay
 
         return (requestId: tokens[2], operationId: tokens[1]);
     }
+
+    /// <summary>
+    /// Non-throwing variant of <see cref="ExtractKeyIds"/>. Returns false (with empty out values) when
+    /// <paramref name="id"/> is null/empty or not a well-formed W3C trace-context id, instead of throwing.
+    /// Used for optional ids (e.g. a parent id) that may be absent.
+    /// </summary>
+    public static bool TryExtractKeyIds(string? id, out string requestId, out string operationId)
+    {
+        requestId = string.Empty;
+        operationId = string.Empty;
+
+        if (string.IsNullOrEmpty(id))
+        {
+            return false;
+        }
+
+        string[] tokens = id!.Split('-');
+        if (tokens.Length != 4 || string.IsNullOrEmpty(tokens[1]) || string.IsNullOrEmpty(tokens[2]))
+        {
+            return false;
+        }
+
+        requestId = tokens[2];
+        operationId = tokens[1];
+        return true;
+    }
 }

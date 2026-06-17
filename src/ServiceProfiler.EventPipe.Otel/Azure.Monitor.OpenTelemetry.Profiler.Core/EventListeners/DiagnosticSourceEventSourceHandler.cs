@@ -13,6 +13,11 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
 {
     public const string EventSourceName = "Microsoft-Diagnostics-DiagnosticSource";
 
+    // ActivitySource name of the Azure Functions .NET isolated worker. Activities from this source are
+    // the per-invocation "function <name>" spans (ActivityKind.Internal). See OnEventWritten for why their
+    // parent id (not their own id) is used to correlate the profiler sample to a request.
+    internal const string FunctionsWorkerActivitySourceName = "Microsoft.Azure.Functions.Worker";
+
     // FilterAndPayloadSpecs grammar: see DiagnosticSourceEventSource source-of-truth comment block.
     //
     // We use the ActivitySource path (the "[AS]" prefix), NOT the DiagnosticListener path:
@@ -132,6 +137,25 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
         }
 
         (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);
+
+        // Azure Functions isolated worker correlation fixup.
+        // The worker's "function <name>" activity is ActivityKind.Internal, so Azure Monitor records it as
+        // a *dependency*, not a request. The actual request (e.g. "ServiceBusProcessor.ProcessMessage" or
+        // an HTTP request) is emitted by the Functions *host* process and is the PARENT of this worker
+        // activity. Service Profiler correlates samples to requests by id, so anchoring on the worker
+        // activity's own (dependency) span id leaves the sample with no matching request. Use the parent
+        // span id instead, which is the host-emitted request. Falls back to the own id if there is no
+        // well-formed parent (e.g. an invocation without propagated context).
+        string? sourceName = eventData.GetPayload<string>("SourceName");
+        if (string.Equals(sourceName, FunctionsWorkerActivitySourceName, StringComparison.Ordinal))
+        {
+            string? parentId = GetArgumentValue(arguments!, "ParentId");
+            if (RequestActivityRelay.TryExtractKeyIds(parentId, out string parentRequestId, out string parentOperationId))
+            {
+                requestId = parentRequestId;
+                operationId = parentOperationId;
+            }
+        }
 
         if (eventName.EndsWith("Start", StringComparison.Ordinal))
         {
