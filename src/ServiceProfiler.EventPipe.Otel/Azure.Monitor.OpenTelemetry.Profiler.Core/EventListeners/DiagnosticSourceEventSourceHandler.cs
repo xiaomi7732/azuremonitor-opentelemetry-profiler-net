@@ -139,15 +139,18 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
         (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);
 
         // Azure Functions isolated worker correlation fixup.
-        // The worker's "function <name>" activity is ActivityKind.Internal, so Azure Monitor records it as
-        // a *dependency*, not a request. The actual request (e.g. "ServiceBusProcessor.ProcessMessage" or
-        // an HTTP request) is emitted by the Functions *host* process and is the PARENT of this worker
-        // activity. Service Profiler correlates samples to requests by id, so anchoring on the worker
-        // activity's own (dependency) span id leaves the sample with no matching request. Use the parent
-        // span id instead, which is the host-emitted request. Falls back to the own id if there is no
-        // well-formed parent (e.g. an invocation without propagated context).
+        // The worker's invocation activity is recorded by Azure Monitor differently depending on the
+        // worker's OpenTelemetry schema version (see TelemetryProvider.Kind in the worker SDK):
+        //   - schema <= 1.17.0: name "Invoke", ActivityKind.Server  -> exported as a REQUEST (own span id
+        //     is the request id, so DO NOT remap).
+        //   - schema 1.37.0+:   name "function <name>", ActivityKind.Internal -> exported as a DEPENDENCY,
+        //     a child of the request that the Functions HOST process emits (e.g.
+        //     "ServiceBusProcessor.ProcessMessage"). Anchoring on the worker activity's own (dependency)
+        //     span id leaves the sample with no matching request, so use the PARENT span id instead.
+        // Only the Internal "function <name>" schema is remapped; falls back to the own id if there is no
+        // well-formed parent.
         string? sourceName = eventData.GetPayload<string>("SourceName");
-        if (string.Equals(sourceName, FunctionsWorkerActivitySourceName, StringComparison.Ordinal))
+        if (ShouldRemapToParentRequest(sourceName, requestName))
         {
             string? parentId = GetArgumentValue(arguments!, "ParentId");
             if (RequestActivityRelay.TryExtractKeyIds(parentId, out string parentRequestId, out string parentOperationId))
@@ -166,6 +169,15 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
             _relay.HandleRequestStop(eventData, requestName, requestId, operationId, id);
         }
     }
+
+    // Decides whether a captured activity's request/operation id should be remapped to its PARENT span id
+    // for App Insights correlation. True only for the Azure Functions isolated worker's Internal-schema
+    // invocation activity ("function <name>", ActivityKind.Internal -> a dependency child of the host
+    // request). The worker's older "Invoke" activity (ActivityKind.Server) is a request itself and keeps
+    // its own id, as do all other captured sources (ASP.NET Core, Service Bus).
+    internal static bool ShouldRemapToParentRequest(string? sourceName, string requestName)
+        => string.Equals(sourceName, FunctionsWorkerActivitySourceName, StringComparison.Ordinal)
+        && requestName.StartsWith(RequestActivityRelay.FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal);
 
     // Each element of the bridged Arguments payload is an IDictionary<string,object>
     // with two entries: { "Key" -> <name>, "Value" -> <value> }.

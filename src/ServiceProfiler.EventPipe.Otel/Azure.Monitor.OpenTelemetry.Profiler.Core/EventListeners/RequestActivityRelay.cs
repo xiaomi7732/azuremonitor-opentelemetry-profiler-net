@@ -40,7 +40,10 @@ internal sealed class RequestActivityRelay
     // because gate 1 (FilterAndPayloadSpecs) only subscribes to this worker source plus ASP.NET Core and
     // Service Bus, none of which produce "function "-prefixed activity names.
     private const string FunctionsWorkerInvokeName = "Invoke";
-    private const string FunctionsWorkerActivityNamePrefix = "function ";
+    // Shared with DiagnosticSourceEventSourceHandler, which gates the parent-id correlation remap on this
+    // same prefix (the schema 1.37.0+ "function <name>" activity is ActivityKind.Internal / a dependency,
+    // whereas the "Invoke" activity is ActivityKind.Server / a request).
+    internal const string FunctionsWorkerActivityNamePrefix = "function ";
 
     private readonly ILogger<RequestActivityRelay> _logger;
     private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();

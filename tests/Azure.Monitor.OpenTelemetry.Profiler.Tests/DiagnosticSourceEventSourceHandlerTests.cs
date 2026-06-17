@@ -38,4 +38,22 @@ public class DiagnosticSourceEventSourceHandlerTests
         Assert.DoesNotContain("[AS]*", specs);
         Assert.Equal(6, specs.Length);
     }
+
+    [Theory]
+    // Functions worker, schema 1.37.0+ ("function <name>", ActivityKind.Internal -> dependency): remap.
+    [InlineData("Microsoft.Azure.Functions.Worker", "function MySBFuncTest", true)]
+    [InlineData("Microsoft.Azure.Functions.Worker", "function SomeOtherFunction", true)]
+    // Functions worker, schema <= 1.17.0 ("Invoke", ActivityKind.Server -> request): do NOT remap.
+    [InlineData("Microsoft.Azure.Functions.Worker", "Invoke", false)]
+    // "function" without the trailing space is not the worker invocation naming.
+    [InlineData("Microsoft.Azure.Functions.Worker", "function", false)]
+    // Non-worker sources are never remapped, even with a "function "-like name.
+    [InlineData("Microsoft.AspNetCore", "function MySBFuncTest", false)]
+    [InlineData("Azure.Messaging.ServiceBus.ServiceBusProcessor", "ServiceBusProcessor.ProcessMessage", false)]
+    [InlineData("Azure.Messaging.ServiceBus.ServiceBusReceiver", "ServiceBusReceiver.Receive", false)]
+    [InlineData(null, "function MySBFuncTest", false)]
+    public void ShouldRemapToParentRequest_OnlyForInternalWorkerSchema(string? sourceName, string requestName, bool expected)
+    {
+        Assert.Equal(expected, DiagnosticSourceEventSourceHandler.ShouldRemapToParentRequest(sourceName, requestName));
+    }
 }
