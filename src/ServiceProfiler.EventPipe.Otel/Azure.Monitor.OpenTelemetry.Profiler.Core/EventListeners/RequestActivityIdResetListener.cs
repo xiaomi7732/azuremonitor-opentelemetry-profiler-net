@@ -5,8 +5,9 @@ using Microsoft.Extensions.Logging;
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 /// <summary>
-/// Registers an <see cref="ActivityListener"/> for Azure Service Bus processor ActivitySources
-/// that resets the thread-local EventSource ActivityId to <see cref="Guid.Empty"/> in the
+/// Registers an <see cref="ActivityListener"/> for the async, request-like ActivitySources we capture
+/// (Azure Service Bus processor / session-processor and the Azure Functions isolated worker) that resets
+/// the thread-local EventSource ActivityId to <see cref="Guid.Empty"/> in the
 /// <see cref="ActivityListener.Sample"/> callback.
 /// </summary>
 /// <remarks>
@@ -14,9 +15,10 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 /// This fixes a nesting issue in the <c>DiagnosticSourceEventSource</c> bridge's
 /// <c>Activity1Start</c>/<c>Activity1Stop</c> events. The bridge uses EventSource's thread-local
 /// ActivityId with <see cref="EventOpcode.Start"/> to push a child ActivityId. For async processing
-/// (like Service Bus), the <c>Activity1Stop</c> fires on a different thread, so the Start thread's
-/// ActivityId is never popped. When the thread is reused for the next message, the bridge pushes
-/// under the stale (un-popped) parent, creating a nested tree instead of flat siblings.
+/// (Service Bus messages, Functions worker invocations), the <c>Activity1Stop</c> can fire on a different
+/// thread, so the Start thread's ActivityId is never popped. When the thread is reused for the next
+/// message/invocation, the bridge pushes under the stale (un-popped) parent, creating a nested tree
+/// instead of flat siblings.
 /// </para>
 /// <para>
 /// The reset is performed in the <see cref="ActivityListener.Sample"/> callback rather than
@@ -27,17 +29,18 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 /// event — fires before ours. Resetting in <c>ActivityStarted</c> would be too late.
 /// </para>
 /// </remarks>
-internal sealed class ServiceBusActivityIdResetListener : IDisposable
+internal sealed class RequestActivityIdResetListener : IDisposable
 {
     private readonly ActivityListener _listener;
 
-    public ServiceBusActivityIdResetListener(ILogger<ServiceBusActivityIdResetListener> logger)
+    public RequestActivityIdResetListener(ILogger<RequestActivityIdResetListener> logger)
     {
         _listener = new ActivityListener
         {
             ShouldListenTo = source =>
                 source.Name == "Azure.Messaging.ServiceBus.ServiceBusProcessor" ||
-                source.Name == "Azure.Messaging.ServiceBus.ServiceBusSessionProcessor",
+                source.Name == "Azure.Messaging.ServiceBus.ServiceBusSessionProcessor" ||
+                source.Name == DiagnosticSourceEventSourceHandler.FunctionsWorkerActivitySourceName,
 
             Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
             {
@@ -53,7 +56,7 @@ internal sealed class ServiceBusActivityIdResetListener : IDisposable
         };
 
         ActivitySource.AddActivityListener(_listener);
-        logger.LogDebug("Registered ActivityListener for Service Bus processor activities.");
+        logger.LogDebug("Registered ActivityListener for Service Bus processor and Functions worker activities.");
     }
 
     public void Dispose() => _listener.Dispose();

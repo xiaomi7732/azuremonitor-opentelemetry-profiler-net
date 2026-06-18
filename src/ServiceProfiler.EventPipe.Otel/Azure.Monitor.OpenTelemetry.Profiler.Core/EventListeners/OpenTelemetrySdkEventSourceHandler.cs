@@ -45,6 +45,19 @@ internal sealed class OpenTelemetrySdkEventSourceHandler : IEventSourceHandler
         }
 
         string requestName = eventData.GetPayload<string>("name") ?? "Unknown";
+
+        // The Azure Functions isolated worker Internal-schema invocation ("function <name>") requires the
+        // host-request parent-id correlation remap (see DiagnosticSourceEventSourceHandler), which needs
+        // the Activity's ParentId. That is only available on the DiagnosticSource bridge path, not in the
+        // OpenTelemetry-Sdk RequestStart/Stop payload. Leave these to the DiagnosticSource handler: in
+        // "Both" mode the two handlers share one relay (deduping by activity id), and forwarding the worker
+        // activity here with its own id would race the DiagnosticSource handler's parent-id mapping and
+        // could emit a Start/Stop pair with mismatched request ids that fail to pair.
+        if (requestName.StartsWith(RequestActivityRelay.FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         string id = eventData.GetPayload<string>("id") ?? throw new InvalidDataException("id payload is missing.");
 
         (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);

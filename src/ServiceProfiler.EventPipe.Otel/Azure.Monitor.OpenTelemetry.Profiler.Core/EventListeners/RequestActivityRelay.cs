@@ -6,8 +6,9 @@ using System.Threading;
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core.EventListeners;
 
 /// <summary>
-/// Tracks in-flight "interesting" request activities (ASP.NET Core HTTP-in and Azure Service Bus
-/// processor messages) and forwards matched start/stop pairs onto
+/// Tracks in-flight "interesting" request activities (ASP.NET Core HTTP-in, Azure Service Bus
+/// processor messages, receiver-based message consumption, and Azure Functions isolated worker
+/// invocations) and forwards matched start/stop pairs onto
 /// <see cref="AzureMonitorOpenTelemetryProfilerDataAdapterEventSource"/>.
 ///
 /// Lives once per <see cref="TraceSessionListener"/> and is shared by every <see cref="IEventSourceHandler"/>
@@ -19,6 +20,25 @@ internal sealed class RequestActivityRelay
     private const string AspNetCoreHttpRequestInName = "Microsoft.AspNetCore.Hosting.HttpRequestIn";
     private const string ServiceBusProcessMessageName = "ServiceBusProcessor.ProcessMessage";
     private const string ServiceBusProcessSessionMessageName = "ServiceBusSessionProcessor.ProcessSessionMessage";
+    // Azure Functions isolated worker per-invocation activity (ActivitySource
+    // "Microsoft.Azure.Functions.Worker"). In the isolated model the Service Bus SDK runs in the host
+    // process, so this worker-side invocation span is the only request-like activity visible to an
+    // in-worker profiler. Note: this fires for every trigger type (HTTP, timer, Service Bus, ...), not
+    // just Service Bus.
+    //
+    // The activity's operation name depends on the worker's OpenTelemetry schema version
+    // (Microsoft.Azure.Functions.Worker, TelemetryProvider.GetActivityName):
+    //   - schema <= 1.17.0: the literal "Invoke" (TraceConstants.ActivityAttributes.InvokeActivityName).
+    //   - schema >= 1.37.0: "function <FunctionName>", e.g. "function MySBFuncTest"
+    //     ($"{FunctionActivityName} {FunctionDefinition.Name}", FunctionActivityName == "function").
+    // We match both so the capture is robust across worker versions. The "function " prefix is safe here
+    // because gate 1 (FilterAndPayloadSpecs) only subscribes to this worker source plus ASP.NET Core and
+    // the Service Bus processor sources, none of which produce "function "-prefixed activity names.
+    private const string FunctionsWorkerInvokeName = "Invoke";
+    // Shared with DiagnosticSourceEventSourceHandler, which gates the parent-id correlation remap on this
+    // same prefix (the schema 1.37.0+ "function <name>" activity is ActivityKind.Internal / a dependency,
+    // whereas the "Invoke" activity is ActivityKind.Server / a request).
+    internal const string FunctionsWorkerActivityNamePrefix = "function ";
 
     private readonly ILogger<RequestActivityRelay> _logger;
     private readonly ConcurrentDictionary<string, byte> _startedActivityIds = new();
@@ -30,13 +50,19 @@ internal sealed class RequestActivityRelay
     }
 
     /// <summary>
-    /// We capture HTTP-in requests and Service Bus processor messages.
-    /// HTTP-out (e.g. HttpClient) and other Service Bus operations (send, receive) are excluded.
+    /// We capture HTTP-in requests, Service Bus processor messages, and Azure Functions isolated worker
+    /// invocations — i.e. activities that Azure Monitor records as *requests* (ActivityKind.Server /
+    /// Consumer), or the worker invocation span.
+    /// HTTP-out (e.g. HttpClient) and Service Bus receiver/sender operations (receive, send, settle, peek,
+    /// lock renewal) are excluded: they are ActivityKind.Client/Producer and are recorded as dependencies,
+    /// so they would never correlate to a request.
     /// </summary>
-    private static bool IsInterestingRequest(string requestName)
+    internal static bool IsInterestingRequest(string requestName)
         => string.Equals(AspNetCoreHttpRequestInName, requestName, StringComparison.Ordinal)
         || string.Equals(ServiceBusProcessMessageName, requestName, StringComparison.Ordinal)
-        || string.Equals(ServiceBusProcessSessionMessageName, requestName, StringComparison.Ordinal);
+        || string.Equals(ServiceBusProcessSessionMessageName, requestName, StringComparison.Ordinal)
+        || string.Equals(FunctionsWorkerInvokeName, requestName, StringComparison.Ordinal)
+        || requestName.StartsWith(FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal);
 
     public void HandleRequestStart(EventWrittenEventArgs eventData, string requestName, string requestId, string operationId, string id)
     {
@@ -137,5 +163,31 @@ internal sealed class RequestActivityRelay
         }
 
         return (requestId: tokens[2], operationId: tokens[1]);
+    }
+
+    /// <summary>
+    /// Non-throwing variant of <see cref="ExtractKeyIds"/>. Returns false (with empty out values) when
+    /// <paramref name="id"/> is null/empty or not a well-formed W3C trace-context id, instead of throwing.
+    /// Used for optional ids (e.g. a parent id) that may be absent.
+    /// </summary>
+    public static bool TryExtractKeyIds(string? id, out string requestId, out string operationId)
+    {
+        requestId = string.Empty;
+        operationId = string.Empty;
+
+        if (string.IsNullOrEmpty(id))
+        {
+            return false;
+        }
+
+        string[] tokens = id!.Split('-');
+        if (tokens.Length != 4 || string.IsNullOrEmpty(tokens[1]) || string.IsNullOrEmpty(tokens[2]))
+        {
+            return false;
+        }
+
+        requestId = tokens[2];
+        operationId = tokens[1];
+        return true;
     }
 }

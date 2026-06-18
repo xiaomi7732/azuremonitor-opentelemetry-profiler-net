@@ -13,6 +13,11 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
 {
     public const string EventSourceName = "Microsoft-Diagnostics-DiagnosticSource";
 
+    // ActivitySource name of the Azure Functions .NET isolated worker. Activities from this source are
+    // the per-invocation "function <name>" spans (ActivityKind.Internal). See OnEventWritten for why their
+    // parent id (not their own id) is used to correlate the profiler sample to a request.
+    internal const string FunctionsWorkerActivitySourceName = "Microsoft.Azure.Functions.Worker";
+
     // FilterAndPayloadSpecs grammar: see DiagnosticSourceEventSource source-of-truth comment block.
     //
     // We use the ActivitySource path (the "[AS]" prefix), NOT the DiagnosticListener path:
@@ -43,17 +48,35 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
     // The ActivitySource name is "Microsoft.AspNetCore" (NOT "Microsoft.AspNetCore.Hosting" —
     // that's the ActivityName / OperationName, e.g. "Microsoft.AspNetCore.Hosting.HttpRequestIn").
     //
-    // Azure Service Bus processor ActivitySource names are dynamically constructed by the SDK as
-    // "<DiagnosticNamespace>.<ClientType>", e.g. "Azure.Messaging.ServiceBus.ServiceBusProcessor".
-    // The processor creates activities with ActivityKind.Consumer and names like
-    // "ServiceBusProcessor.ProcessMessage" and "ServiceBusSessionProcessor.ProcessSessionMessage".
-    // ActivitySource is enabled by default in Azure.Core 1.36.0+.
+    // Azure Service Bus ActivitySource names are NOT a fixed "<namespace>.<ClientType>" string; the SDK
+    // derives them from the operation name. Azure.Core's DiagnosticScopeFactory.GetActivitySource builds
+    // the source name as "<DiagnosticNamespace>.<operation-name up to the first dot>", where
+    // DiagnosticNamespace is "Azure.Messaging.ServiceBus" and the operation name is one of the
+    // DiagnosticProperty.*ActivityName constants. So, for example:
+    //   "ServiceBusProcessor.ProcessMessage"      -> [AS]Azure.Messaging.ServiceBus.ServiceBusProcessor
+    //   "ServiceBusSessionProcessor.ProcessSessionMessage" -> [AS]...ServiceBusSessionProcessor
+    //
+    // We subscribe ONLY to the processor sources, NOT the receiver sources. The processor's
+    // ProcessMessage / ProcessSessionMessage activities are ActivityKind.Consumer, which Azure Monitor
+    // records as *requests* — the right anchor for a profiler sample. Receiver operations
+    // ("ServiceBusReceiver.Receive"/".Complete"/...) are ActivityKind.Client and are recorded as
+    // *dependencies*, so they would never correlate to a request; they also fire internally inside the
+    // processor's own receive loop. ActivitySource is enabled by default in Azure.Core 1.36.0+.
+    //
+    // Azure Functions isolated worker: the .NET isolated worker emits a per-invocation Activity from a
+    // plain ActivitySource named "Microsoft.Azure.Functions.Worker". The operation name varies by the
+    // worker's OpenTelemetry schema version: "Invoke" on older schemas (<= 1.17.0) and
+    // "function <FunctionName>" on schema 1.37.0+ (e.g. "function MySBFuncTest"). In the isolated model the
+    // Service Bus SDK runs in the Functions *host* process, so only this worker-side invocation Activity is
+    // visible to an in-worker profiler. The worker only creates this Activity when its OpenTelemetry/
+    // telemetry integration is wired up; our [AS] subscription satisfies HasListeners().
     //
     // Multiple specs are newline-separated per DiagnosticSourceEventSource convention.
     internal const string FilterAndPayloadSpecs =
         "[AS]Microsoft.AspNetCore/\n" +
         "[AS]Azure.Messaging.ServiceBus.ServiceBusProcessor/\n" +
-        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/";
+        "[AS]Azure.Messaging.ServiceBus.ServiceBusSessionProcessor/\n" +
+        "[AS]Microsoft.Azure.Functions.Worker/";
 
     private readonly RequestActivityRelay _relay;
     private readonly ILogger<DiagnosticSourceEventSourceHandler> _logger;
@@ -112,6 +135,28 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
 
         (string requestId, string operationId) = RequestActivityRelay.ExtractKeyIds(id);
 
+        // Azure Functions isolated worker correlation fixup.
+        // The worker's invocation activity is recorded by Azure Monitor differently depending on the
+        // worker's OpenTelemetry schema version (see TelemetryProvider.Kind in the worker SDK):
+        //   - schema <= 1.17.0: name "Invoke", ActivityKind.Server  -> exported as a REQUEST (own span id
+        //     is the request id, so DO NOT remap).
+        //   - schema 1.37.0+:   name "function <name>", ActivityKind.Internal -> exported as a DEPENDENCY,
+        //     a child of the request that the Functions HOST process emits (e.g.
+        //     "ServiceBusProcessor.ProcessMessage"). Anchoring on the worker activity's own (dependency)
+        //     span id leaves the sample with no matching request, so use the PARENT span id instead.
+        // Only the Internal "function <name>" schema is remapped; falls back to the own id if there is no
+        // well-formed parent.
+        string? sourceName = eventData.GetPayload<string>("SourceName");
+        if (ShouldRemapToParentRequest(sourceName, requestName))
+        {
+            string? parentId = GetArgumentValue(arguments!, "ParentId");
+            if (RequestActivityRelay.TryExtractKeyIds(parentId, out string parentRequestId, out string parentOperationId))
+            {
+                requestId = parentRequestId;
+                operationId = parentOperationId;
+            }
+        }
+
         if (eventName.EndsWith("Start", StringComparison.Ordinal))
         {
             _relay.HandleRequestStart(eventData, requestName, requestId, operationId, id);
@@ -121,6 +166,15 @@ internal sealed class DiagnosticSourceEventSourceHandler : IEventSourceHandler
             _relay.HandleRequestStop(eventData, requestName, requestId, operationId, id);
         }
     }
+
+    // Decides whether a captured activity's request/operation id should be remapped to its PARENT span id
+    // for App Insights correlation. True only for the Azure Functions isolated worker's Internal-schema
+    // invocation activity ("function <name>", ActivityKind.Internal -> a dependency child of the host
+    // request). The worker's older "Invoke" activity (ActivityKind.Server) is a request itself and keeps
+    // its own id, as do all other captured sources (ASP.NET Core, Service Bus).
+    internal static bool ShouldRemapToParentRequest(string? sourceName, string requestName)
+        => string.Equals(sourceName, FunctionsWorkerActivitySourceName, StringComparison.Ordinal)
+        && requestName.StartsWith(RequestActivityRelay.FunctionsWorkerActivityNamePrefix, StringComparison.Ordinal);
 
     // Each element of the bridged Arguments payload is an IDictionary<string,object>
     // with two entries: { "Key" -> <name>, "Value" -> <value> }.

@@ -20,13 +20,13 @@ internal class TraceSessionListenerFactory
         RequestSourceMode mode = RequestSourceModeResolver.Resolve(logger);
         logger.LogInformation("Request event source mode: {mode}", mode);
 
-        // Register the Service Bus ActivityId reset listener BEFORE any handler that calls
+        // Register the request ActivityId reset listener BEFORE any handler that calls
         // EnableEvents with FilterAndPayloadSpecs. The bridge's internal ActivityListener is
         // created during EnableEvents, and ActivityStarted callbacks fire in registration order.
         // Our listener must fire first to reset the thread-local ActivityId before the bridge
         // pushes a child under a potentially stale parent (async thread reuse issue).
-        ServiceBusActivityIdResetListener resetListener =
-            ActivatorUtilities.CreateInstance<ServiceBusActivityIdResetListener>(_serviceProvider);
+        RequestActivityIdResetListener resetListener =
+            ActivatorUtilities.CreateInstance<RequestActivityIdResetListener>(_serviceProvider);
 
         // One RequestActivityRelay per listener lifetime, shared across this listener's handlers so that
         // a Start emitted by one source can correlate with a Stop emitted by another (when in Both mode).
