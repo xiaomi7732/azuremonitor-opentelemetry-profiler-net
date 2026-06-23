@@ -8,7 +8,6 @@ using System.Threading;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceProfiler.Utilities;
 using ServiceProfiler.Common.Utilities;
 
@@ -20,34 +19,37 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
         private readonly TelemetryClient _telemetryClient;
         private readonly TelemetryConfiguration _telemetryConfiguration;
         private bool _isDisposed = false;
-        private readonly ServiceProvider _standaloneServiceProvider;
 
-        public EventPipeAppInsightsLogger(
-            Guid instrumentationKey)
+        /// <summary>
+        /// Creates a logger that sends telemetry using an instrumentation-key-only connection string.
+        /// This routes telemetry to the global ingestion endpoint without AAD authentication and is
+        /// intended only for Microsoft's anonymous-usage telemetry, not customer telemetry.
+        /// </summary>
+        public EventPipeAppInsightsLogger(Guid instrumentationKey)
+            : this(CreateInstrumentationKeyOnlyConfiguration(instrumentationKey))
         {
-            // Build the AI client and hook it up with ILogger according to the code here:
-            // https://github.com/Microsoft/ApplicationInsights-aspnetcore/blob/3dcab5b92ebddc92e9010fc707cc7062d03f92e4/src/Microsoft.ApplicationInsights.AspNetCore/Extensions/ApplicationInsightsExtensions.cs
-            // and here: https://github.com/aspnet/Logging/blob/c821494678a30c323174bea8056f43b93a3ca6f4/src/Microsoft.Extensions.Logging/LoggingServiceCollectionExtensions.cs
-            ServiceCollection services = new ServiceCollection();
-            string instrumentationKeyString = instrumentationKey.ToString();
-            _telemetryConfiguration = new TelemetryConfiguration();
-            _telemetryConfiguration.ConnectionString = $"InstrumentationKey={instrumentationKeyString}";
-            _telemetryClient = new TelemetryClient(_telemetryConfiguration);
-            services.AddApplicationInsightsTelemetry(options =>
-            {
-                options.ConnectionString = _telemetryConfiguration.ConnectionString;
-            });
+        }
 
-            // Hack: remove the existing telemetryClient that uses default iKey. Replace it with the one using MS iKey
-            services.Remove(new ServiceDescriptor(typeof(TelemetryClient), typeof(TelemetryClient), ServiceLifetime.Singleton));
-            services.AddSingleton(_telemetryClient);
-            // ~
-            _standaloneServiceProvider = services.BuildServiceProvider();
+        /// <summary>
+        /// Creates a logger that sends telemetry using a fully configured <see cref="TelemetryConfiguration"/>.
+        /// Use this overload for customer telemetry so the regional IngestionEndpoint and AAD token credential
+        /// (when configured) are honored. Build the configuration with TelemetryConfigurationBuilder.
+        /// </summary>
+        public EventPipeAppInsightsLogger(TelemetryConfiguration telemetryConfiguration)
+        {
+            _telemetryConfiguration = telemetryConfiguration ?? throw new ArgumentNullException(nameof(telemetryConfiguration));
+            _telemetryClient = new TelemetryClient(_telemetryConfiguration);
 
             // Reference https://github.com/Microsoft/ApplicationInsights-Home/blob/master/EndpointSpecs/SDK-VERSIONS.md for SDK Name.
             string sdkVersion = EnvironmentUtilities.GetApplicationInsightsSdkVersion("l_ap:");
             SetCommonProperty(Constants.SdkVersion, sdkVersion);
         }
+
+        private static TelemetryConfiguration CreateInstrumentationKeyOnlyConfiguration(Guid instrumentationKey)
+            => new TelemetryConfiguration
+            {
+                ConnectionString = $"InstrumentationKey={instrumentationKey}",
+            };
 
         /// <summary>
         /// Get and set the instrumentation key. By setting it to 'null' you can disable the logger.
@@ -187,7 +189,6 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Logging
             {
                 Flush();
                 _telemetryConfiguration.Dispose();
-                _standaloneServiceProvider.Dispose();
             }
 
             _isDisposed = true;
