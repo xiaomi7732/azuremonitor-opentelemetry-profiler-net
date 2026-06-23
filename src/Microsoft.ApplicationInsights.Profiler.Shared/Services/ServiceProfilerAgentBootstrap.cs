@@ -132,64 +132,16 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     private const string InstrumentationKeyMessage = "Instrumentation key is not set or malformed in the connection string.";
 
     /// <summary>
-    /// Inspects the connection string configuration and returns an actionable error message
+    /// Maps the connection string validation result to an actionable error message
     /// describing why the profiler cannot start, or <see langword="null"/> when it is valid.
     /// </summary>
-    private string? GetConnectionStringConfigurationError()
+    private string? GetConnectionStringConfigurationError() => _serviceProfilerContext.ConnectionStringValidation switch
     {
-        string? connectionStringValue = _serviceProfilerContext.ConnectionStringValue;
-
-        if (connectionStringValue is null)
-        {
-            return NoConnectionStringMessage;
-        }
-
-        if (string.IsNullOrWhiteSpace(connectionStringValue))
-        {
-            return "The connection string is empty.";
-        }
-
-        // Connection string is present but could not be parsed.
-        if (_serviceProfilerContext.ConnectionString is null)
-        {
-            // Surface the more specific instrumentation-key error when the connection string
-            // explicitly contains an empty instrumentation key (e.g. "InstrumentationKey=").
-            return ContainsEmptyInstrumentationKey(connectionStringValue)
-                ? InstrumentationKeyMessage
-                : "The connection string is malformed and could not be parsed. Verify the connection string and that it contains a valid instrumentation key.";
-        }
-
-        // Connection string parsed, but the instrumentation key is missing or malformed.
-        if (_serviceProfilerContext.AppInsightsInstrumentationKey == Guid.Empty)
-        {
-            return InstrumentationKeyMessage;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Determines whether the raw connection string declares any
-    /// <c>InstrumentationKey</c> token whose value is empty or whitespace.
-    /// </summary>
-    private static bool ContainsEmptyInstrumentationKey(string connectionStringValue)
-    {
-        foreach (string token in connectionStringValue.Split(';'))
-        {
-            int separatorIndex = token.IndexOf('=');
-            if (separatorIndex < 0)
-            {
-                continue;
-            }
-
-            string key = token.Substring(0, separatorIndex).Trim();
-            if (key.Equals("InstrumentationKey", StringComparison.OrdinalIgnoreCase)
-                && string.IsNullOrWhiteSpace(token.Substring(separatorIndex + 1)))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+        ConnectionStringValidationResult.Valid => null,
+        ConnectionStringValidationResult.NotConfigured => NoConnectionStringMessage,
+        ConnectionStringValidationResult.Empty => "The connection string is empty.",
+        ConnectionStringValidationResult.InvalidInstrumentationKey => InstrumentationKeyMessage,
+        ConnectionStringValidationResult.Malformed => "The connection string is malformed and could not be parsed. Verify the connection string and that it contains a valid instrumentation key.",
+        _ => "The connection string is invalid.",
+    };
 }

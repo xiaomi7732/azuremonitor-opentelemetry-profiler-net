@@ -12,11 +12,10 @@ internal interface IServiceProfilerContext
     ConnectionString? ConnectionString { get; }
 
     /// <summary>
-    /// Gets the raw connection string value as provided by the user, before parsing.
-    /// This is null when no connection string was provided, and may be a non-empty but
-    /// unparsable value when the connection string is malformed.
+    /// Gets the result of validating the configured connection string. This intentionally does
+    /// not expose the raw connection string value, so callers cannot misuse or leak it.
     /// </summary>
-    string? ConnectionStringValue { get; }
+    ConnectionStringValidationResult ConnectionStringValidation { get; }
 
     Guid AppInsightsInstrumentationKey { get; }
 

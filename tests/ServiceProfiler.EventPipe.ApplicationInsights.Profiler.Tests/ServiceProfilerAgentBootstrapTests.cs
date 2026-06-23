@@ -20,55 +20,47 @@ namespace ServiceProfiler.EventPipe.Client.Tests;
 public class ServiceProfilerAgentBootstrapTests
 {
     [Fact]
-    public async Task ActivateAsync_NullConnectionString_LogsNotSetMessage()
+    public async Task ActivateAsync_NotConfigured_LogsNotSetMessage()
     {
-        (string? logged, bool running) = await RunBootstrapAsync(connectionStringValue: null);
+        (string? logged, bool running) = await RunBootstrapAsync(ConnectionStringValidationResult.NotConfigured);
 
         Assert.False(running);
         Assert.Contains("No connection string is set", logged);
     }
 
     [Fact]
-    public async Task ActivateAsync_EmptyConnectionString_LogsEmptyMessage()
+    public async Task ActivateAsync_Empty_LogsEmptyMessage()
     {
-        (string? logged, bool running) = await RunBootstrapAsync(connectionStringValue: "   ");
+        (string? logged, bool running) = await RunBootstrapAsync(ConnectionStringValidationResult.Empty);
 
         Assert.False(running);
         Assert.Contains("connection string is empty", logged);
     }
 
     [Fact]
-    public async Task ActivateAsync_MalformedConnectionString_LogsMalformedMessage()
+    public async Task ActivateAsync_Malformed_LogsMalformedMessage()
     {
-        // A non-empty value that fails to parse leaves the parsed ConnectionString null.
-        (string? logged, bool running) = await RunBootstrapAsync(connectionStringValue: "this-is-not-a-valid-connection-string");
+        (string? logged, bool running) = await RunBootstrapAsync(ConnectionStringValidationResult.Malformed);
 
         Assert.False(running);
         Assert.Contains("malformed", logged);
     }
 
-    [Theory]
-    [InlineData("InstrumentationKey=")]
-    [InlineData("InstrumentationKey=   ")]
-    [InlineData("IngestionEndpoint=https://example.com/;InstrumentationKey=")]
-    [InlineData("InstrumentationKey=00000000-0000-0000-0000-000000000001;InstrumentationKey=")]
-    public async Task ActivateAsync_EmptyInstrumentationKey_LogsInstrumentationKeyMessage(string connectionStringValue)
+    [Fact]
+    public async Task ActivateAsync_InvalidInstrumentationKey_LogsInstrumentationKeyMessage()
     {
-        // An explicitly empty instrumentation key fails to parse (ConnectionString stays null),
-        // but should surface the instrumentation-key-specific message rather than the generic one.
-        (string? logged, bool running) = await RunBootstrapAsync(connectionStringValue);
+        (string? logged, bool running) = await RunBootstrapAsync(ConnectionStringValidationResult.InvalidInstrumentationKey);
 
         Assert.False(running);
         Assert.Contains("Instrumentation key", logged);
     }
 
-    private static async Task<(string? loggedError, bool running)> RunBootstrapAsync(string? connectionStringValue)
+    private static async Task<(string? loggedError, bool running)> RunBootstrapAsync(ConnectionStringValidationResult validation)
     {
         using BootstrapState bootstrapState = new();
 
         Mock<IServiceProfilerContext> contextMock = new();
-        contextMock.SetupGet(c => c.ConnectionStringValue).Returns(connectionStringValue);
-        // ConnectionString is left at its default (null), simulating an unset or unparsable value.
+        contextMock.SetupGet(c => c.ConnectionStringValidation).Returns(validation);
 
         Mock<IOrchestrator> orchestratorMock = new();
 
