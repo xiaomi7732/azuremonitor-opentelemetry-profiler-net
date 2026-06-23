@@ -102,7 +102,15 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton(_ => DiagnosticsClientProvider.Instance);
         services.AddSingleton<DiagnosticsClientTraceConfiguration>();
         services.AddSingleton<ITraceControl, DiagnosticsClientTrace>();
-        services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
+        services.AddSingleton<IServiceProfilerContext>(p =>
+        {
+            ServiceProfilerOptions options = p.GetRequiredService<IOptions<ServiceProfilerOptions>>().Value;
+            return new ServiceProfilerContext(
+                p.GetService<ConnectionString>(),
+                options.ConnectionString,
+                p.GetRequiredService<IEndpointProvider>(),
+                p.GetRequiredService<ILogger<ServiceProfilerContext>>());
+        });
         services.AddSingleton<IServiceProfilerProvider, OpenTelemetryProfilerProvider>();
 
         // Client

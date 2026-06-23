@@ -14,6 +14,7 @@ internal class ServiceProfilerContext : IServiceProfilerContext
 
     public ServiceProfilerContext(
         ConnectionString? connectionString,
+        string? connectionStringValue,
         IEndpointProvider endpointProvider,
         ILogger<ServiceProfilerContext> logger)
     {
@@ -21,6 +22,7 @@ internal class ServiceProfilerContext : IServiceProfilerContext
         
         // Allow null connection string for local development scenarios.
         ConnectionString = connectionString;
+        ConnectionStringValue = connectionStringValue;
         
         _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
 
@@ -38,4 +40,6 @@ internal class ServiceProfilerContext : IServiceProfilerContext
     public Guid AppInsightsInstrumentationKey => ConnectionString is null ? Guid.Empty : ConnectionString.InstrumentationKeyGuid;
 
     public ConnectionString? ConnectionString { get; }
+
+    public string? ConnectionStringValue { get; }
 }
