@@ -1,4 +1,5 @@
 using Azure.Monitor.Diagnostics.Profiler;
+using Azure.Core;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Profiler.Core.Auth;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
@@ -16,6 +17,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.RoleNames;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.TraceScavenger;
@@ -87,8 +89,7 @@ internal static class ServiceCollectionExtensions
 
         // Telemetry - TODO:
         // 1. Have a dedicated application insights resource
-        // 2. Use the connection string
-        // 3. Support multiple endpoints / multiple clouds
+        // 2. Support multiple endpoints / multiple clouds
 
         // AI for Microsoft depends on user settings.
         services.AddSingleton<IAppInsightsLogger>(provider =>
@@ -110,9 +111,10 @@ internal static class ServiceCollectionExtensions
         });
 
         // AI for the customer.
-        // TODO: Use connection string instead.
-        services.AddSingleton<IAppInsightsLogger>(p =>
-            ActivatorUtilities.CreateInstance<EventPipeAppInsightsLogger>(p, p.GetRequiredService<IServiceProfilerContext>().AppInsightsInstrumentationKey));
+        // Build the customer telemetry client from the full connection string (so the regional
+        // IngestionEndpoint is honored) and the configured AAD token credential (so it works when
+        // local auth is disabled). This is the same mechanism used by AgentStatusSender.
+        services.AddSingleton<IAppInsightsLogger>(CreateCustomerAppInsightsLogger);
 
         // Heartbeats
         services.TryAddSingleton<IEventPipeTelemetryTracker, TelemetryTracker>();
@@ -241,6 +243,48 @@ internal static class ServiceCollectionExtensions
             .AddUploaderCallerServices()
             .AddTraceScavengerServices()
             .AddTraceControl();
+    }
+
+    /// <summary>
+    /// Creates the customer-facing Application Insights logger used for the profiler's notable
+    /// Start/Stop traces. Unlike the Microsoft anonymous-telemetry logger, this uses the full
+    /// connection string (so the regional IngestionEndpoint is honored) and the configured AAD
+    /// token credential (so it works when local auth is disabled).
+    /// </summary>
+    private static IAppInsightsLogger CreateCustomerAppInsightsLogger(IServiceProvider provider)
+    {
+        ILoggerFactory loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        ILogger logger = loggerFactory.CreateLogger("Microsoft.ApplicationInsights.Profiler.Core.Logging.CustomerAppInsightsLogger");
+
+        ConnectionString? connectionString = provider.GetRequiredService<IServiceProfilerContext>().ConnectionString;
+        if (connectionString is null)
+        {
+            logger.LogDebug("No Application Insights connection string is available. Customer notable-trace telemetry is disabled.");
+            return new NullAppInsightsLogger();
+        }
+
+        IAuthTokenProvider authTokenProvider = provider.GetRequiredService<IAuthTokenProvider>();
+        TokenCredential? tokenCredential = authTokenProvider.IsAADAuthenticateEnabled
+            ? new AADAuthTokenCredential(authTokenProvider, loggerFactory.CreateLogger<AADAuthTokenCredential>())
+            : null;
+
+        // Hardening: surface a warning when there is no ingestion endpoint to route to. Without it,
+        // telemetry falls back to the global endpoint and is silently dropped by workspace-based resources.
+        if (connectionString.GetFeatureEndpoint("Ingestion") is null)
+        {
+            logger.LogWarning(
+                "The Application Insights connection string does not specify an IngestionEndpoint. Profiler Start/Stop traces are " +
+                "sent to the global ingestion endpoint and may be dropped by workspace-based resources. Provide a full connection " +
+                "string (including IngestionEndpoint) to ensure these traces are ingested.");
+        }
+
+        TelemetryConfiguration telemetryConfiguration = new TelemetryConfigurationBuilder(
+            connectionString,
+            tokenCredential,
+            telemetryInitializers: [],
+            loggerFactory.CreateLogger<TelemetryConfigurationBuilder>()).Build();
+
+        return new EventPipeAppInsightsLogger(telemetryConfiguration);
     }
 
     // Register services related to Application Insights AAD Auth
