@@ -155,6 +155,20 @@ internal sealed class DuplexNamedPipeService : INamedPipeServerService, INamedPi
         VerifyModeIsSpecified();
         string payload = await ReadMessageAsync(timeout, cancellationToken).ConfigureAwait(false);
         _logger.LogTrace("Reading payload from named pipe: {payload}", payload);
+
+        // An empty payload means the stream reached end-of-file: the peer closed the pipe before
+        // sending a message (timeouts surface as TimeoutException, and outgoing empty messages are
+        // rejected on the send side). Surface this as a distinct, actionable error instead of a
+        // misleading deserialization failure so the real cause - the peer (e.g. the uploader)
+        // exiting early - is visible in the logs.
+        if (string.IsNullOrEmpty(payload))
+        {
+            string closedMessage = $"Named pipe was closed by the peer before a {typeof(T).FullName} message could be read. " +
+                "The other process (for example, the trace uploader) likely exited prematurely; check its logs for the underlying failure.";
+            _logger.LogError(closedMessage);
+            throw new NamedPipeClosedException(closedMessage);
+        }
+
         if (_payloadSerializer.TryDeserialize<T>(payload, out T? result))
         {
             return result;

@@ -123,6 +123,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         _logger.LogTrace("Entering {StopServiceProfilerAsync}.", nameof(StopServiceProfilerAsync));
 
         bool profilerStopped = false;
+        bool semaphoreReleased = false;
 
         if (source is null)
         {
@@ -148,10 +149,11 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
         try
         {
-            // Copy resource usage values captured at session start before releasing the semaphore,
-            // to avoid a race where a new session could overwrite these fields.
+            // Copy values captured at session start before releasing the semaphore, to avoid a race
+            // where a new session could overwrite these fields once the semaphore is released below.
             float cpuUsage = _sessionCPUUsage;
             float memoryUsage = _sessionMemoryUsage;
+            string currentTraceFilePath = _currentTraceFilePath;
 
             // Notice: Stop trace session listener has to be happen before calling ITraceControl.Disable().
             // Trace control disabling will take a while. We shall not gathering anything events when disable is happening.
@@ -163,16 +165,44 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             // Disable the EventPipe.
             await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
             profilerStopped = true;
-            ReleaseSemaphoreForProfiling();
+            // Release the semaphore as soon as the trace is disabled so a new session can start
+            // while the (potentially long) post-stop processing/upload runs. Mark it as released in
+            // a finally so that even if Release() throws (e.g. the semaphore was disposed during
+            // shutdown), the outer finally does not attempt a second release - that would throw
+            // again and mask the original outcome, or free a semaphore acquired by a newer session.
+            try
+            {
+                ReleaseSemaphoreForProfiling();
+            }
+            finally
+            {
+                semaphoreReleased = true;
+            }
 
-            await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
-                _currentTraceFilePath,
-                currentSessionId.Value,
-                stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
-                sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                source,
-                averageCPUUsage: cpuUsage,
-                averageMemoryUsage: memoryUsage), cancellationToken).ConfigureAwait(false);
+            // Only the post-stop processing resolves services from the (possibly disposed during
+            // shutdown) root IServiceProvider, so scope the ObjectDisposedException handling to just
+            // this call. An ObjectDisposedException from anywhere else (e.g. DisableAsync) must still
+            // propagate so the caller learns the stop failed and the semaphore handling stays correct.
+            try
+            {
+                await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
+                    currentTraceFilePath,
+                    currentSessionId.Value,
+                    stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
+                    sampleActivities ?? Enumerable.Empty<SampleActivity>(),
+                    source,
+                    averageCPUUsage: cpuUsage,
+                    averageMemoryUsage: memoryUsage), cancellationToken).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                // The root IServiceProvider can be disposed while a profiling session is being stopped
+                // during host shutdown (the post-stop processor is resolved via the service provider).
+                // In that case there is nothing more we can do - the upload cannot proceed once the
+                // container is torn down - so log it and return gracefully instead of a noisy error.
+                _logger.LogWarning(ex, "Service provider was disposed (likely during host shutdown) before post-stop processing finished. Skipping trace upload.");
+                return false;
+            }
 
             _logger.LogInformation(StopProfilerSucceeded);
 
@@ -192,7 +222,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         }
         finally
         {
-            if (profilerStopped)
+            if (profilerStopped && !semaphoreReleased)
             {
                 ReleaseSemaphoreForProfiling();
             }
