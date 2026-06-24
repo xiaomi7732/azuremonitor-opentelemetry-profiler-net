@@ -11,9 +11,11 @@ internal class ServiceProfilerContext : IServiceProfilerContext
 {
     private readonly IEndpointProvider _endpointProvider;
     private readonly ILogger _logger;
+    private readonly string? _connectionStringValue;
 
     public ServiceProfilerContext(
         ConnectionString? connectionString,
+        string? connectionStringValue,
         IEndpointProvider endpointProvider,
         ILogger<ServiceProfilerContext> logger)
     {
@@ -21,6 +23,8 @@ internal class ServiceProfilerContext : IServiceProfilerContext
         
         // Allow null connection string for local development scenarios.
         ConnectionString = connectionString;
+        _connectionStringValue = connectionStringValue;
+        ConnectionStringValidation = ValidateConnectionString();
         
         _endpointProvider = endpointProvider ?? throw new ArgumentNullException(nameof(endpointProvider));
 
@@ -38,4 +42,62 @@ internal class ServiceProfilerContext : IServiceProfilerContext
     public Guid AppInsightsInstrumentationKey => ConnectionString is null ? Guid.Empty : ConnectionString.InstrumentationKeyGuid;
 
     public ConnectionString? ConnectionString { get; }
+
+    public ConnectionStringValidationResult ConnectionStringValidation { get; }
+
+    private ConnectionStringValidationResult ValidateConnectionString()
+    {
+        if (_connectionStringValue is null)
+        {
+            return ConnectionStringValidationResult.NotConfigured;
+        }
+
+        if (string.IsNullOrWhiteSpace(_connectionStringValue))
+        {
+            return ConnectionStringValidationResult.Empty;
+        }
+
+        // Connection string is present but could not be parsed.
+        if (ConnectionString is null)
+        {
+            // Distinguish an explicitly empty instrumentation key (e.g. "InstrumentationKey=")
+            // from an otherwise malformed connection string.
+            return ContainsEmptyInstrumentationKey(_connectionStringValue)
+                ? ConnectionStringValidationResult.InvalidInstrumentationKey
+                : ConnectionStringValidationResult.Malformed;
+        }
+
+        // Connection string parsed, but the instrumentation key is missing or malformed.
+        if (AppInsightsInstrumentationKey == Guid.Empty)
+        {
+            return ConnectionStringValidationResult.InvalidInstrumentationKey;
+        }
+
+        return ConnectionStringValidationResult.Valid;
+    }
+
+    /// <summary>
+    /// Determines whether the raw connection string declares any
+    /// <c>InstrumentationKey</c> token whose value is empty or whitespace.
+    /// </summary>
+    private static bool ContainsEmptyInstrumentationKey(string connectionStringValue)
+    {
+        foreach (string token in connectionStringValue.Split(';'))
+        {
+            int separatorIndex = token.IndexOf('=');
+            if (separatorIndex < 0)
+            {
+                continue;
+            }
+
+            string key = token.Substring(0, separatorIndex).Trim();
+            if (key.Equals("InstrumentationKey", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(token.Substring(separatorIndex + 1)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

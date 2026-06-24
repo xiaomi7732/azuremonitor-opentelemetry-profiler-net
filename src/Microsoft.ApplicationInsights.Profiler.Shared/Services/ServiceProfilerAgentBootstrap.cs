@@ -48,8 +48,6 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 
     public async Task ActivateAsync(CancellationToken cancellationToken)
     {
-        string noConnectionStringMessage = "No connection string is set. Application Insights Profiler won't start.";
-
         if (_serializer.TrySerialize(_userConfiguration, out string? serializedUserConfiguration))
         {
             _logger.LogDebug("User Settings:{eol} {details}", Environment.NewLine, serializedUserConfiguration);
@@ -84,18 +82,11 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
 
         try
         {
-            // Connection string exists.
-            if (string.IsNullOrEmpty(_serviceProfilerContext.ConnectionString?.ToString()))
+            // Diagnose the connection string state to provide an actionable error message.
+            string? connectionStringError = GetConnectionStringConfigurationError();
+            if (connectionStringError is not null)
             {
-                _logger.LogError(noConnectionStringMessage);
-                Activated(false);
-                return;
-            }
-
-            // Instrumentation key is well-formed.
-            if (_serviceProfilerContext.AppInsightsInstrumentationKey == Guid.Empty)
-            {
-                _logger.LogError("Instrumentation key is not set or malformed in the connection string. Application Insights Profiler won't start.");
+                _logger.LogError(connectionStringError + ProfilerWontStartSuffix);
                 Activated(false);
                 return;
             }
@@ -115,7 +106,7 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
         catch (ArgumentNullException ex) when (string.Equals(ex.ParamName, "instrumentationKey", StringComparison.OrdinalIgnoreCase))
         {
             Debug.Fail("You hit the safety net! How could it escape the instrumentation key check?");
-            _logger.LogError(noConnectionStringMessage);
+            _logger.LogError(NoConnectionStringMessage + ProfilerWontStartSuffix);
             Activated(false);
             return;
         }
@@ -135,4 +126,22 @@ internal class ServiceProfilerAgentBootstrap : IServiceProfilerAgentBootstrap
     {
         _bootstrapState.SetProfilerRunning(isRunning);
     }
+
+    private const string ProfilerWontStartSuffix = " Application Insights Profiler won't start.";
+    private const string NoConnectionStringMessage = "No connection string is set.";
+    private const string InstrumentationKeyMessage = "Instrumentation key is not set or malformed in the connection string.";
+
+    /// <summary>
+    /// Maps the connection string validation result to an actionable error message
+    /// describing why the profiler cannot start, or <see langword="null"/> when it is valid.
+    /// </summary>
+    private string? GetConnectionStringConfigurationError() => _serviceProfilerContext.ConnectionStringValidation switch
+    {
+        ConnectionStringValidationResult.Valid => null,
+        ConnectionStringValidationResult.NotConfigured => NoConnectionStringMessage,
+        ConnectionStringValidationResult.Empty => "The connection string is empty.",
+        ConnectionStringValidationResult.InvalidInstrumentationKey => InstrumentationKeyMessage,
+        ConnectionStringValidationResult.Malformed => "The connection string is malformed and could not be parsed. Verify the connection string and that it contains a valid instrumentation key.",
+        _ => "The connection string is invalid.",
+    };
 }

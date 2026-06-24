@@ -177,7 +177,15 @@ internal static class ServiceCollectionExtensions
         services.TryAddSingleton<IEndpointProvider, EndpointProviderMirror>();
 
         services.AddSingleton<IMetadataWriter, MetadataWriter>();
-        services.AddSingleton<IServiceProfilerContext, ServiceProfilerContext>();
+        services.AddSingleton<IServiceProfilerContext>(p =>
+        {
+            TelemetryConfiguration telemetryConfiguration = p.GetRequiredService<TelemetryConfiguration>();
+            return new ServiceProfilerContext(
+                p.GetService<ConnectionString>(),
+                telemetryConfiguration.ConnectionString,
+                p.GetRequiredService<IEndpointProvider>(),
+                p.GetRequiredService<ILogger<ServiceProfilerContext>>());
+        });
 
         services.AddSingleton<INamedPipeClientFactory, NamedPipeClientFactory>();
 
