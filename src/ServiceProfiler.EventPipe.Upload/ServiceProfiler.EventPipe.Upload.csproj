@@ -17,7 +17,6 @@
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     <PackageReference Include="System.Memory.Data" />
     <!--
@@ -29,6 +28,7 @@
     <PackageReference Include="Microsoft.ApplicationInsights" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.Core" />

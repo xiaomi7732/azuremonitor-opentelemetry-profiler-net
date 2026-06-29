@@ -8,11 +8,15 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
     public class UploadContextModelTests
     {
+        private const string IKey = "ed63033b-cd63-4df6-848e-f00772de729f";
+
+        private static string CommonPrefix(DateTimeOffset utcNow) =>
+            $@"--TraceFilePath ""c:\tracefilePath.etl.zip"" --AIInstrumentationKey ""{IKey}"" --SessionId ""{TimestampContract.TimestampToString(utcNow)}"" --StampId ""stampId"" --HostUrl ""https://endpoint/"" --MetadataFilePath ""c:\metadataFilePath.metadata"" --UploadMode ""OnSuccess"" --SerializedSampleFilePath ""c:\sample""";
+
         [Fact]
         public void ShouldOverwriteToStringForCommandLine()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
             var validUploadContext = new UploadContextModel()
@@ -31,7 +35,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -39,8 +43,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldSetPreserveTraceFile()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
             var validUploadContext = new UploadContextModel()
@@ -59,7 +62,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -67,8 +70,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldAllowInsecureSSLCommunication()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
 
             var validUploadContext = new UploadContextModel()
@@ -87,7 +89,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -95,8 +97,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldPassOnRoleNameWhenExists()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             const string roleName = "testRoleName";
             UploadContextModel validUploadContext = new()
@@ -116,7 +117,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --roleName ""{roleName}"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + $@" --PreserveTraceFile true --SkipEndpointCertificateValidation true --RoleName ""{roleName}"" --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -124,8 +125,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotPassOnRoleNameWhenNull()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             UploadContextModel validUploadContext = new()
             {
@@ -144,7 +144,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -152,8 +152,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotPassOnRoleNameWhenEmpty()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             UploadContextModel validUploadContext = new()
             {
@@ -172,7 +171,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -180,8 +179,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldPassOnTriggerTypeWhenExists()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             const string trigger = "HighCPU";
             UploadContextModel validUploadContext = new UploadContextModel()
@@ -201,7 +199,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --trigger ""{trigger}"" --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + $@" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TriggerType ""{trigger}"" --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -209,8 +207,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotPassOnTriggerTypeWhenNull()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             UploadContextModel validUploadContext = new UploadContextModel()
             {
@@ -229,7 +226,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }
@@ -237,8 +234,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [Fact]
         public void ShouldNotPassOnTriggerTypeWhenEmpty()
         {
-            Guid iKey = Guid.Parse("ed63033b-cd63-4df6-848e-f00772de729f");
-            Guid dataCube = Guid.Parse("33a5a798-8489-4467-97d3-b35870fed1b3");
+            Guid iKey = Guid.Parse(IKey);
             DateTimeOffset utcNow = DateTimeOffset.UtcNow;
             UploadContextModel validUploadContext = new()
             {
@@ -257,7 +253,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             };
             string commandLine = validUploadContext.ToString();
 
-            string expectedCommandLine = $@"-t ""c:\tracefilePath.etl.zip"" -i ed63033b-cd63-4df6-848e-f00772de729f --sessionId ""{TimestampContract.TimestampToString(utcNow)}"" -s ""stampId"" --host https://endpoint/ --metadata ""c:\metadataFilePath.metadata"" --uploadMode ""OnSuccess"" --sampleActivityFilePath ""c:\sample"" --preserve --insecure --traceFileFormat ""Netperf""";
+            string expectedCommandLine = CommonPrefix(utcNow) + @" --PreserveTraceFile true --SkipEndpointCertificateValidation true --TraceFileFormat ""Netperf""";
 
             Assert.Equal(expectedCommandLine, commandLine);
         }

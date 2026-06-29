@@ -1,26 +1,11 @@
 using System;
+using System.Text;
 using Microsoft.ServiceProfiler.Contract.Agent;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 
 internal class UploadContextModel
 {
-    private const char InstrumentationKeyShortKeyName = 'i';
-    private const string EndpointKeyName = "host";
-    private const string SessionIdKeyName = "sessionId";
-    private const char StampIdShortKeyName = 's';
-    private const char TraceFilePathShortKeyName = 't';
-    private const string MetadataFilePathKeyName = "metadata";
-    private const string PreserveTraceFileKeyName = "preserve";
-    private const string SkipEndpointCertificateValidationKeyName = "insecure";
-    private const string UploadModeKeyName = "uploadMode";
-    private const string SampleActivityFilePathKeyName = "sampleActivityFilePath";
-    private const string PipeNameKeyName = "pipeName";
-    private const string RoleNameKeyName = "roleName";
-    private const string TriggerTypeKeyName = "trigger";
-    private const string TraceFileFormatKeyName = "traceFileFormat";
-
-
     public Guid AIInstrumentationKey { get; init; }
 
     public Uri HostUrl { get; init; } = null!;
@@ -51,38 +36,48 @@ internal class UploadContextModel
 
     public override string ToString()
     {
-        // TODO: Treat this as a method to serialize the parameters before passing it on to the uploader.
-        // The issue is: The uploader uses CommandOptions to sort of deserializing the parameters.
-        // This is somewhat awkward because of the mismatch between the serializer and the deserializer.
-        string argumentLine = $@"-{TraceFilePathShortKeyName} ""{TraceFilePath}"" -{InstrumentationKeyShortKeyName} {AIInstrumentationKey} --{SessionIdKeyName} ""{TimestampContract.TimestampToString(SessionId)}"" -{StampIdShortKeyName} ""{StampId}"" --{EndpointKeyName} {HostUrl} --{MetadataFilePathKeyName} ""{MetadataFilePath}"" --{UploadModeKeyName} ""{UploadMode}"" --{SampleActivityFilePathKeyName} ""{SerializedSampleFilePath}""";
+        // Serializes the parameters into a command line that the Uploader binds back
+        // into its own context via Microsoft.Extensions.Configuration.CommandLine.
+        // Keys intentionally match the Uploader's UploadContext property names so the
+        // configuration binder can map them directly (no third-party parser needed).
+        StringBuilder builder = new();
+
+        builder.Append($@"--{nameof(TraceFilePath)} ""{TraceFilePath}""");
+        builder.Append($@" --{nameof(AIInstrumentationKey)} ""{AIInstrumentationKey}""");
+        builder.Append($@" --{nameof(SessionId)} ""{TimestampContract.TimestampToString(SessionId)}""");
+        builder.Append($@" --{nameof(StampId)} ""{StampId}""");
+        builder.Append($@" --{nameof(HostUrl)} ""{HostUrl}""");
+        builder.Append($@" --{nameof(MetadataFilePath)} ""{MetadataFilePath}""");
+        builder.Append($@" --{nameof(UploadMode)} ""{UploadMode}""");
+        builder.Append($@" --{nameof(SerializedSampleFilePath)} ""{SerializedSampleFilePath}""");
 
         if (!string.IsNullOrEmpty(PipeName))
         {
-            argumentLine += $@" --{PipeNameKeyName} ""{PipeName}""";
+            builder.Append($@" --{nameof(PipeName)} ""{PipeName}""");
         }
 
         if (PreserveTraceFile)
         {
-            argumentLine += $" --{PreserveTraceFileKeyName}";
+            builder.Append($" --{nameof(PreserveTraceFile)} true");
         }
 
         if (SkipEndpointCertificateValidation)
         {
-            argumentLine += $" --{SkipEndpointCertificateValidationKeyName}";
+            builder.Append($" --{nameof(SkipEndpointCertificateValidation)} true");
         }
 
         if (!string.IsNullOrEmpty(RoleName))
         {
-            argumentLine += $@" --{RoleNameKeyName} ""{RoleName}""";
+            builder.Append($@" --{nameof(RoleName)} ""{RoleName}""");
         }
 
         if (!string.IsNullOrEmpty(TriggerType))
         {
-            argumentLine += $@" --{TriggerTypeKeyName} ""{TriggerType}""";
+            builder.Append($@" --{nameof(TriggerType)} ""{TriggerType}""");
         }
 
-        argumentLine += $@" --{TraceFileFormatKeyName} ""{TraceFileFormat}""";
+        builder.Append($@" --{nameof(TraceFileFormat)} ""{TraceFileFormat}""");
 
-        return argumentLine;
+        return builder.ToString();
     }
 }
