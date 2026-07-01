@@ -14,7 +14,15 @@ The site extension stages three cooperating pieces and sets three environment va
 | Component | Assembly | Env var | Role |
 |---|---|---|---|
 | Resolver hook | `Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll` | `DOTNET_STARTUP_HOOKS` | Runs before `Main`; installs an `AssemblyLoadContext.Resolving` fallback so the staged payload (which is not on the app's probing path) is loadable. Only fills gaps — the app's own assemblies always win. |
-| Activation | `Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll` | `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` | Detects the telemetry stack (from the app's own `*.deps.json`) and calls `AddAzureMonitorProfiler()` (OpenTelemetry) or `AddServiceProfiler()` (classic Application Insights). Both/neither present → logs an error and enables nothing. |
+| Activation | `Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll` | `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` | Detects the telemetry stack from the app's own `*.deps.json` and calls `AddAzureMonitorProfiler()` (OpenTelemetry) or `AddServiceProfiler()` (classic Application Insights). |
+
+**Detection is intent-based** (the top-level integration package, with precedence), because the classic
+Application Insights ASP.NET Core SDK (2.22+) transitively pulls in the OpenTelemetry SDK, so a naive
+"is OpenTelemetry present" check would misclassify a classic app. Order:
+1. `Azure.Monitor.OpenTelemetry.AspNetCore` (distro) → OpenTelemetry.
+2. `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` → Application Insights.
+3. Any `OpenTelemetry*` package → OpenTelemetry.
+4. Otherwise → nothing enabled.
 | Uploader | `Microsoft.ApplicationInsights.Profiler.Uploader.dll` | `SP_UPLOADER_PATH` | The out-of-proc trace uploader the profiler launches to upload captured traces. |
 
 The connection string is taken from the application's existing `APPLICATIONINSIGHTS_CONNECTION_STRING`
@@ -68,6 +76,20 @@ payload produces:
 
 The full profiler DI pipeline then loads and initializes — end-to-end codeless activation, with **no
 code change** to the application.
+
+## Profiler support: OpenTelemetry vs classic Application Insights
+
+The package **bundles both profiler stacks** and routes to the one matching the app:
+
+- **OpenTelemetry** (`AddAzureMonitorProfiler`): **verified end-to-end** — the profiler activates and its
+  full pipeline initializes with no code change.
+- **Classic Application Insights SDK** (`AddServiceProfiler`): **detection and routing are verified** —
+  a classic app is correctly identified and the classic profiler is enabled. Full classic activation on
+  **.NET 10** currently hits an Application Insights SDK wiring issue in the codeless/early-injection
+  context (`TelemetryConfiguration` is not resolvable for the profiler's `AuthTokenProvider`; calling
+  `AddApplicationInsightsTelemetry()` from the HostingStartup does not register it and interacts with the
+  app's own call). The classic SDK also only supports `[2.23.0, 3.0.0)` — apps on Application Insights
+  SDK 3.x are out of range. Full classic-path activation is a follow-up item.
 
 ## Known limitations (POC)
 
