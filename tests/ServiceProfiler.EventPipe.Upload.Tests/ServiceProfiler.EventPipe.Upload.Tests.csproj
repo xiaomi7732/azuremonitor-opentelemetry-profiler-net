@@ -23,6 +23,16 @@
     <ProjectReference Include="..\..\src\ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj" />
   </ItemGroup>
 
+  <!--
+    Compile the real agent-side producer (UploadContextModel) into the test assembly so the round-trip
+    test drives the actual UploadContextModel.ToString() rather than a hand-built command line. The
+    uploader assembly deliberately does not reference it (it is a producer-only type), so it is linked
+    here the same way the uploader links other shared source files.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Microsoft.ApplicationInsights.Profiler.Shared\Contracts\UploadContextModel.cs" Link="Contracts\UploadContextModel.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
