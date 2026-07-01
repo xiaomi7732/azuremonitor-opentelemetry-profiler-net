@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!--
+  Azure App Service (Windows) applicationHost.xdt for the codeless Azure Monitor OpenTelemetry Profiler.
+  On install, Kudu applies this transform against applicationHost.config and replaces the platform
+  tokens (%XDT_EXTENSIONPATH% = this extension's install folder). It injects three environment
+  variables into the application's worker process:
+
+    * DOTNET_STARTUP_HOOKS               -> a tiny resolver hook that makes the staged payload loadable.
+    * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the unified HostingStartup that detects the telemetry stack
+                                            and enables the matching profiler.
+    * SP_UPLOADER_PATH                    -> the out-of-proc trace uploader shipped in the payload.
+-->
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
+
+        <add name="DOTNET_STARTUP_HOOKS"
+             value="%XDT_EXTENSIONPATH%\payload\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+
+        <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
+             value="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
+             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+
+        <add name="SP_UPLOADER_PATH"
+             value="%XDT_EXTENSIONPATH%\payload\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
+             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
+</configuration>

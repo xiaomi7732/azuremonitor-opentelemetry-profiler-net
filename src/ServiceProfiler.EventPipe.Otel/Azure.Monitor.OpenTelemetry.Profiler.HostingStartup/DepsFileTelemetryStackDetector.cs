@@ -2,16 +2,21 @@
 // Licensed under the MIT license.
 
 using System.Reflection;
-using System.Text.Json;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 
 /// <summary>
 /// Detects the telemetry stack by inspecting the host application's own <c>*.deps.json</c> file.
 /// This reflects the packages the developer chose to reference and is unaffected by the profiler
-/// assemblies we bundle alongside it (those live in a separate additional-deps file), so it cleanly
-/// distinguishes the app's telemetry choice from our payload.
+/// assemblies we bundle alongside it (those live in a separate folder), so it cleanly distinguishes the
+/// app's telemetry choice from our payload.
 /// </summary>
+/// <remarks>
+/// The detection deliberately performs a lightweight text scan instead of parsing with
+/// <c>System.Text.Json</c>. This code runs extremely early (while the host is being built) and must not
+/// force-load a specific <c>System.Text.Json</c> version - the bundled profiler stack may reference a
+/// newer version than the target application, which would fail to bind at this point.
+/// </remarks>
 internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
 {
     private readonly Func<string?> _depsFilePathProvider;
@@ -48,43 +53,16 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     }
 
     /// <summary>
-    /// Parses a <c>.deps.json</c> document and classifies the telemetry stack from the referenced
-    /// package names under <c>libraries</c>.
+    /// Classifies the telemetry stack from the package names referenced in a <c>.deps.json</c> document
+    /// using a dependency-free text scan.
     /// </summary>
     internal static TelemetryStack DetectFromDepsJson(string depsJson)
     {
-        bool hasOpenTelemetry = false;
-        bool hasApplicationInsights = false;
+        bool hasOpenTelemetry =
+            ContainsPackageToken(depsJson, "OpenTelemetry")
+            || ContainsPackageToken(depsJson, "Azure.Monitor.OpenTelemetry");
 
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(depsJson);
-            if (document.RootElement.TryGetProperty("libraries", out JsonElement libraries)
-                && libraries.ValueKind == JsonValueKind.Object)
-            {
-                foreach (JsonProperty library in libraries.EnumerateObject())
-                {
-                    // Keys look like "OpenTelemetry/1.9.0" or "Microsoft.ApplicationInsights.AspNetCore/2.22.0".
-                    string name = library.Name;
-                    int separator = name.IndexOf('/');
-                    string package = separator >= 0 ? name.Substring(0, separator) : name;
-
-                    if (IsOpenTelemetryPackage(package))
-                    {
-                        hasOpenTelemetry = true;
-                    }
-                    else if (IsApplicationInsightsPackage(package))
-                    {
-                        hasApplicationInsights = true;
-                    }
-                }
-            }
-        }
-        catch (JsonException ex)
-        {
-            BootstrapLog.Error("Failed to parse the application's .deps.json; treating telemetry stack as undetected.", ex);
-            return TelemetryStack.None;
-        }
+        bool hasApplicationInsights = ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights");
 
         return (hasOpenTelemetry, hasApplicationInsights) switch
         {
@@ -95,12 +73,13 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
         };
     }
 
-    private static bool IsOpenTelemetryPackage(string package) =>
-        package.StartsWith("OpenTelemetry", StringComparison.OrdinalIgnoreCase)
-        || package.StartsWith("Azure.Monitor.OpenTelemetry", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsApplicationInsightsPackage(string package) =>
-        package.StartsWith("Microsoft.ApplicationInsights", StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Returns true when the document contains a quoted JSON token that begins with the given package
+    /// name (a library key such as <c>"OpenTelemetry/1.9.0"</c> or a dependency reference such as
+    /// <c>"OpenTelemetry.Api"</c>).
+    /// </summary>
+    private static bool ContainsPackageToken(string depsJson, string package) =>
+        depsJson.IndexOf("\"" + package, StringComparison.OrdinalIgnoreCase) >= 0;
 
     private static string? GetEntryAssemblyDepsPath()
     {
