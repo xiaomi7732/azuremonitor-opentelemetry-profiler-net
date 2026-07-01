@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup</AssemblyName>
+    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <!-- This is a codeless-injection assembly, not part of the public API surface. -->
+    <IsPackable>false</IsPackable>
+    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.Tests" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
+  </ItemGroup>
+
+  <!-- Both profiler stacks are bundled so the unified HostingStartup can route to whichever the app uses. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
+    <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Hosting" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+</Project>
