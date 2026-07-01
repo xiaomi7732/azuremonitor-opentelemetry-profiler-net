@@ -22,7 +22,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services;
 /// <see cref="DiagnosticsClient"/> lease API. The underlying client is created lazily so
 /// the instrumentation key / endpoint are resolved at first use.
 /// </summary>
-internal sealed class DiagnosticsProfilerLeaseClient : IProfilerLeaseClient
+internal class DiagnosticsProfilerLeaseClient : IProfilerLeaseClient
 {
     private const string LeaseNamespace = LeaseNamespaces.Profiler;
 
@@ -59,19 +59,46 @@ internal sealed class DiagnosticsProfilerLeaseClient : IProfilerLeaseClient
     }
 
     public Task<Guid> AcquireAsync(TimeSpan duration, IReadOnlyDictionary<string, string> metadata, CancellationToken cancellationToken)
-        => _diagnosticsClient.Value.AcquireLeaseAsync(_iKey.Value, LeaseNamespace, duration, metadata, cancellationToken);
+        => TranslateLeaseLostAsync(AcquireCoreAsync(duration, metadata, cancellationToken));
 
     public Task RenewAsync(Guid leaseId, CancellationToken cancellationToken)
-        => TranslateLeaseLostAsync(_diagnosticsClient.Value.RenewLeaseAsync(_iKey.Value, LeaseNamespace, leaseId, cancellationToken));
+        => TranslateLeaseLostAsync(RenewCoreAsync(leaseId, cancellationToken));
 
     public Task ReleaseAsync(Guid leaseId, CancellationToken cancellationToken)
-        => TranslateLeaseLostAsync(_diagnosticsClient.Value.ReleaseLeaseAsync(_iKey.Value, LeaseNamespace, leaseId, cancellationToken));
+        => TranslateLeaseLostAsync(ReleaseCoreAsync(leaseId, cancellationToken));
+
+    // Raw calls into the underlying SDK, isolated as an overridable seam so the 409 -> typed-exception
+    // translation can be unit-tested without a live backend.
+    internal virtual Task<Guid> AcquireCoreAsync(TimeSpan duration, IReadOnlyDictionary<string, string> metadata, CancellationToken cancellationToken)
+        => _diagnosticsClient.Value.AcquireLeaseAsync(_iKey.Value, LeaseNamespace, duration, metadata, cancellationToken);
+
+    internal virtual Task RenewCoreAsync(Guid leaseId, CancellationToken cancellationToken)
+        => _diagnosticsClient.Value.RenewLeaseAsync(_iKey.Value, LeaseNamespace, leaseId, cancellationToken);
+
+    internal virtual Task ReleaseCoreAsync(Guid leaseId, CancellationToken cancellationToken)
+        => _diagnosticsClient.Value.ReleaseLeaseAsync(_iKey.Value, LeaseNamespace, leaseId, cancellationToken);
 
     /// <summary>
-    /// Unlike acquire, the underlying client surfaces a lost/expired lease (HTTP 409) on renew/release
-    /// as a generic <see cref="RequestFailedException"/>. Translate it to <see cref="LeaseUnavailableException"/>
-    /// so callers can distinguish "lease lost" from transient errors.
+    /// Translates a cap-reached / lost-lease response (HTTP 409) surfaced as a generic
+    /// <see cref="RequestFailedException"/> into a typed <see cref="LeaseUnavailableException"/> so callers
+    /// can distinguish "cap reached / lease lost" from transient errors.
+    /// The underlying client already throws <see cref="LeaseUnavailableException"/> directly for a 409 on
+    /// acquire, but surfaces it as a generic <see cref="RequestFailedException"/> on renew/release; acquire
+    /// is routed through here too so a single, symmetric contract holds regardless of that asymmetry (and is
+    /// a no-op when the SDK already throws the typed exception).
     /// </summary>
+    private static async Task<T> TranslateLeaseLostAsync<T>(Task<T> operation)
+    {
+        try
+        {
+            return await operation.ConfigureAwait(false);
+        }
+        catch (RequestFailedException ex) when (ex.Status == (int)System.Net.HttpStatusCode.Conflict)
+        {
+            throw new LeaseUnavailableException("The lease is unavailable.", ex);
+        }
+    }
+
     private static async Task TranslateLeaseLostAsync(Task operation)
     {
         try
