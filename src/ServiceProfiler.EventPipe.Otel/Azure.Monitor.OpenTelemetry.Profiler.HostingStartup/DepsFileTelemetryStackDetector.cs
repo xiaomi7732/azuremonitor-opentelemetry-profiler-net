@@ -56,21 +56,36 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     /// Classifies the telemetry stack from the package names referenced in a <c>.deps.json</c> document
     /// using a dependency-free text scan.
     /// </summary>
+    /// <remarks>
+    /// Detection is by the top-level integration package the developer added, with precedence, because
+    /// the classic Application Insights ASP.NET Core SDK (2.22+) transitively pulls in the OpenTelemetry
+    /// SDK (via <c>Azure.Monitor.OpenTelemetry.Exporter</c>). "OpenTelemetry is present" alone therefore
+    /// does not imply the app uses OpenTelemetry for its telemetry.
+    /// </remarks>
     internal static TelemetryStack DetectFromDepsJson(string depsJson)
     {
-        bool hasOpenTelemetry =
-            ContainsPackageToken(depsJson, "OpenTelemetry")
-            || ContainsPackageToken(depsJson, "Azure.Monitor.OpenTelemetry");
-
-        bool hasApplicationInsights = ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights");
-
-        return (hasOpenTelemetry, hasApplicationInsights) switch
+        // 1. Explicit Azure Monitor OpenTelemetry distro. It does not reference the classic ASP.NET Core
+        //    SDK, so its presence is an unambiguous OpenTelemetry signal.
+        if (ContainsPackageToken(depsJson, "Azure.Monitor.OpenTelemetry.AspNetCore"))
         {
-            (true, false) => TelemetryStack.OpenTelemetry,
-            (false, true) => TelemetryStack.ApplicationInsights,
-            (true, true) => TelemetryStack.Both,
-            _ => TelemetryStack.None,
-        };
+            return TelemetryStack.OpenTelemetry;
+        }
+
+        // 2. Classic Application Insights SDK integration package (ASP.NET Core or Worker Service). Takes
+        //    precedence over the generic OpenTelemetry check below, which it pulls in transitively.
+        if (ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights.AspNetCore")
+            || ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights.WorkerService"))
+        {
+            return TelemetryStack.ApplicationInsights;
+        }
+
+        // 3. Manual OpenTelemetry setup (SDK / hosting) without either distro or the classic SDK.
+        if (ContainsPackageToken(depsJson, "OpenTelemetry"))
+        {
+            return TelemetryStack.OpenTelemetry;
+        }
+
+        return TelemetryStack.None;
     }
 
     /// <summary>

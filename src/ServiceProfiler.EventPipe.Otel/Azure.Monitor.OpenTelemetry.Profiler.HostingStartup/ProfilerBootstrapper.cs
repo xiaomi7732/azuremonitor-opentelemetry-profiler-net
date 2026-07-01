@@ -64,7 +64,14 @@ public sealed class ProfilerBootstrapper : IHostingStartup
 
             case TelemetryStack.ApplicationInsights:
                 BootstrapLog.Info("Detected the Application Insights SDK. Enabling the classic Application Insights profiler.");
-                builder.ConfigureServices(services => services.AddServiceProfiler());
+                builder.ConfigureServices(services =>
+                {
+                    // Mirror the classic HostingStartup (HostingStartup30): ensure the Application Insights
+                    // telemetry pipeline the profiler depends on is present, then add the profiler. Both
+                    // calls are idempotent.
+                    services.AddApplicationInsightsTelemetry();
+                    services.AddServiceProfiler();
+                });
                 break;
 
             case TelemetryStack.Both:

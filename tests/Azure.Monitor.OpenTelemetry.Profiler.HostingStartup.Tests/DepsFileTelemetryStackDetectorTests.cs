@@ -12,15 +12,21 @@ public class DepsFileTelemetryStackDetectorTests
         """;
 
     private const string AzureMonitorDistroDeps = """
-        { "libraries": { "SampleApp/1.0.0": {}, "Azure.Monitor.OpenTelemetry.AspNetCore/1.2.0": {} } }
+        { "libraries": { "SampleApp/1.0.0": {}, "Azure.Monitor.OpenTelemetry.AspNetCore/1.2.0": {}, "OpenTelemetry/1.9.0": {} } }
         """;
 
     private const string ApplicationInsightsDeps = """
         { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.22.0": {}, "Microsoft.ApplicationInsights/2.22.0": {} } }
         """;
 
-    private const string BothDeps = """
-        { "libraries": { "OpenTelemetry/1.9.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.22.0": {} } }
+    // The classic AI ASP.NET Core SDK (2.22+) transitively pulls in the OpenTelemetry SDK; this must
+    // still be classified as ApplicationInsights, not Both.
+    private const string ClassicWithTransitiveOTelDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.23.0": {}, "Azure.Monitor.OpenTelemetry.Exporter/1.8.0": {}, "OpenTelemetry/1.15.3": {}, "OpenTelemetry.Extensions.Hosting/1.15.3": {} } }
+        """;
+
+    private const string WorkerServiceDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.WorkerService/2.23.0": {}, "OpenTelemetry/1.15.3": {} } }
         """;
 
     private const string NeitherDeps = """
@@ -31,7 +37,8 @@ public class DepsFileTelemetryStackDetectorTests
     [InlineData(OpenTelemetryDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(AzureMonitorDistroDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(ApplicationInsightsDeps, TelemetryStack.ApplicationInsights)]
-    [InlineData(BothDeps, TelemetryStack.Both)]
+    [InlineData(ClassicWithTransitiveOTelDeps, TelemetryStack.ApplicationInsights)]
+    [InlineData(WorkerServiceDeps, TelemetryStack.ApplicationInsights)]
     [InlineData(NeitherDeps, TelemetryStack.None)]
     internal void DetectFromDepsJson_ClassifiesStack(string depsJson, TelemetryStack expected)
     {
