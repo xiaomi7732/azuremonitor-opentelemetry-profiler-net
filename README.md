@@ -23,8 +23,8 @@ Choose the path that matches your project:
 | SDK | Path |
 |-----|------|
 | **Azure Monitor OpenTelemetry distro** (`Azure.Monitor.OpenTelemetry.AspNetCore`) | [Option A](#option-a-azure-monitor-opentelemetry-distro) |
-| **Application Insights SDK for ASP.NET Core v3.x** (`Microsoft.ApplicationInsights.AspNetCore` package v3.x — an OpenTelemetry-based release) | [Option B](#option-b-application-insights-sdk-for-aspnet-core-v3x-experimental) |
-| **Application Insights SDK for ASP.NET Core v2.x** (classic, non-OpenTelemetry `Microsoft.ApplicationInsights.AspNetCore` package v2.x) | Use [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead |
+| **Application Insights SDK for ASP.NET Core** (`Microsoft.ApplicationInsights.AspNetCore`, current OpenTelemetry-based release) | [Option B](#option-b-application-insights-sdk-for-aspnet-core-experimental) |
+| **Application Insights SDK for ASP.NET Core — classic 2.x** (legacy, non-OpenTelemetry release) | Use [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead |
 
 ---
 
@@ -116,17 +116,17 @@ Assuming you are building an **ASP.NET Core application**:
 
 ---
 
-### Option B: Application Insights SDK for ASP.NET Core v3.x (Experimental)
+### Option B: Application Insights SDK for ASP.NET Core (Experimental)
 
 > ⚠️ **Experimental** — This integration is under active development. Please [report any issues](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/issues/new) you encounter.
 
-The `Microsoft.ApplicationInsights.AspNetCore` **package v3.x** (the SDK version — not the ASP.NET Core framework version) is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler **without** adding `Azure.Monitor.OpenTelemetry.AspNetCore` or calling `UseAzureMonitor()`.
+The current `Microsoft.ApplicationInsights.AspNetCore` SDK is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler **without** adding `Azure.Monitor.OpenTelemetry.AspNetCore` or calling `UseAzureMonitor()`.
 
 #### Prerequisites
 
 - **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
 - **Application Insights Resource**: Follow [this guide](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource) to create a new Application Insights resource.
-- **Application Insights SDK for ASP.NET Core v3.x**: Your project must reference the [`Microsoft.ApplicationInsights.AspNetCore`](https://www.nuget.org/packages/Microsoft.ApplicationInsights.AspNetCore/) package version **3.x or later** (this is the NuGet package version, not the .NET framework version).
+- **Application Insights SDK for ASP.NET Core**: Your project must reference the current OpenTelemetry-based [`Microsoft.ApplicationInsights.AspNetCore`](https://www.nuget.org/packages/Microsoft.ApplicationInsights.AspNetCore/) SDK. The legacy classic 2.x release is not supported by this profiler — use [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead.
 
 #### Walkthrough
 
@@ -229,7 +229,7 @@ If you're still experiencing issues, please [open an issue](https://github.com/A
 Learn more by following the examples:
 
 - [Azure Monitor OpenTelemetry Distro + Profiler (ASP.NET Core WebAPI)](./examples/aspnetcore-webapi) — for [Option A](#option-a-azure-monitor-opentelemetry-distro)
-- [Application Insights SDK for ASP.NET Core v3.x + Profiler](./examples/aspnetcore-aisdk3) — for [Option B](#option-b-application-insights-sdk-for-aspnet-core-v3x-experimental)
+- [Application Insights SDK for ASP.NET Core + Profiler](./examples/aspnetcore-aisdk3) — for [Option B](#option-b-application-insights-sdk-for-aspnet-core-experimental)
 
 ## Contributing
 
