@@ -38,16 +38,7 @@ This mirrors the profiler's [supported-SDK matrix](../../../README.md): the curr
 OpenTelemetry profiler; the legacy classic 2.x line uses the classic Application Insights profiler that
 this repo also builds (`Microsoft.ApplicationInsights.Profiler.AspNetCore`).
 
-### Coexistence and scoping (applicationHost.xdt)
-
-The `applicationHost.xdt` sets the three environment variables on the **main site's application pool
-only** (`system.applicationHost/applicationPools/add name="%XDT_SITENAME%"`), *not* the global
-`system.webServer/runtime` section. This deliberately keeps them off the **SCM/Kudu application pool**
-(`~1<sitename>`): because `DOTNET_STARTUP_HOOKS` is a file-path hook honored by any .NET-Core process, a
-global value would make the .NET-Core Kudu worker load (and memory-map/lock) `StartupHook.dll` from the
-extension folder — and since Kudu performs the extension upgrade, it then cannot overwrite a file it has
-loaded, breaking upgrades with *"The process cannot access the file … because it is being used by another
-process."* Scoping to the app pool ensures only the app worker loads the payload.
+### Coexistence (applicationHost.xdt append + de-dup)
 
 `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` and `DOTNET_STARTUP_HOOKS` are semicolon-separated lists that other
 agents also write — most notably the **Application Insights auto-instrumentation agent**. The transform
@@ -56,20 +47,31 @@ uses a custom `AppendListValueIfMissing` transform (shipped as
 **de-duplicates** it (so re-installs/restarts don't accumulate duplicates), rather than the built-in
 `InsertIfMissing` which would be skipped when the variable already exists.
 
-### Upgrading / uninstalling
+The variables are set under the global `system.webServer/runtime` section, so they apply to every worker
+on the site. Scoping them to the main app pool only (`system.applicationHost/applicationPools`) is **not
+honored by App Service's site-extension XDT engine** (verified — it applies to neither pool), so the
+global section must be used.
 
-Because the app worker loads the payload DLLs from the extension folder, those files are locked while the
-app is running. **Stop the app before upgrading or uninstalling the extension**, then start it again:
+### Upgrading / uninstalling (important)
+
+Because `DOTNET_STARTUP_HOOKS` is global, both the app worker **and** the .NET-Core SCM/Kudu worker load
+`StartupHook.dll` from the extension folder and memory-map (lock) it. Since Kudu performs the extension
+upgrade, it cannot overwrite a DLL it has loaded, so an in-place upgrade/uninstall fails with *"The
+process cannot access the file … because it is being used by another process."*
+
+To upgrade or uninstall, **recycle both the app and the SCM/Kudu site** so the locks release, then perform
+the operation:
 
 ```powershell
-az webapp stop  -g <rg> -n <site>
-# upgrade / uninstall the extension
+az webapp stop  -g <rg> -n <site>          # stop the app worker
+# recycle Kudu too (e.g. restart the site / kill the ~1 SCM w3wp via Kudu) so it releases StartupHook.dll
+# then upgrade or uninstall the extension, and:
 az webapp start -g <rg> -n <site>
 ```
 
-With the app-pool scoping above, the SCM/Kudu worker no longer holds a lock, so stopping the app is
-sufficient. (A fully in-place, no-stop upgrade would additionally require loading the payload from a
-versioned shadow copy outside the extension folder — a possible future enhancement.)
+A fully in-place, no-recycle upgrade would require loading the payload from a versioned shadow copy
+**outside** the extension folder (so the extension folder is never locked). That is the recommended
+future enhancement; the current POC accepts the recycle-before-upgrade constraint.
 
 ## Building the package
 

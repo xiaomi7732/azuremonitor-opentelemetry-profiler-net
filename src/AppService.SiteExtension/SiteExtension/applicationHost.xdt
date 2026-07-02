@@ -2,17 +2,9 @@
 <!--
   Azure App Service (Windows) applicationHost.xdt for the codeless Azure Monitor OpenTelemetry Profiler.
   On install, Kudu applies this transform against applicationHost.config and replaces the platform
-  tokens (%XDT_EXTENSIONPATH% = this extension's install folder; %XDT_SITENAME% = the site name).
+  tokens (%XDT_EXTENSIONPATH% = this extension's install folder). It injects three environment variables
+  into the application's worker process:
 
-  IMPORTANT: the environment variables are scoped to the MAIN site's application pool
-  (system.applicationHost/applicationPools/add name="%XDT_SITENAME%"), NOT the global
-  system.webServer/runtime section. This deliberately keeps them off the SCM/Kudu application pool
-  ("~1<sitename>"). If DOTNET_STARTUP_HOOKS were global, the .NET-Core Kudu worker would also load our
-  StartupHook.dll from the extension folder and memory-map (lock) it - and since Kudu performs the
-  extension upgrade, it could not overwrite a file it had loaded, breaking upgrades with
-  "The process cannot access the file ... because it is being used by another process".
-
-  It injects three environment variables into the application's worker process:
     * DOTNET_STARTUP_HOOKS               -> a tiny resolver hook that makes the staged payload loadable.
     * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the HostingStartup that detects the telemetry stack and
                                             enables the matching profiler.
@@ -21,32 +13,44 @@
   The two list-valued variables use the custom AppendListValueIfMissing transform so our value is
   APPENDED (semicolon-separated) and de-duplicated, letting the extension coexist with other agents that
   set the same variables (e.g. the Application Insights auto-instrumentation agent).
+
+  NOTE: these are set under the global system.webServer/runtime section, so they apply to every worker
+  on the site - including the SCM/Kudu pool. Scoping them to the main app pool
+  (system.applicationHost/applicationPools) is NOT honored by App Service's site-extension XDT engine
+  (verified: it applies to neither pool), so the global section is used. A consequence is that the
+  .NET-Core Kudu worker also loads StartupHook.dll and locks it, so the app AND the SCM site must be
+  recycled before upgrading/uninstalling the extension (see README).
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
   <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
               namespace="Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms" />
 
-  <system.applicationHost>
-    <applicationPools>
-      <!-- Target the main site's application pool only (its name is the site name); the SCM pool is
-           "~1<sitename>" and therefore is not matched. -->
-      <add name="%XDT_SITENAME%" xdt:Locator="Match(name)">
-        <environmentVariables xdt:Transform="InsertIfMissing">
+  <!-- Ensure the environmentVariables container exists before the value transforms run. -->
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
 
-          <add name="DOTNET_STARTUP_HOOKS"
-               value="%XDT_EXTENSIONPATH%\payload\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
-               xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
+  <!-- Set / append the profiler environment variables. -->
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
 
-          <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
-               value="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
-               xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
+        <add name="DOTNET_STARTUP_HOOKS"
+             value="%XDT_EXTENSIONPATH%\payload\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
-          <add name="SP_UPLOADER_PATH"
-               value="%XDT_EXTENSIONPATH%\payload\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
-               xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+        <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
+             value="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
-        </environmentVariables>
-      </add>
-    </applicationPools>
-  </system.applicationHost>
+        <add name="SP_UPLOADER_PATH"
+             value="%XDT_EXTENSIONPATH%\payload\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
+             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
 </configuration>
