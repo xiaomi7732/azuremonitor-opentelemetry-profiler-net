@@ -38,14 +38,38 @@ This mirrors the profiler's [supported-SDK matrix](../../../README.md): the curr
 OpenTelemetry profiler; the legacy classic 2.x line uses the classic Application Insights profiler that
 this repo also builds (`Microsoft.ApplicationInsights.Profiler.AspNetCore`).
 
-### Coexistence with other agents (XDT append + de-dup)
+### Coexistence and scoping (applicationHost.xdt)
 
-`ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` and `DOTNET_STARTUP_HOOKS` are semicolon-separated lists that
-other agents also write — most notably the **Application Insights auto-instrumentation agent**. The
-`applicationHost.xdt` therefore uses a custom `AppendListValueIfMissing` transform (shipped as
+The `applicationHost.xdt` sets the three environment variables on the **main site's application pool
+only** (`system.applicationHost/applicationPools/add name="%XDT_SITENAME%"`), *not* the global
+`system.webServer/runtime` section. This deliberately keeps them off the **SCM/Kudu application pool**
+(`~1<sitename>`): because `DOTNET_STARTUP_HOOKS` is a file-path hook honored by any .NET-Core process, a
+global value would make the .NET-Core Kudu worker load (and memory-map/lock) `StartupHook.dll` from the
+extension folder — and since Kudu performs the extension upgrade, it then cannot overwrite a file it has
+loaded, breaking upgrades with *"The process cannot access the file … because it is being used by another
+process."* Scoping to the app pool ensures only the app worker loads the payload.
+
+`ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` and `DOTNET_STARTUP_HOOKS` are semicolon-separated lists that other
+agents also write — most notably the **Application Insights auto-instrumentation agent**. The transform
+uses a custom `AppendListValueIfMissing` transform (shipped as
 `Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll`) that **appends** our value and
 **de-duplicates** it (so re-installs/restarts don't accumulate duplicates), rather than the built-in
 `InsertIfMissing` which would be skipped when the variable already exists.
+
+### Upgrading / uninstalling
+
+Because the app worker loads the payload DLLs from the extension folder, those files are locked while the
+app is running. **Stop the app before upgrading or uninstalling the extension**, then start it again:
+
+```powershell
+az webapp stop  -g <rg> -n <site>
+# upgrade / uninstall the extension
+az webapp start -g <rg> -n <site>
+```
+
+With the app-pool scoping above, the SCM/Kudu worker no longer holds a lock, so stopping the app is
+sufficient. (A fully in-place, no-stop upgrade would additionally require loading the payload from a
+versioned shadow copy outside the extension folder — a possible future enhancement.)
 
 ## Building the package
 
