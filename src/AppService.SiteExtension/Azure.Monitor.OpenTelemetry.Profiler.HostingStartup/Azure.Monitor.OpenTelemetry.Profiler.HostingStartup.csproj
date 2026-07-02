@@ -10,6 +10,14 @@
     <!-- This is a codeless-injection assembly, not part of the public API surface. -->
     <IsPackable>false</IsPackable>
     <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+    <!--
+      Don't centrally pin transitive dependencies for this project. It references the OpenTelemetry
+      profiler projects, whose transitive Microsoft.Diagnostics.NETCore.Client (0.2.621003) is higher
+      than the repo-root central pin (0.2.607501); with transitive pinning on that would be an NU1109
+      downgrade. Disabling it lets the transitive version resolve to what the graph requires, so this
+      folder needs no Directory.Packages.props of its own.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
   <ItemGroup>
