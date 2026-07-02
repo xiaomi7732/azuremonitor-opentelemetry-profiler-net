@@ -12,6 +12,8 @@ The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of
 
 The profiler supports both **random sampling** (periodic snapshots) and **trigger-based profiling** (activated when CPU or memory usage exceeds a threshold). See [CPU Usage Monitoring](./docs/CpuUsageMonitoring.md) and [Memory Usage Monitoring](./docs/MemoryUsageMonitoring.md) for details on triggered profiling.
 
+> 💡 Want help acting on the results? Try [**optix** — Code Optimizations skills for GitHub Copilot](https://github.com/microsoft/code-optimizations-skills) to analyze profiler traces and get AI-assisted optimization suggestions right in your editor.
+
 > ⭐ Not sure which `Profiler Agent` is right for you? Check out our [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) to help you choose the best option for your needs.
 
 ## Get Started
@@ -148,9 +150,7 @@ Assuming you are building an **ASP.NET Core application**:
 
 2. **Enable the Profiler**
 
-    The code differs slightly depending on which version of `Azure.Monitor.OpenTelemetry.Profiler` you are using:
-
-    **`Azure.Monitor.OpenTelemetry.Profiler` 1.0.0-beta10 and later** — a single fluent chain:
+    Chain `AddAzureMonitorProfiler()` after `AddApplicationInsightsTelemetry()`:
 
     ```csharp
     using Azure.Monitor.OpenTelemetry.Profiler;
@@ -158,20 +158,6 @@ Assuming you are building an **ASP.NET Core application**:
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Services.AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();
-
-    var app = builder.Build();
-    app.Run();
-    ```
-
-    **`Azure.Monitor.OpenTelemetry.Profiler` 1.0.0-beta9 and earlier** — separate calls:
-
-    ```csharp
-    using Azure.Monitor.OpenTelemetry.Profiler;
-
-    var builder = WebApplication.CreateBuilder(args);
-
-    builder.Services.AddApplicationInsightsTelemetry();
-    builder.Services.AddOpenTelemetry().AddAzureMonitorProfiler();
 
     var app = builder.Build();
     app.Run();

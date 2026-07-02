@@ -65,6 +65,71 @@ This document summarizes configuration options exposed via `UserConfigurationBas
 5. Use triggers (CPU/Memory thresholds) to supplement, not replace, random sampling.
 6. Set `StandaloneMode = true` only for offline/local investigations.
 
+## Applying Configuration
+
+The profiler binds its options from the **`ServiceProfiler`** configuration section. Every property above can therefore be set through any standard .NET configuration source — `appsettings.json`, environment variables, command-line arguments, or the programmatic callback. Values supplied through the `AddAzureMonitorProfiler(...)` callback are applied last and win over configuration sources.
+
+### Example (Environment Variables)
+
+.NET maps hierarchical configuration keys to environment variables by joining segments with a double underscore (`__`), prefixed with the section name `ServiceProfiler`:
+
+```sh
+# TimeSpan values use the "d.hh:mm:ss" / "hh:mm:ss" format
+export ServiceProfiler__Duration="00:00:45"
+export ServiceProfiler__InitialDelay="00:00:10"
+
+# Numeric and boolean values
+export ServiceProfiler__RandomProfilingOverhead="0.02"
+export ServiceProfiler__CPUTriggerThreshold="85"
+export ServiceProfiler__MemoryTriggerThreshold="85"
+export ServiceProfiler__PreserveTraceFile="true"
+export ServiceProfiler__IsDisabled="false"
+
+# String values
+export ServiceProfiler__LocalCacheFolder="/var/profiler-cache"
+
+# Array items are indexed with a numeric segment (0, 1, 2, ...)
+export ServiceProfiler__CustomEventPipeProviders__0__Name="MyCompany-Diagnostics"
+export ServiceProfiler__CustomEventPipeProviders__0__Level="4"
+export ServiceProfiler__CustomEventPipeProviders__0__Keywords="0xFFFFFFFFFFFFFFFF"
+```
+
+On Windows PowerShell, set the same variables with `$env:`:
+
+```powershell
+$env:ServiceProfiler__Duration = "00:00:45"
+$env:ServiceProfiler__RandomProfilingOverhead = "0.02"
+$env:ServiceProfiler__PreserveTraceFile = "true"
+```
+
+> Tip: In containers, pass these through your orchestrator (e.g., a Kubernetes `env:` list or a Docker `-e` flag) exactly as named above.
+
+### Example (appsettings.json)
+
+The same settings expressed as JSON:
+
+```json
+{
+  "ServiceProfiler": {
+    "Duration": "00:00:45",
+    "InitialDelay": "00:00:10",
+    "RandomProfilingOverhead": 0.02,
+    "CPUTriggerThreshold": 85,
+    "MemoryTriggerThreshold": 85,
+    "PreserveTraceFile": true,
+    "IsDisabled": false,
+    "LocalCacheFolder": "/var/profiler-cache",
+    "CustomEventPipeProviders": [
+      {
+        "Name": "MyCompany-Diagnostics",
+        "Level": 4,
+        "Keywords": "0xFFFFFFFFFFFFFFFF"
+      }
+    ]
+  }
+}
+```
+
 ## Example (Programmatic Setup)
 
 ```csharp
