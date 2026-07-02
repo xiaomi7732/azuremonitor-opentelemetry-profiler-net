@@ -4,33 +4,53 @@
 
 ## Description
 
-The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of your live .NET applications with minimal overhead — helping you find slow code paths, high-CPU methods, and bottlenecks, then surfacing fixes through [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) in Application Insights. It profiles on a schedule (random sampling) and can also trigger on high CPU or memory.
+The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of your live .NET applications with minimal overhead. It helps you find slow code paths, high-CPU methods, and bottlenecks, then surfaces fixes through [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) in Application Insights. The profiler runs on a schedule (random sampling) and can also trigger on high CPU or memory.
 
 **Learn more:** [optix — Code Optimizations skills for Copilot](https://github.com/microsoft/code-optimizations-skills) · [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) · [CPU](./docs/CpuUsageMonitoring.md) & [Memory](./docs/MemoryUsageMonitoring.md) usage monitoring
 
 ## Get Started
 
-**Prerequisites:** [.NET 8.0+](https://dotnet.microsoft.com/download/dotnet), an [Application Insights resource](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource), and its connection string set as `APPLICATIONINSIGHTS_CONNECTION_STRING`.
+Using this profiler is two phases: **enable** it (once), then **analyze** the traces it collects (ongoing). Enabling takes three steps.
 
-**1. Add the profiler package:**
+### Before you begin
+
+You'll need:
+
+- [.NET 8.0 or later](https://dotnet.microsoft.com/download/dotnet)
+- An [Application Insights resource](https://learn.microsoft.com/azure/azure-monitor/app/create-workspace-resource#create-a-workspace-based-resource)
+- Its connection string set as the `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable
+
+### Step 1 — Add the profiler package
 
 ```sh
 dotnet add package Azure.Monitor.OpenTelemetry.Profiler --prerelease
 ```
 
-**2. Add one line where you configure telemetry** — pick the row that matches your SDK:
+### Step 2 — Enable the profiler in one line
 
-| Your SDK | Enable the profiler with | Full walkthrough |
+Find the row that matches the telemetry SDK you already use, and add the highlighted call where you configure telemetry:
+
+| Your SDK | Add this call | Detailed walkthrough |
 |---|---|---|
-| **Application Insights SDK for ASP.NET Core** (`Microsoft.ApplicationInsights.AspNetCore`) | `AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();` | [Option A steps](#option-a-application-insights-sdk-for-aspnet-core-experimental) |
-| **Azure Monitor OpenTelemetry distro** (`Azure.Monitor.OpenTelemetry.AspNetCore`) | `AddOpenTelemetry().UseAzureMonitor().AddAzureMonitorProfiler();` | [Option B steps](#option-b-azure-monitor-opentelemetry-distro) |
-| **Application Insights SDK for ASP.NET Core — classic 2.x** (legacy) | Not supported by this profiler | Use [Microsoft Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) |
+| **Application Insights SDK for ASP.NET Core** (`Microsoft.ApplicationInsights.AspNetCore`) | `AddApplicationInsightsTelemetry().AddAzureMonitorProfiler();` | [Option A](#option-a-application-insights-sdk-for-aspnet-core-experimental) |
+| **Azure Monitor OpenTelemetry distro** (`Azure.Monitor.OpenTelemetry.AspNetCore`) | `AddOpenTelemetry().UseAzureMonitor().AddAzureMonitorProfiler();` | [Option B](#option-b-azure-monitor-opentelemetry-distro) |
+| **Application Insights SDK for ASP.NET Core — classic 2.x** (legacy) | Not supported — use [Application Insights Profiler for ASP.NET Core](https://github.com/microsoft/ApplicationInsights-Profiler-AspNetCore) instead | — |
 
-**3. Run your app** — profiler traces appear in Application Insights after a few minutes.
+### Step 3 — Run your app
 
-> 🤖 Not sure which you use, or want zero config? Let **optix** do it — install the [Code Optimizations skills for Copilot CLI](https://github.com/microsoft/code-optimizations-skills) and run `copilot "Help me enable the Application Insights Profiler"`. See [Enable the Profiler with optix](./docs/AddAzureMonitorProfilerWithCoPilot.md).
+```sh
+dotnet run
+```
 
-Need the full step-by-step (packages, connection string, verification)? Expand the walkthrough for your SDK below.
+Profiler traces appear in Application Insights after a few minutes. [How to view them →](https://learn.microsoft.com/azure/azure-monitor/profiler/profiler-data)
+
+> 🤖 **Prefer zero config?** Let **optix** enable it for you. Install the [Code Optimizations skills for Copilot CLI](https://github.com/microsoft/code-optimizations-skills) and run:
+> ```sh
+> copilot "Help me enable the Application Insights Profiler"
+> ```
+> See [Enable the Profiler with optix](./docs/AddAzureMonitorProfilerWithCoPilot.md).
+
+**Next:** once traces are flowing, [analyze them with optix](#analyze-performance-with-optix) to turn bottlenecks into concrete code fixes. Need more detail on enabling? Expand the walkthrough for your SDK below.
 
 ---
 
@@ -187,8 +207,29 @@ Assuming you are building an **ASP.NET Core application**:
 
 ---
 
+## Analyze Performance with optix
+
+Enabling the profiler is a one-time step. The real, ongoing value is **analysis** — turning collected traces into fixes. [optix](https://github.com/microsoft/code-optimizations-skills) (Code Optimizations skills for Copilot) automates that end to end:
+
+1. **Ingest** — finds recent profiler traces on your Application Insights resource and downloads one.
+2. **Identify** — extracts the hot path and ranks the top CPU and latency contributors.
+3. **Correlate** — links hot frames to a specific operation or distributed trace, plus related errors and failed dependencies.
+4. **Recommend** — maps hot frames to your source code and proposes concrete changes.
+5. **Verify** — re-profiles after your change to confirm the bottleneck is gone.
+
+Install the [Code Optimizations skills for Copilot CLI](https://github.com/microsoft/code-optimizations-skills), then ask:
+
+```sh
+copilot "Analyze my Application Insights Profiler traces and show me the top CPU bottlenecks"
+```
+
+No profiler data yet? optix will guide you back to [enabling the profiler](#get-started).
+
+---
+
 ## Next
 
+- [Analyze performance with optix (Copilot CLI)](#analyze-performance-with-optix)
 - [Enable the Profiler with optix (Copilot CLI)](./docs/AddAzureMonitorProfilerWithCoPilot.md)
 - [Profiling Azure Service Bus Applications](./docs/ServiceBusSetup.md)
 - [Setup the Role name](./docs/SetupCloudRoleName.md)
