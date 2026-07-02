@@ -36,7 +36,7 @@ This document summarizes configuration options exposed via `UserConfigurationBas
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| RandomProfilingOverhead | float | 0.01 (1%) | Target average time spent profiling per hour. Effective number of sessions per hour ≈ (60 * overhead) / DurationMinutes. |
+| SamplingRate | double | 0.05 (5%) | Probability, evaluated once per scheduling cycle, that a random profiling session starts. On each cycle the profiler flips a coin: if `random < SamplingRate` it profiles for `Duration`; otherwise it stands by (~120s by default) before the next flip. Valid range `[0, 1]`. |
 | CPUTriggerThreshold | float | 80 | Avg CPU (%) threshold to start a CPU-triggered session. See [CPU Usage Monitoring](CpuUsageMonitoring.md). |
 | CPUTriggerCooldown | TimeSpan | (default per CpuTriggerSettings) | Minimum wait after a CPU-triggered session. |
 | MemoryTriggerThreshold | float | 80 | Avg memory usage (%) threshold to start a memory-triggered session. See [Memory Usage Monitoring](MemoryUsageMonitoring.md). |
@@ -79,7 +79,7 @@ export ServiceProfiler__Duration="00:00:45"
 export ServiceProfiler__InitialDelay="00:00:10"
 
 # Numeric and boolean values
-export ServiceProfiler__RandomProfilingOverhead="0.02"
+export ServiceProfiler__SamplingRate="0.1"
 export ServiceProfiler__CPUTriggerThreshold="85"
 export ServiceProfiler__MemoryTriggerThreshold="85"
 export ServiceProfiler__PreserveTraceFile="true"
@@ -98,7 +98,7 @@ On Windows PowerShell, set the same variables with `$env:`:
 
 ```powershell
 $env:ServiceProfiler__Duration = "00:00:45"
-$env:ServiceProfiler__RandomProfilingOverhead = "0.02"
+$env:ServiceProfiler__SamplingRate = "0.1"
 $env:ServiceProfiler__PreserveTraceFile = "true"
 ```
 
@@ -113,7 +113,7 @@ The same settings expressed as JSON:
   "ServiceProfiler": {
     "Duration": "00:00:45",
     "InitialDelay": "00:00:10",
-    "RandomProfilingOverhead": 0.02,
+    "SamplingRate": 0.1,
     "CPUTriggerThreshold": 85,
     "MemoryTriggerThreshold": 85,
     "PreserveTraceFile": true,
@@ -136,7 +136,7 @@ The same settings expressed as JSON:
 var options = new ServiceProfilerOptions
 {
     Duration = TimeSpan.FromSeconds(45),
-    RandomProfilingOverhead = 0.02f, // target ~2% time
+    SamplingRate = 0.1, // ~10% chance to start a session each cycle
     CPUTriggerThreshold = 85f,
     MemoryTriggerThreshold = 85f,
     PreserveTraceFile = true,
@@ -153,12 +153,19 @@ var options = new ServiceProfilerOptions
 };
 ```
 
-## Overhead Estimation
+## Frequency Estimation
 
-Effective sessions per hour (random):
-sessions ≈ (60 * RandomProfilingOverhead) / (DurationMinutes)
+Random profiling is scheduled with a per-cycle coin flip, so `SamplingRate`, `Duration`, and the standby duration together determine how often sessions run. Modeling each cycle as either a session (`Duration` seconds, on success) or a standby wait (`StandbyDuration` seconds, on a miss), the expected time between two random sessions is:
 
-Example: overhead=0.01, duration=0.5 min (30s) → (60 * 0.01)/0.5 = 1.2 sessions/hour.
+```
+secondsBetweenSessions ≈ ((1 - SamplingRate) / SamplingRate) * StandbyDuration + Duration
+sessionsPerHour ≈ 3600 / secondsBetweenSessions
+```
+
+Example: `SamplingRate = 0.05`, `Duration = 30s`, `StandbyDuration = 120s` (default) →
+`((1 - 0.05) / 0.05) * 120 + 30 = 2310s` between sessions → ≈ **1.6 sessions/hour**.
+
+Raising `SamplingRate` increases frequency (e.g., `0.1` → ≈ 3.1 sessions/hour). `StandbyDuration` defaults to 120s and is tuned server-side, not through the `ServiceProfiler` config section.
 
 ## Safety Checklist
 
@@ -171,7 +178,7 @@ Example: overhead=0.01, duration=0.5 min (30s) → (60 * 0.01)/0.5 = 1.2 session
 
 | Symptom | Suggested Adjustment |
 |---------|----------------------|
-| Few or no profiles | Lower thresholds, slightly raise RandomProfilingOverhead |
+| Few or no profiles | Lower thresholds, slightly raise SamplingRate |
 | High overhead | Shorter Duration, reduce CustomEventPipeProviders |
 | Large disk usage | Disable PreserveTraceFile, tighten scavenger options |
 | Missing triggers | Verify thresholds below observed steady-state levels. See [CPU](CpuUsageMonitoring.md) and [Memory](MemoryUsageMonitoring.md) monitoring docs for diagnostic logging. |
