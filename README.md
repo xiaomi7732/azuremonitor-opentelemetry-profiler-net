@@ -34,6 +34,9 @@ Choose the path that matches your project:
 
 The current `Microsoft.ApplicationInsights.AspNetCore` SDK is an OpenTelemetry-based wrapper. Since it already configures OpenTelemetry internally, you can enable the profiler **without** adding `Azure.Monitor.OpenTelemetry.AspNetCore` or calling `UseAzureMonitor()`.
 
+<details>
+<summary><strong>Show setup walkthrough</strong></summary>
+
 #### Prerequisites
 
 - **.NET 8.0 or later**: Install the latest .NET SDK from [here](https://dotnet.microsoft.com/download/dotnet).
@@ -98,9 +101,14 @@ The current `Microsoft.ApplicationInsights.AspNetCore` SDK is an OpenTelemetry-b
 
 📖 **Full example:** [aspnetcore-aisdk3](./examples/aspnetcore-aisdk3)
 
+</details>
+
 ---
 
 ### Option B: Azure Monitor OpenTelemetry Distro
+
+<details>
+<summary><strong>Show setup walkthrough</strong></summary>
 
 #### Prerequisites
 
@@ -185,6 +193,8 @@ Assuming you are building an **ASP.NET Core application**:
     ![sample trace](./images/sample-trace.png)
 
 📖 **Full example:** [aspnetcore-webapi](./examples/aspnetcore-webapi)
+
+</details>
 
 ---
 
