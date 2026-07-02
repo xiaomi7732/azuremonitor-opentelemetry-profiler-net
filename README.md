@@ -8,11 +8,9 @@
 
 ## Description
 
-The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of your live .NET applications with minimal overhead. It helps you identify slow code paths, high-CPU methods, and performance bottlenecks — then surfaces actionable insights through [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) in your Application Insights resource.
+The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of your live .NET applications with minimal overhead. It helps you identify slow code paths, high-CPU methods, and performance bottlenecks — then surfaces actionable insights through [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) in your Application Insights resource. To act on those insights directly in your editor, pair the profiler with [**optix** — Code Optimizations skills for GitHub Copilot](https://github.com/microsoft/code-optimizations-skills), which analyzes profiler traces and suggests AI-assisted optimizations.
 
 The profiler supports both **random sampling** (periodic snapshots) and **trigger-based profiling** (activated when CPU or memory usage exceeds a threshold). See [CPU Usage Monitoring](./docs/CpuUsageMonitoring.md) and [Memory Usage Monitoring](./docs/MemoryUsageMonitoring.md) for details on triggered profiling.
-
-> 💡 Want help acting on the results? Try [**optix** — Code Optimizations skills for GitHub Copilot](https://github.com/microsoft/code-optimizations-skills) to analyze profiler traces and get AI-assisted optimization suggestions right in your editor.
 
 > ⭐ Not sure which `Profiler Agent` is right for you? Check out our [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) to help you choose the best option for your needs.
 
