@@ -19,8 +19,8 @@
 
   <!-- OpenTelemetry profiler for OTel-based stacks; classic profiler for legacy Application Insights 2.x. -->
   <ItemGroup>
-    <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
-    <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
     <ProjectReference Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
   </ItemGroup>
 

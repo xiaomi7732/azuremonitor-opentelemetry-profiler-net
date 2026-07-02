@@ -34,13 +34,13 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $here      = $PSScriptRoot
-$otelDir   = Split-Path -Parent $here
-$srcDir    = Split-Path -Parent $otelDir
+$extRoot   = Split-Path -Parent $here
+$srcDir    = Split-Path -Parent $extRoot
 $repoRoot  = Split-Path -Parent $srcDir
 
-$hostingStartupProj = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.csproj"
-$startupHookProj    = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.csproj"
-$xdtTransformsProj  = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.csproj"
+$hostingStartupProj = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.csproj"
+$startupHookProj    = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.csproj"
+$xdtTransformsProj  = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.csproj"
 $uploaderProj       = Join-Path $srcDir  "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj"
 $nuspec             = Join-Path $here    "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.nuspec"
 
@@ -74,7 +74,7 @@ Invoke-Checked "Publishing HostingStartup payload ($targetFramework)" {
 Invoke-Checked "Building StartupHook resolver" {
     dotnet build $startupHookProj -c $Configuration -f $targetFramework --nologo
 }
-$startupHookDll = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$targetFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+$startupHookDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$targetFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
 if (-not (Test-Path $startupHookDll)) { throw "StartupHook assembly not found at $startupHookDll." }
 Copy-Item $startupHookDll -Destination $payload -Force
 
@@ -89,7 +89,7 @@ Invoke-Checked "Publishing the trace uploader ($targetFramework)" {
 Invoke-Checked "Building the applicationHost.xdt custom transform" {
     dotnet build $xdtTransformsProj -c $Configuration --nologo
 }
-$xdtTransformsDll = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\bin\$Configuration\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
+$xdtTransformsDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\bin\$Configuration\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
 if (-not (Test-Path $xdtTransformsDll)) { throw "XDT transform assembly not found at $xdtTransformsDll." }
 Copy-Item $xdtTransformsDll -Destination $staging -Force
 

@@ -1,0 +1,29 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove(Directory.Packages.props, $(MSBuildThisFileDirectory)..))" />
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!--
+    The site-extension projects reference the OpenTelemetry and classic profilers, so they must use the
+    same package version overrides the OTel tree uses (src/ServiceProfiler.EventPipe.Otel/Directory.Packages.props),
+    otherwise the centrally-managed root versions cause transitive package-downgrade errors (NU1109).
+  -->
+  <PropertyGroup>
+    <_AzureMonitorOpenTelemetryExporterVersion>1.4.0</_AzureMonitorOpenTelemetryExporterVersion>
+    <_MicrosoftDiagnosticsNETCoreClientVersion>0.2.621003</_MicrosoftDiagnosticsNETCoreClientVersion>
+    <_SystemCollectionsImmutableVersion>8.0.0</_SystemCollectionsImmutableVersion>
+    <_SystemMemoryDataVersion>10.0.0</_SystemMemoryDataVersion>
+    <_SystemSecurityCryptographyProtectedDataVersion>10.0.0</_SystemSecurityCryptographyProtectedDataVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="$(_AzureMonitorOpenTelemetryExporterVersion)" />
+
+    <PackageVersion Update="Microsoft.Diagnostics.NETCore.Client" Version="$(_MicrosoftDiagnosticsNETCoreClientVersion)" />
+    <PackageVersion Update="System.Collections.Immutable" Version="$(_SystemCollectionsImmutableVersion)" />
+    <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
+  </ItemGroup>
+</Project>
