@@ -43,6 +43,15 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Utilities
                 errorMessageBuilder.AppendLine($"{nameof(uploadContext.SessionId)} is required.");
             }
 
+            // TraceFilePath was previously enforced by the command-line parser's [Option(Required = true)]
+            // attribute. Now that arguments are bound via Microsoft.Extensions.Configuration, re-assert it
+            // here so a missing trace path fails fast with a clear message instead of an obscure downstream
+            // file error.
+            if (string.IsNullOrEmpty(uploadContext.TraceFilePath))
+            {
+                errorMessageBuilder.AppendLine($"{nameof(uploadContext.TraceFilePath)} is required.");
+            }
+
             if (string.IsNullOrEmpty(uploadContext.SerializedSampleFilePath) && string.IsNullOrEmpty(uploadContext.PipeName))
             {
                 errorMessageBuilder.AppendLine($"{nameof(uploadContext.SerializedSampleFilePath)} and {nameof(uploadContext.PipeName)} can't be null at the same time.");

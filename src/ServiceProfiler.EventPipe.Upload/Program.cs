@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
-using CommandLine;
 using Microsoft.ApplicationInsights.Profiler.Core.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
@@ -28,13 +27,33 @@ namespace Microsoft.ApplicationInsights.Profiler.Uploader
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
-            Parser.Default.ParseArguments<UploadContext>(args).WithParsed<UploadContext>(options =>
+            UploadContext options;
+            try
             {
-                using IHost host = CreateHostBuilder(args, options).Build();
-                host.Run();
-            });
+                IConfiguration configuration = new ConfigurationBuilder()
+                    .AddCommandLine(args)
+                    .Build();
+
+                options = configuration.Get<UploadContext>() ?? new UploadContext();
+            }
+            catch (Exception ex)
+            {
+                // Mirror the previous CommandLineParser behavior of failing fast on
+                // malformed arguments (e.g. an unparseable Guid/Uri/DateTimeOffset)
+                // instead of letting the exception escape as an unhandled crash.
+                Console.Error.WriteLine($"fail: Failed to parse uploader arguments. {ex.Message}");
+                return 1;
+            }
+
+            using IHost host = CreateHostBuilder(args, options).Build();
+            host.Run();
+
+            // Preserve the exit code set by HostedUploaderService via Environment.ExitCode.
+            // Returning a literal 0 here would override it and mask upload failures from the
+            // parent process, which only inspects the process exit code.
+            return Environment.ExitCode;
         }
 
         private static IHostBuilder CreateHostBuilder(string[] args, UploadContext options) =>
