@@ -36,23 +36,21 @@ public class ProfilerBootstrapperRoutingTests
     }
 
     [Fact]
-    internal void Apply_WhenApplicationInsights_RegistersConfigureServices()
+    internal void Apply_WhenLegacyApplicationInsights_RegistersConfigureServices()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
 
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.ApplicationInsights);
+        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.LegacyApplicationInsights);
 
         Assert.Single(captured);
     }
 
-    [Theory]
-    [InlineData(TelemetryStack.Both)]
-    [InlineData(TelemetryStack.None)]
-    internal void Apply_WhenAmbiguousOrNone_DoesNotRegisterAnything(TelemetryStack stack)
+    [Fact]
+    internal void Apply_WhenNone_DoesNotRegisterAnything()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
 
-        ProfilerBootstrapper.Apply(builder.Object, stack);
+        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.None);
 
         Assert.Empty(captured);
         builder.Verify(b => b.ConfigureServices(It.IsAny<Action<IServiceCollection>>()), Times.Never);

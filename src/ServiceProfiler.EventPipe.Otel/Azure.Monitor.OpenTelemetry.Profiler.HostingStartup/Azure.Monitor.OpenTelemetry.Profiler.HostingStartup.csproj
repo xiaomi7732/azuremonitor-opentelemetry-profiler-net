@@ -17,7 +17,7 @@
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
   </ItemGroup>
 
-  <!-- Both profiler stacks are bundled so the unified HostingStartup can route to whichever the app uses. -->
+  <!-- OpenTelemetry profiler for OTel-based stacks; classic profiler for legacy Application Insights 2.x. -->
   <ItemGroup>
     <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
     <ProjectReference Include="..\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />

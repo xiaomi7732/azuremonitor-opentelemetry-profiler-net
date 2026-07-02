@@ -40,6 +40,7 @@ $repoRoot  = Split-Path -Parent $srcDir
 
 $hostingStartupProj = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.csproj"
 $startupHookProj    = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.csproj"
+$xdtTransformsProj  = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.csproj"
 $uploaderProj       = Join-Path $srcDir  "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj"
 $nuspec             = Join-Path $here    "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.nuspec"
 
@@ -82,10 +83,20 @@ Invoke-Checked "Publishing the trace uploader ($targetFramework)" {
     dotnet publish $uploaderProj -c $Configuration -f $targetFramework -o $uploaderOut --nologo
 }
 
-# 5. Copy the applicationHost.xdt into the staging root.
+# 5. Build the applicationHost.xdt custom transform (net472) and copy just its assembly into the
+#    staging root, next to applicationHost.xdt. Microsoft.Web.XmlTransform.dll is intentionally NOT
+#    shipped - the App Service XDT engine provides it at runtime.
+Invoke-Checked "Building the applicationHost.xdt custom transform" {
+    dotnet build $xdtTransformsProj -c $Configuration --nologo
+}
+$xdtTransformsDll = Join-Path $otelDir "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\bin\$Configuration\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
+if (-not (Test-Path $xdtTransformsDll)) { throw "XDT transform assembly not found at $xdtTransformsDll." }
+Copy-Item $xdtTransformsDll -Destination $staging -Force
+
+# 6. Copy the applicationHost.xdt into the staging root.
 Copy-Item (Join-Path $here "applicationHost.xdt") -Destination $staging -Force
 
-# 6. Pack the site extension.
+# 7. Pack the site extension.
 $nuget = (Get-Command nuget -ErrorAction SilentlyContinue)?.Source
 if (-not $nuget) { $nuget = "C:\Program Files\NuGet\nuget.exe" }
 if (-not (Test-Path $nuget)) { throw "nuget.exe not found. Install NuGet CLI or add it to PATH." }

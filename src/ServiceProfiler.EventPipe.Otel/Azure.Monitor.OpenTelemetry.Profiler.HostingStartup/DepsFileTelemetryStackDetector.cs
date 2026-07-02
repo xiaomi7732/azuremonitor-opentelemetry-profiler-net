@@ -53,33 +53,48 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     }
 
     /// <summary>
-    /// Classifies the telemetry stack from the package names referenced in a <c>.deps.json</c> document
-    /// using a dependency-free text scan.
+    /// Classifies the telemetry stack from the package names/versions referenced in a <c>.deps.json</c>
+    /// document using a dependency-free text scan.
     /// </summary>
     /// <remarks>
-    /// Detection is by the top-level integration package the developer added, with precedence, because
-    /// the classic Application Insights ASP.NET Core SDK (2.22+) transitively pulls in the OpenTelemetry
-    /// SDK (via <c>Azure.Monitor.OpenTelemetry.Exporter</c>). "OpenTelemetry is present" alone therefore
-    /// does not imply the app uses OpenTelemetry for its telemetry.
+    /// Per the profiler's supported-SDK matrix: the Azure Monitor OpenTelemetry distro and the current
+    /// OpenTelemetry-based Application Insights SDK (3.x) are supported (OpenTelemetry profiler), while the
+    /// legacy classic Application Insights SDK (2.x) is not. Detection is version-aware because the classic
+    /// 2.x and the OpenTelemetry-based 3.x share the <c>Microsoft.ApplicationInsights.AspNetCore</c> package
+    /// id, and 3.x also transitively pulls in the OpenTelemetry SDK.
     /// </remarks>
     internal static TelemetryStack DetectFromDepsJson(string depsJson)
     {
-        // 1. Explicit Azure Monitor OpenTelemetry distro. It does not reference the classic ASP.NET Core
-        //    SDK, so its presence is an unambiguous OpenTelemetry signal.
+        // 1. Azure Monitor OpenTelemetry distro - unambiguous, supported OpenTelemetry signal.
         if (ContainsPackageToken(depsJson, "Azure.Monitor.OpenTelemetry.AspNetCore"))
         {
             return TelemetryStack.OpenTelemetry;
         }
 
-        // 2. Classic Application Insights SDK integration package (ASP.NET Core or Worker Service). Takes
-        //    precedence over the generic OpenTelemetry check below, which it pulls in transitively.
+        // 2. Application Insights ASP.NET Core / Worker Service SDK. 3.x is an OpenTelemetry-based wrapper
+        //    (supported via the OpenTelemetry profiler); 2.x is the legacy classic SDK (not supported).
+        //    Checked before the generic OpenTelemetry test below, which 3.x pulls in transitively.
         if (ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights.AspNetCore")
             || ContainsPackageToken(depsJson, "Microsoft.ApplicationInsights.WorkerService"))
         {
-            return TelemetryStack.ApplicationInsights;
+            int major = 0;
+            if (TryGetPackageMajorVersion(depsJson, "Microsoft.ApplicationInsights.AspNetCore", out int aspNetMajor))
+            {
+                major = aspNetMajor;
+            }
+            else if (TryGetPackageMajorVersion(depsJson, "Microsoft.ApplicationInsights.WorkerService", out int workerMajor))
+            {
+                major = workerMajor;
+            }
+            else if (TryGetPackageMajorVersion(depsJson, "Microsoft.ApplicationInsights", out int baseMajor))
+            {
+                major = baseMajor;
+            }
+
+            return major >= 3 ? TelemetryStack.OpenTelemetry : TelemetryStack.LegacyApplicationInsights;
         }
 
-        // 3. Manual OpenTelemetry setup (SDK / hosting) without either distro or the classic SDK.
+        // 3. Manual OpenTelemetry setup (SDK / hosting) without either the distro or the AI SDK.
         if (ContainsPackageToken(depsJson, "OpenTelemetry"))
         {
             return TelemetryStack.OpenTelemetry;
@@ -95,6 +110,32 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     /// </summary>
     private static bool ContainsPackageToken(string depsJson, string package) =>
         depsJson.IndexOf("\"" + package, StringComparison.OrdinalIgnoreCase) >= 0;
+
+    /// <summary>
+    /// Extracts the major version from a <c>.deps.json</c> library key of the exact form
+    /// <c>"&lt;package&gt;/&lt;version&gt;"</c> (e.g. <c>"Microsoft.ApplicationInsights.AspNetCore/3.1.2"</c>).
+    /// The trailing <c>/</c> ensures an exact package match rather than a prefix (so
+    /// <c>Microsoft.ApplicationInsights</c> does not match <c>Microsoft.ApplicationInsights.AspNetCore</c>).
+    /// </summary>
+    private static bool TryGetPackageMajorVersion(string depsJson, string package, out int major)
+    {
+        major = 0;
+        string marker = "\"" + package + "/";
+        int index = depsJson.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        int start = index + marker.Length;
+        int end = start;
+        while (end < depsJson.Length && char.IsDigit(depsJson[end]))
+        {
+            end++;
+        }
+
+        return end > start && int.TryParse(depsJson.Substring(start, end - start), out major);
+    }
 
     private static string? GetEntryAssemblyDepsPath()
     {

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms</AssemblyName>
+    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms</RootNamespace>
+    <!-- Loaded by the App Service applicationHost.xdt engine (.NET Framework), so target net472. -->
+    <IsPackable>false</IsPackable>
+    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.Web.XmlTransform (XDT) base types; the App Service engine provides the runtime copy. -->
+    <PackageReference Include="Microsoft.Web.Xdt" />
+  </ItemGroup>
+
+</Project>

@@ -15,18 +15,22 @@ public class DepsFileTelemetryStackDetectorTests
         { "libraries": { "SampleApp/1.0.0": {}, "Azure.Monitor.OpenTelemetry.AspNetCore/1.2.0": {}, "OpenTelemetry/1.9.0": {} } }
         """;
 
-    private const string ApplicationInsightsDeps = """
-        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.22.0": {}, "Microsoft.ApplicationInsights/2.22.0": {} } }
+    // Legacy classic Application Insights SDK 2.x (also transitively references the OpenTelemetry SDK).
+    private const string ApplicationInsights2xDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.23.0": {}, "Microsoft.ApplicationInsights/2.23.0": {}, "OpenTelemetry/1.15.3": {} } }
         """;
 
-    // The classic AI ASP.NET Core SDK (2.22+) transitively pulls in the OpenTelemetry SDK; this must
-    // still be classified as ApplicationInsights, not Both.
-    private const string ClassicWithTransitiveOTelDeps = """
-        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.23.0": {}, "Azure.Monitor.OpenTelemetry.Exporter/1.8.0": {}, "OpenTelemetry/1.15.3": {}, "OpenTelemetry.Extensions.Hosting/1.15.3": {} } }
+    // Current OpenTelemetry-based Application Insights SDK 3.x.
+    private const string ApplicationInsights3xDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.AspNetCore/3.1.2": {}, "Microsoft.ApplicationInsights/3.1.2": {}, "Azure.Monitor.OpenTelemetry.Exporter/1.8.0": {}, "OpenTelemetry/1.15.3": {} } }
         """;
 
-    private const string WorkerServiceDeps = """
-        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.WorkerService/2.23.0": {}, "OpenTelemetry/1.15.3": {} } }
+    private const string WorkerService2xDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.WorkerService/2.23.0": {}, "Microsoft.ApplicationInsights/2.23.0": {} } }
+        """;
+
+    private const string WorkerService3xDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.WorkerService/3.1.2": {}, "OpenTelemetry/1.15.3": {} } }
         """;
 
     private const string NeitherDeps = """
@@ -36,9 +40,10 @@ public class DepsFileTelemetryStackDetectorTests
     [Theory]
     [InlineData(OpenTelemetryDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(AzureMonitorDistroDeps, TelemetryStack.OpenTelemetry)]
-    [InlineData(ApplicationInsightsDeps, TelemetryStack.ApplicationInsights)]
-    [InlineData(ClassicWithTransitiveOTelDeps, TelemetryStack.ApplicationInsights)]
-    [InlineData(WorkerServiceDeps, TelemetryStack.ApplicationInsights)]
+    [InlineData(ApplicationInsights2xDeps, TelemetryStack.LegacyApplicationInsights)]
+    [InlineData(ApplicationInsights3xDeps, TelemetryStack.OpenTelemetry)]
+    [InlineData(WorkerService2xDeps, TelemetryStack.LegacyApplicationInsights)]
+    [InlineData(WorkerService3xDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(NeitherDeps, TelemetryStack.None)]
     internal void DetectFromDepsJson_ClassifiesStack(string depsJson, TelemetryStack expected)
     {

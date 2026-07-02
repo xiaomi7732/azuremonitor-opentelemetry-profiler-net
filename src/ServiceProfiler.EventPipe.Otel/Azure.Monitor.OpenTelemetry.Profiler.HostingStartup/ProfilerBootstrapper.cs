@@ -50,20 +50,21 @@ public sealed class ProfilerBootstrapper : IHostingStartup
     }
 
     /// <summary>
-    /// Applies the routing decision. Exactly one detected stack enables the matching profiler; both or
-    /// neither logs an error and enables nothing (per the v1 routing rule).
+    /// Applies the routing decision. A supported OpenTelemetry-based stack enables the Azure Monitor
+    /// OpenTelemetry profiler; the legacy classic Application Insights SDK (2.x) enables the classic
+    /// Application Insights profiler; anything else enables nothing.
     /// </summary>
     internal static void Apply(IWebHostBuilder builder, TelemetryStack stack)
     {
         switch (stack)
         {
             case TelemetryStack.OpenTelemetry:
-                BootstrapLog.Info("Detected OpenTelemetry. Enabling the Azure Monitor OpenTelemetry profiler.");
+                BootstrapLog.Info("Detected a supported OpenTelemetry-based telemetry stack. Enabling the Azure Monitor OpenTelemetry profiler.");
                 builder.ConfigureServices(services => services.AddAzureMonitorProfiler());
                 break;
 
-            case TelemetryStack.ApplicationInsights:
-                BootstrapLog.Info("Detected the Application Insights SDK. Enabling the classic Application Insights profiler.");
+            case TelemetryStack.LegacyApplicationInsights:
+                BootstrapLog.Info("Detected the classic Application Insights SDK (2.x). Enabling the classic Application Insights profiler.");
                 builder.ConfigureServices(services =>
                 {
                     // Mirror the classic HostingStartup (HostingStartup30): ensure the Application Insights
@@ -74,12 +75,8 @@ public sealed class ProfilerBootstrapper : IHostingStartup
                 });
                 break;
 
-            case TelemetryStack.Both:
-                BootstrapLog.Error("Both the Application Insights SDK and OpenTelemetry were detected; cannot determine which profiler to enable. The profiler will NOT be activated.");
-                break;
-
             default:
-                BootstrapLog.Error("No supported telemetry stack (Application Insights SDK or OpenTelemetry) was detected. The profiler will NOT be activated.");
+                BootstrapLog.Error("No supported telemetry stack (OpenTelemetry, the Azure Monitor OpenTelemetry distro, the OpenTelemetry-based Application Insights SDK 3.x, or the classic Application Insights SDK 2.x) was detected. The profiler will NOT be activated.");
                 break;
         }
     }

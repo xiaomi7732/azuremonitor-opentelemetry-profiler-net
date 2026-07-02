@@ -6,22 +6,39 @@
   variables into the application's worker process:
 
     * DOTNET_STARTUP_HOOKS               -> a tiny resolver hook that makes the staged payload loadable.
-    * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the unified HostingStartup that detects the telemetry stack
-                                            and enables the matching profiler.
+    * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the HostingStartup that detects the telemetry stack and
+                                            enables the matching profiler.
     * SP_UPLOADER_PATH                    -> the out-of-proc trace uploader shipped in the payload.
+
+  The two list-valued variables (DOTNET_STARTUP_HOOKS, ASPNETCORE_HOSTINGSTARTUPASSEMBLIES) use the
+  custom AppendListValueIfMissing transform so our value is APPENDED (semicolon-separated) and
+  de-duplicated, letting the extension coexist with other agents that set the same variables (e.g. the
+  Application Insights auto-instrumentation agent) instead of being skipped or overwriting them.
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
+              namespace="Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms" />
+
+  <!-- Ensure the environmentVariables container exists before the value transforms run. -->
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
+
+  <!-- Set / append the profiler environment variables. -->
   <system.webServer xdt:Transform="InsertIfMissing">
     <runtime xdt:Transform="InsertIfMissing">
       <environmentVariables xdt:Transform="InsertIfMissing">
 
         <add name="DOTNET_STARTUP_HOOKS"
              value="%XDT_EXTENSIONPATH%\payload\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
-             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
         <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
              value="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
-             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
         <add name="SP_UPLOADER_PATH"
              value="%XDT_EXTENSIONPATH%\payload\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
