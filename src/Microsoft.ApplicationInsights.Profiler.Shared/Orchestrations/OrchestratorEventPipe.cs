@@ -27,6 +27,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     private readonly IServiceProfilerProvider _profilerProvider;
     private readonly IAgentStatusService _agentStatusService;
     private readonly IResourceUsageSource _resourceUsageSource;
+    private readonly IProfilerConcurrencyControlClient? _concurrencyControlClient;
     private ILogger _logger;
     private TimeSpan _initialDelay;
 
@@ -37,6 +38,14 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     private readonly ConcurrentDictionary<Task, byte> _semaphoreTasks = new();
 
     private SchedulingPolicy? _currentProfilingPolicy = null;
+
+    // The concurrency lease held for the in-flight profiling session, if any.
+    // Guarded by _policyChangeHandler alongside _currentProfilingPolicy.
+    private IAsyncDisposable? _currentLease = null;
+
+    // Set during disposal so an in-flight StartProfilingAsync releases its lease instead of
+    // retaining it (the normal stop path won't run during shutdown). Volatile for visibility.
+    private volatile bool _disposed = false;
 
     private CancellationTokenSource _cancellationTokenSource = new();
 
@@ -52,7 +61,8 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         IDelaySource delaySource,
         IAgentStatusService agentStatusService,
         IResourceUsageSource resourceUsageSource,
-        ILogger<OrchestratorEventPipe> logger) : base(delaySource)
+        ILogger<OrchestratorEventPipe> logger,
+        IProfilerConcurrencyControlClient? concurrencyControlClient = null) : base(delaySource)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _policyCollection = (policyCollection ?? throw new ArgumentNullException(nameof(policyCollection)))
@@ -60,6 +70,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         _profilerProvider = profilerProvider ?? throw new ArgumentNullException(nameof(profilerProvider));
         _agentStatusService = agentStatusService ?? throw new ArgumentNullException(nameof(agentStatusService));
         _resourceUsageSource = resourceUsageSource ?? throw new ArgumentNullException(nameof(resourceUsageSource));
+        _concurrencyControlClient = concurrencyControlClient;
         _initialDelay = config.Value.InitialDelay;
     }
 
@@ -173,6 +184,11 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         _cancellationTokenSource.Cancel();
                         _logger.LogInformation("Agent status is {status}, stopping all scheduling policies.", status);
                     }
+
+                    // Cancelled schedules may exit without going through the normal stop path (e.g. a policy
+                    // cancelled during its profiling-duration delay), leaving an active session and its lease
+                    // dangling. Explicitly stop the session and release the lease here.
+                    await StopActiveSessionAndReleaseLeaseAsync("Agent deactivated").ConfigureAwait(false);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status));
@@ -207,11 +223,73 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 {
                     if (_currentProfilingPolicy == null)
                     {
-                        bool result = await _profilerProvider.StartServiceProfilerAsync(policy, cancellationToken).ConfigureAwait(false);
+                        if (_disposed)
+                        {
+                            // Shutting down; don't acquire a lease or start a session.
+                            return false;
+                        }
+
+                        IAsyncDisposable? lease = null;
+                        if (_concurrencyControlClient is not null)
+                        {
+                            lease = await _concurrencyControlClient.TryAcquireLeaseAsync(cancellationToken).ConfigureAwait(false);
+                            if (lease is null)
+                            {
+                                _logger.LogDebug("Profiling requested by {source} skipped: concurrency lease unavailable.", policy.Source);
+                                return false;
+                            }
+
+                            _logger.LogTrace("Concurrency lease acquired for {source}; starting profiler session.", policy.Source);
+                        }
+
+                        bool result;
+                        try
+                        {
+                            result = await _profilerProvider.StartServiceProfilerAsync(policy, cancellationToken).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            // The start failed. The provider may have started (or partially started) before
+                            // throwing, and for some providers IsProfilerRunning reflects only that the
+                            // provider semaphore is held rather than that a session is truly active. To avoid
+                            // ever retaining/leaking a lease on a failed start, we do NOT keep the lease here:
+                            // best-effort stop the profiler if it reports running, then release the lease.
+                            if (_profilerProvider.IsProfilerRunning)
+                            {
+                                await StopProfilerBestEffortAsync(policy).ConfigureAwait(false);
+                            }
+
+                            await DisposeLeaseAsync(lease).ConfigureAwait(false);
+
+                            throw;
+                        }
+
                         if (result)
                         {
-                            _logger.LogDebug("Profiling is started. Source: {source}", policy.Source);
-                            _currentProfilingPolicy = policy;
+                            // If we are terminating while the provider was starting -- the orchestrator is
+                            // being disposed, or the schedule token was cancelled (e.g. agent deactivation) --
+                            // the normal stop path will not run to release the lease. Stop the just-started
+                            // session best-effort and release the lease here instead of retaining it, so we
+                            // never leave a profiler running without a concurrency lease, and never strand a
+                            // renewing lease. This runs under the policy-change semaphore, which Dispose and the
+                            // deactivation cleanup also acquire before reading _currentLease.
+                            if (_disposed || cancellationToken.IsCancellationRequested)
+                            {
+                                _logger.LogDebug("Orchestrator terminating during profiler start; stopping the just-started session and releasing the concurrency lease for {source}.", policy.Source);
+                                await StopProfilerBestEffortAsync(policy).ConfigureAwait(false);
+                                await DisposeLeaseAsync(lease).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Profiling is started. Source: {source}", policy.Source);
+                                _currentProfilingPolicy = policy;
+                                _currentLease = lease;
+                            }
+                        }
+                        else
+                        {
+                            // Profiler did not start; release the lease so another instance can use it.
+                            await DisposeLeaseAsync(lease).ConfigureAwait(false);
                         }
 
                         return result;
@@ -282,6 +360,15 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                             // StopServiceProfilerAsync guarantees the semaphore is released before returning,
                             // so the profiler is no longer running regardless of the result value.
                             _currentProfilingPolicy = null;
+
+                            // The profiler is no longer running; release the concurrency lease.
+                            IAsyncDisposable? leaseToRelease = _currentLease;
+                            _currentLease = null;
+                            if (leaseToRelease is not null)
+                            {
+                                _logger.LogTrace("Releasing concurrency lease for {source}.", policy.Source);
+                                await DisposeLeaseAsync(leaseToRelease).ConfigureAwait(false);
+                            }
                         }
                         else
                         {
@@ -291,11 +378,29 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     }
                     catch
                     {
-                        // Stop profiling can fail for various reasons. Check the current status to decide 
-                        // whether to give back the current profiling handler.
-                        if (_currentProfilingPolicy == policy && !_profilerProvider.IsProfilerRunning)
+                        // Stop profiling can fail for various reasons. Decide whether to release the lease now
+                        // or keep it for a retry. Release it when the profiler is no longer running, or when we
+                        // are terminating (the orchestrator is being disposed, or this stop was cancelled e.g.
+                        // by agent deactivation / shutdown) — because in those cases the scheduling loop will
+                        // not run again to retry the stop and release the lease. Otherwise keep the lease so the
+                        // still-active schedule can retry the stop.
+                        bool terminating = _disposed || cancellationToken.IsCancellationRequested;
+                        if (_currentProfilingPolicy == policy && (!_profilerProvider.IsProfilerRunning || terminating))
                         {
                             _currentProfilingPolicy = null;
+
+                            IAsyncDisposable? leaseToRelease = _currentLease;
+                            _currentLease = null;
+
+                            // If terminating while the profiler still reports running (e.g. the stop above was
+                            // cancelled), best-effort stop it before releasing the lease so we do not free a
+                            // concurrency slot while still profiling.
+                            if (terminating && _profilerProvider.IsProfilerRunning)
+                            {
+                                await StopProfilerBestEffortAsync(policy).ConfigureAwait(false);
+                            }
+
+                            await DisposeLeaseAsync(leaseToRelease).ConfigureAwait(false);
                         }
 
                         throw;
@@ -327,13 +432,169 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         {
             _agentStatusService.StatusChanged -= OnAgentStatusChanged;
 
+            // Signal disposal first so any in-flight StartProfilingAsync (running while holding
+            // _policyChangeHandler) releases its own lease instead of retaining it.
+            _disposed = true;
+
+            // Cancel next so in-flight start/stop operations return promptly.
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource.Dispose();
 
             _statusChangeSemaphore.Dispose();
 
-            Task.WhenAll(_semaphoreTasks.Keys);
-            _policyChangeHandler.Dispose();
+            // Acquire the policy-change gate before reading _currentLease so we observe the final value
+            // assigned by any in-flight start/stop instead of racing it. Only mutate/dispose the semaphore
+            // when we actually acquired it; on timeout the in-flight holder still owns the gate and will
+            // release its own lease (because _disposed is set), so we avoid both a lease leak and a
+            // Release()/Dispose() against a semaphore another thread still holds.
+            IAsyncDisposable? leaseToRelease = null;
+            SchedulingPolicy? policyToStop = null;
+            bool acquired = false;
+            try
+            {
+                acquired = _policyChangeHandler.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            if (acquired)
+            {
+                leaseToRelease = _currentLease;
+                policyToStop = _currentProfilingPolicy;
+                _currentLease = null;
+                _currentProfilingPolicy = null;
+
+                // Release so any queued start/stop waiter can drain cleanly; it will observe _disposed
+                // and return without acquiring a lease. _policyChangeHandler is intentionally NOT disposed:
+                // it is never used via AvailableWaitHandle (so Dispose would free nothing), and disposing it
+                // while in-flight/queued callers may still call Release() in their finally blocks would throw
+                // ObjectDisposedException.
+                _policyChangeHandler.Release();
+            }
+
+            // Best-effort teardown of any session still active during disposal: stop the profiler first
+            // (so we never release a concurrency slot while still profiling), then release the lease.
+            if (leaseToRelease is not null)
+            {
+                _logger.LogDebug("Cleaning up active profiling session and concurrency lease during disposal.");
+                _ = CleanupActiveSessionAsync(policyToStop, leaseToRelease);
+            }
+        }
+    }
+
+    private async Task DisposeLeaseAsync(IAsyncDisposable? lease)
+    {
+        if (lease is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await lease.DisposeAsync().ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Releasing a lease must never throw to the caller.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogDebug(ex, "Error releasing concurrency lease.");
+        }
+    }
+
+    /// <summary>
+    /// Best-effort stop of a profiling session during termination (disposal, agent deactivation, or a
+    /// cancelled stop), where the normal stop path will not run. Callers stop the profiler with this and
+    /// then release the lease.
+    /// </summary>
+    /// <remarks>
+    /// Deliberate termination tradeoff: callers release the concurrency lease after this returns even if
+    /// the stop failed and the provider still reports running. This is intentional. Holding the lease
+    /// instead would leave it auto-renewing forever (a permanent fleet-slot leak), which is strictly worse
+    /// than briefly overlapping during teardown — and note <c>IsProfilerRunning</c> reflects that the
+    /// provider's session semaphore is held, not necessarily that a trace is actively being captured, so a
+    /// failed stop here is frequently a stuck-semaphore false positive with no real session to keep a slot
+    /// for. The server-side lease also expires on its own within its short duration. Never throws.
+    /// </remarks>
+    private async Task StopProfilerBestEffortAsync(IProfilerSource policy)
+    {
+        try
+        {
+            await _profilerProvider.StopServiceProfilerAsync(policy, CancellationToken.None).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Best-effort shutdown cleanup must not throw.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogDebug(ex, "Best-effort stop during termination failed for {source}.", policy.Source);
+        }
+    }
+
+    /// <summary>
+    /// Cleans up an active profiling session during disposal: stops the profiler best-effort first (so a
+    /// concurrency slot is never released while still profiling), then releases the lease. Never throws.
+    /// </summary>
+    private async Task CleanupActiveSessionAsync(IProfilerSource? policy, IAsyncDisposable lease)
+    {
+        if (policy is not null && _profilerProvider.IsProfilerRunning)
+        {
+            await StopProfilerBestEffortAsync(policy).ConfigureAwait(false);
+        }
+
+        await DisposeLeaseAsync(lease).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Acquires the policy-change gate and, if a profiling session is active, best-effort stops it and
+    /// releases its concurrency lease. Used when schedules are torn down outside the normal stop path
+    /// (e.g. agent deactivation), where the cancelled policy loop may exit without releasing the lease.
+    /// Never throws.
+    /// </summary>
+    private async Task StopActiveSessionAndReleaseLeaseAsync(string reason)
+    {
+        bool acquired;
+        try
+        {
+            acquired = await _policyChangeHandler.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (!acquired)
+        {
+            _logger.LogWarning("Timed out acquiring the policy gate to clean up the active session ({reason}).", reason);
+            return;
+        }
+
+        try
+        {
+            SchedulingPolicy? policy = _currentProfilingPolicy;
+            IAsyncDisposable? lease = _currentLease;
+            if (policy is null && lease is null)
+            {
+                return;
+            }
+
+            _currentProfilingPolicy = null;
+            _currentLease = null;
+
+            _logger.LogDebug("Cleaning up active profiling session and concurrency lease ({reason}).", reason);
+            if (policy is not null && _profilerProvider.IsProfilerRunning)
+            {
+                await StopProfilerBestEffortAsync(policy).ConfigureAwait(false);
+            }
+
+            await DisposeLeaseAsync(lease).ConfigureAwait(false);
+        }
+        finally
+        {
+            _policyChangeHandler.Release();
         }
     }
 

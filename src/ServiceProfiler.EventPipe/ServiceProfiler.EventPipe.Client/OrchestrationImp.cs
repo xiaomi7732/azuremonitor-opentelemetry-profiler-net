@@ -17,7 +17,8 @@ internal class OrchestrationImp : OrchestratorEventPipe
         IDelaySource delaySource,
         IAgentStatusService agentStatusService,
         IResourceUsageSource resourceUsageSource,
-        ILogger<OrchestrationImp> logger) : base(profilerProvider, config, policyCollection, delaySource, agentStatusService, resourceUsageSource, logger)
+        ILogger<OrchestrationImp> logger,
+        IProfilerConcurrencyControlClient concurrencyControlClient) : base(profilerProvider, config, policyCollection, delaySource, agentStatusService, resourceUsageSource, logger, concurrencyControlClient)
     {
     }
 }

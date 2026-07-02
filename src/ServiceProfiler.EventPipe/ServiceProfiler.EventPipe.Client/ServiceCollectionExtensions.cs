@@ -365,6 +365,20 @@ internal static class ServiceCollectionExtensions
     private static IServiceCollection AddFrontendClient(this IServiceCollection services)
     {
         services.AddSingleton<IProfilerClient>(p => ActivatorUtilities.CreateInstance<ProfilerClientFactory>(p).CreateProfilerClient());
+
+        // Concurrency control (lease-based). No-op in standalone mode (no backend to lease from).
+        services.AddSingleton<IProfilerLeaseClient, DiagnosticsProfilerLeaseClient>();
+        services.AddSingleton<IProfilerConcurrencyControlClient>(p =>
+        {
+            UserConfiguration options = p.GetRequiredService<IOptions<UserConfiguration>>().Value;
+            if (options.StandaloneMode)
+            {
+                return new NoOpProfilerConcurrencyControlClient();
+            }
+
+            return ActivatorUtilities.CreateInstance<ProfilerConcurrencyControlClient>(p);
+        });
+
         return services;
     }
 
