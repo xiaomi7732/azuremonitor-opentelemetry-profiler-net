@@ -27,7 +27,7 @@ Then add **one line** where you configure telemetry, depending on which SDK you 
 
 Run your app — profiler traces appear in Application Insights after a few minutes.
 
-> 🤖 Not sure which you use, or want zero config? [Let Copilot enable the Profiler for you](./docs/AddAzureMonitorProfilerWithCoPilot.md).
+> 🤖 Not sure which you use, or want zero config? Let **optix** do it — install the [Code Optimizations skills for Copilot CLI](https://github.com/microsoft/code-optimizations-skills) and run `copilot "Help me enable the Application Insights Profiler"`. See [Enable the Profiler with optix](./docs/AddAzureMonitorProfilerWithCoPilot.md).
 
 Want the full step-by-step (packages, connection string, verification)? See the [detailed setup](#get-started) below.
 
@@ -198,14 +198,9 @@ Assuming you are building an **ASP.NET Core application**:
 
 ---
 
-### Let Copilot enable the Profiler for you
-
-As an alternative to the manual walkthrough above, you can use Copilot to enable the profiler automatically (works for both Option A and Option B):
-
-- [Enable Profiler using Copilot](./docs/AddAzureMonitorProfilerWithCoPilot.md)
-
 ## Next
 
+- [Enable the Profiler with optix (Copilot CLI)](./docs/AddAzureMonitorProfilerWithCoPilot.md)
 - [Profiling Azure Service Bus Applications](./docs/ServiceBusSetup.md)
 - [Setup the Role name](./docs/SetupCloudRoleName.md)
 - [Configuration Guide](./docs/Configurations.md)
