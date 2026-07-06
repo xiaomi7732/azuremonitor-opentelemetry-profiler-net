@@ -53,11 +53,48 @@ $uploaderProj       = Join-Path $srcDir  "ServiceProfiler.EventPipe.Upload\Servi
 $nuspec             = Join-Path $here    "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.nuspec"
 
 $staging     = Join-Path $here "staging"
-$payload     = Join-Path $staging "payload\$Version"
-$uploaderOut = Join-Path $payload "Uploader"
+$payloadRoot = Join-Path $staging "payload\$Version"
+$uploaderOut = Join-Path $payloadRoot "Uploader"
 $outDir      = Join-Path $repoRoot "Out\NuGets"
 
-$targetFramework = "net8.0"
+# Uploader is a standalone out-of-proc process, independent of the profiled app's runtime.
+$uploaderFramework = "net8.0"
+
+# The profiler projects are netstandard2.1 (runtime-version-flexible); only the bundled framework/extension
+# dependency DLLs differ per runtime. We publish one HostingStartup closure per target framework, each with
+# the framework/extension package versions overridden to that major's baseline, so the bundled versions
+# match what the app's shared framework already provides (the runtime never rolls a shared-framework
+# assembly DOWN, so a 10.x bundle cannot load on a .NET 8/9 app). At runtime the StartupHook resolver picks
+# the payload\<version>\net{major}.0\ folder matching Environment.Version.Major.
+#
+# NOTE (blocker for net8.0/net9.0): the repo pins OpenTelemetry to 1.15.3, whose graph transitively
+# requires Microsoft.Extensions.* >= 10.0.0 (via Microsoft.Extensions.Logging.Configuration 10.0.0), and
+# Azure.Core/System.ClientModel add further 8.0.x floors. So a net8/net9 payload cannot simply down-level
+# the extension packages - it would also require down-leveling OpenTelemetry + the Azure.Monitor exporter +
+# Azure.Core (a large dependency-matrix change, and the profiler is compiled against the OTel 1.15 API).
+# Until that strategy is decided, only net10.0 is published. Adding "net8.0"/"net9.0" back here (with a
+# compatible down-leveled dependency set) is the remaining A2 work; the resolver + layout already support
+# it. See plan.md "A2".
+$targetFrameworks = @("net10.0")
+
+# Per-TFM overrides for the version PROPERTIES defined in the Directory.Packages.props files. net10.0 uses
+# the repo defaults (10.0.0), so no overrides. The net8.0/net9.0 maps below are retained for when the
+# down-leveled dependency set is worked out (they are NOT sufficient on their own - see the note above).
+$tfmVersionOverrides = @{
+    "net8.0" = @{
+        "_MicrosoftExtensionsVersion"                 = "8.0.0"
+        "_MicrosoftExtensionsOptionsVersion"          = "8.0.2"
+        "_SystemTextJsonVersion"                      = "8.0.5"
+        "_SystemDiagnosticsDiagnosticSourceVersion"   = "8.0.1"
+    }
+    "net9.0" = @{
+        "_MicrosoftExtensionsVersion"                 = "9.0.0"
+        "_MicrosoftExtensionsOptionsVersion"          = "9.0.0"
+        "_SystemTextJsonVersion"                      = "9.0.0"
+        "_SystemDiagnosticsDiagnosticSourceVersion"   = "9.0.0"
+    }
+    "net10.0" = @{}
+}
 
 function Invoke-Checked([string]$description, [scriptblock]$action) {
     Write-Host "==> $description" -ForegroundColor Cyan
@@ -70,25 +107,34 @@ function Invoke-Checked([string]$description, [scriptblock]$action) {
 # 1. Clean staging.
 Write-Host "==> Cleaning staging folder" -ForegroundColor Cyan
 if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
-New-Item -ItemType Directory -Force -Path $payload | Out-Null
-New-Item -ItemType Directory -Force -Path $outDir  | Out-Null
+New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $outDir      | Out-Null
 
-# 2. Publish the HostingStartup closure (brings both profiler stacks + all dependencies).
-Invoke-Checked "Publishing HostingStartup payload ($targetFramework)" {
-    dotnet publish $hostingStartupProj -c $Configuration -f $targetFramework -o $payload --nologo
+# 2. Publish the HostingStartup closure once per target framework into payload\<version>\<tfm>\, overriding
+#    the framework/extension package versions to that major's baseline.
+foreach ($tfm in $targetFrameworks) {
+    $tfmDir = Join-Path $payloadRoot $tfm
+    $overrideArgs = @()
+    foreach ($kvp in $tfmVersionOverrides[$tfm].GetEnumerator()) {
+        $overrideArgs += "-p:$($kvp.Key)=$($kvp.Value)"
+    }
+    Invoke-Checked "Publishing HostingStartup payload ($tfm)" {
+        dotnet publish $hostingStartupProj -c $Configuration -f $tfm -o $tfmDir --nologo @overrideArgs
+    }
 }
 
-# 3. Build the resolver StartupHook and copy just its single (dependency-free) assembly into the payload.
+# 3. Build the resolver StartupHook once (BCL-only, TFM-agnostic) and copy its single assembly to the
+#    payload root. It runs on every runtime and selects the matching net{major}.0 subfolder at load time.
 Invoke-Checked "Building StartupHook resolver" {
-    dotnet build $startupHookProj -c $Configuration -f $targetFramework --nologo
+    dotnet build $startupHookProj -c $Configuration -f $uploaderFramework --nologo
 }
-$startupHookDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$targetFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+$startupHookDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$uploaderFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
 if (-not (Test-Path $startupHookDll)) { throw "StartupHook assembly not found at $startupHookDll." }
-Copy-Item $startupHookDll -Destination $payload -Force
+Copy-Item $startupHookDll -Destination $payloadRoot -Force
 
-# 4. Publish the out-of-proc uploader into payload/Uploader.
-Invoke-Checked "Publishing the trace uploader ($targetFramework)" {
-    dotnet publish $uploaderProj -c $Configuration -f $targetFramework -o $uploaderOut --nologo
+# 4. Publish the out-of-proc uploader once into payload\<version>\Uploader.
+Invoke-Checked "Publishing the trace uploader ($uploaderFramework)" {
+    dotnet publish $uploaderProj -c $Configuration -f $uploaderFramework -o $uploaderOut --nologo
 }
 
 # 5. Build the applicationHost.xdt custom transform (net472) and copy just its assembly into the

@@ -12,4 +12,8 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.Tests" Key="$(TestPublicKey)" />
+  </ItemGroup>
+
 </Project>

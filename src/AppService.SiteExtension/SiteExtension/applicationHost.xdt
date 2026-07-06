@@ -5,9 +5,12 @@
   tokens (%XDT_EXTENSIONPATH% = this extension's install folder). It injects three environment variables
   into the application's worker process:
 
-    * DOTNET_STARTUP_HOOKS               -> a tiny resolver hook that makes the staged payload loadable.
+    * DOTNET_STARTUP_HOOKS               -> a tiny, runtime-version-agnostic resolver hook (at the payload
+                                            root) that selects the net{major}.0 payload subfolder matching
+                                            the app's runtime and makes the staged profiler loadable.
     * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the HostingStartup that detects the telemetry stack and
-                                            enables the matching profiler.
+                                            enables the matching profiler (resolved from the runtime-matched
+                                            per-TFM subfolder by the hook above).
     * SP_UPLOADER_PATH                    -> the out-of-proc trace uploader shipped in the payload.
 
   The two list-valued variables use the custom AppendListValueIfMissing transform so our value is
@@ -22,6 +25,11 @@
   a DLL that a running worker holds open. This mirrors how the AI agent versions its own StartupHook path
   (...\ApplicationInsightsAgent\<version>\core\StartupHook\...). The {{PAYLOAD_SUBDIR}} token is replaced
   with the package version by Build-SiteExtension.ps1 at pack time.
+
+  The versioned payload folder holds the single (TFM-agnostic) StartupHook.dll and the Uploader\ at its
+  root, plus one profiler closure per target framework (net8.0\, net9.0\, net10.0\, ...). Only
+  DOTNET_STARTUP_HOOKS and SP_UPLOADER_PATH carry a path (both to the root); the HostingStartup is resolved
+  by NAME out of the runtime-matched per-TFM subfolder, so the XDT needs no per-framework branching.
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
   <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
