@@ -11,6 +11,21 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!--
+      App Service's applicationHost.xdt transform sandbox only loads custom transform assemblies that are
+      strong-name signed (the shipping classic transform is signed with the Microsoft key 31bf3856ad364e35
+      via the official build; an unsigned assembly is refused with "Could not resolve '<transform>' as a
+      type of Transform" and the whole transform aborts).
+
+      In the official build (StrongNameSignAssembly=true) the assembly is delay-signed with the Microsoft
+      key inherited from src/Directory.Build.props. For local POC builds we FULL-sign with a committed key
+      so the produced DLL is strong-named and loadable, to test whether App Service accepts any strong name
+      or requires the Microsoft key specifically.
+    -->
+    <SignAssembly Condition="'$(StrongNameSignAssembly)' != 'true'">true</SignAssembly>
+    <DelaySign Condition="'$(StrongNameSignAssembly)' != 'true'">false</DelaySign>
+    <AssemblyOriginatorKeyFile Condition="'$(StrongNameSignAssembly)' != 'true'">$(MSBuildProjectDirectory)\XdtTransforms.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
