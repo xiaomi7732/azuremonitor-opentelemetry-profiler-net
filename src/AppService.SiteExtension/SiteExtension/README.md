@@ -75,9 +75,9 @@ versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\
 pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 0.1.0-poc
 ```
 
-This publishes the HostingStartup closure (both profiler stacks + dependencies), the resolver hook, and
-the uploader into `staging/payload/`, builds the XDT transform, and packs everything (plus
-`applicationHost.xdt`, tagged `AzureSiteExtension`) into:
+This publishes the HostingStartup closure (both profiler stacks + dependencies) once per target framework,
+plus the resolver hook and the uploader, into `staging/payload/<version>/`, builds the XDT transform, and
+packs everything (plus `applicationHost.xdt`, tagged `AzureSiteExtension`) into:
 
 ```
 <repo>/Out/NuGets/Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.<version>.nupkg
@@ -91,9 +91,10 @@ content/
   Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll   (custom XDT transform)
   payload/
     <version>/
-      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll
-      Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-      Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all dependencies)
+      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (single, TFM-agnostic; selects the folder below)
+      net10.0/                                                (one folder per shipped runtime; net8.0/ net9.0/ future)
+        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
+        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all dependencies)
       Uploader/
         Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
 ```
@@ -125,14 +126,23 @@ code change** to the application. The `AppendListValueIfMissing` transform is ve
 
 ## Known limitations (POC)
 
-- **Runtime version must match the profiler's build.** The bundled profiler references .NET 10 versions
-  of `Microsoft.Extensions.*` / `System.Text.Json`. It therefore activates cleanly on **.NET 10** apps
-  (the runtime this repo builds against). On **.NET 8 / 9** apps those framework assemblies are present
-  at a lower version and the higher-versioned references can't be satisfied by the resolver fallback
-  (the lower version is already loaded, so `Resolving` never fires for it). Proper multi-runtime support
-  needs dependency-version reconciliation — publishing a payload per target framework, or isolating the
-  profiler in a dedicated `AssemblyLoadContext` (the "adaptive dependency resolution" work in the design
-  plan).
+- **Runtime version support: .NET 10 only (today).** The build stages the payload per target framework
+  (`payload/<version>/net{major}.0/`) and the resolver selects the folder matching the app's runtime major
+  (with a highest-≤ fallback), so the layout already supports multiple runtimes. However, only the
+  **net10.0** payload is currently published, because the profiler stack is version-coupled to .NET 10:
+  **OpenTelemetry 1.15.3** (repo-pinned) transitively requires `Microsoft.Extensions.* >= 10.0.0`. A lower
+  payload can't just down-level the extension packages:
+  - **.NET 9:** would require down-leveling OpenTelemetry to **1.12.0** and ~10 extension packages to 9.0.x
+    in lockstep (OTel 1.12.0 floors them at 9.0.0). Since the profiler builds from source it would recompile
+    against OTel 1.12, but the change is repo-wide (touches the shared/submodule central-package-management
+    files) — not yet done.
+  - **.NET 8:** not viable while keeping `Azure.Monitor.OpenTelemetry.Exporter` **1.4.0**, which floors OTel
+    at 1.12.0 → extensions at 9.0.0. Supporting net8 would additionally require dropping the exporter below
+    1.4.0 (changes the profiler's exporter integration).
+  To add a runtime later, extend `$targetFrameworks` in `Build-SiteExtension.ps1` (the net8.0/net9.0
+  override maps are already stubbed there) once the dependency down-level is agreed. A future .NET 11 app
+  needs **no** rebuild — the resolver's highest-≤ fallback runs it on the net10.0 payload and framework
+  roll-forward covers the newer runtime.
 - **A valid connection string is required.** With a bogus/placeholder connection string the profiler
   fails to construct its backend client during startup. Use a real `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 - **Legacy classic Application Insights 2.x activation is incomplete.** Detection/routing to the classic
