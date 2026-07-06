@@ -12,6 +12,15 @@
     <_SystemCollectionsImmutableVersion>8.0.0</_SystemCollectionsImmutableVersion>
     <_SystemMemoryDataVersion>10.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>10.0.0</_SystemSecurityCryptographyProtectedDataVersion>
+    <!--
+      OpenTelemetry SDK version. Default 1.15.3 (aligned to .NET 10). Overridable so the codeless site
+      extension can publish a lower-runtime payload: OpenTelemetry 1.15.3 transitively pins
+      Microsoft.Extensions.* >= 10.0.0, which cannot load on a .NET 9 app. Azure.Monitor.OpenTelemetry.Exporter
+      1.4.0 floors OpenTelemetry at 1.12.0, and OpenTelemetry 1.12.0 only requires Microsoft.Extensions.* >=
+      9.0.0 - so the net9.0 payload publishes with -p:_OpenTelemetryVersion=1.12.0 (+ the 9.0 extension
+      overrides). Normal builds are unaffected (default unchanged).
+    -->
+    <_OpenTelemetryVersion Condition="'$(_OpenTelemetryVersion)' == ''">1.15.3</_OpenTelemetryVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,5 +31,10 @@
     <PackageVersion Update="Microsoft.Diagnostics.NETCore.Client" Version="$(_MicrosoftDiagnosticsNETCoreClientVersion)" />
     <PackageVersion Update="System.Collections.Immutable" Version="$(_SystemCollectionsImmutableVersion)" />
     <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
+
+    <!-- OpenTelemetry down-leveled per payload runtime via $(_OpenTelemetryVersion); see the note above. -->
+    <PackageVersion Update="OpenTelemetry" Version="$(_OpenTelemetryVersion)" />
+    <PackageVersion Update="OpenTelemetry.Api" Version="$(_OpenTelemetryVersion)" />
+    <PackageVersion Update="OpenTelemetry.Extensions.Hosting" Version="$(_OpenTelemetryVersion)" />
   </ItemGroup>
 </Project>

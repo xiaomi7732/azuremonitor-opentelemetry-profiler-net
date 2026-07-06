@@ -92,9 +92,12 @@ content/
   payload/
     <version>/
       Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (single, TFM-agnostic; selects the folder below)
-      net10.0/                                                (one folder per shipped runtime; net8.0/ net9.0/ future)
+      net9.0/                                                 (one folder per shipped runtime)
         Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all dependencies)
+        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + net9-matched dependencies)
+      net10.0/
+        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
+        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + net10-matched dependencies)
       Uploader/
         Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
 ```
@@ -126,23 +129,24 @@ code change** to the application. The `AppendListValueIfMissing` transform is ve
 
 ## Known limitations (POC)
 
-- **Runtime version support: .NET 10 only (today).** The build stages the payload per target framework
+- **Runtime version support: .NET 9 and .NET 10.** The build stages the payload per target framework
   (`payload/<version>/net{major}.0/`) and the resolver selects the folder matching the app's runtime major
-  (with a highest-≤ fallback), so the layout already supports multiple runtimes. However, only the
-  **net10.0** payload is currently published, because the profiler stack is version-coupled to .NET 10:
-  **OpenTelemetry 1.15.3** (repo-pinned) transitively requires `Microsoft.Extensions.* >= 10.0.0`. A lower
-  payload can't just down-level the extension packages:
-  - **.NET 9:** would require down-leveling OpenTelemetry to **1.12.0** and ~10 extension packages to 9.0.x
-    in lockstep (OTel 1.12.0 floors them at 9.0.0). Since the profiler builds from source it would recompile
-    against OTel 1.12, but the change is repo-wide (touches the shared/submodule central-package-management
-    files) — not yet done.
-  - **.NET 8:** not viable while keeping `Azure.Monitor.OpenTelemetry.Exporter` **1.4.0**, which floors OTel
-    at 1.12.0 → extensions at 9.0.0. Supporting net8 would additionally require dropping the exporter below
-    1.4.0 (changes the profiler's exporter integration).
-  To add a runtime later, extend `$targetFrameworks` in `Build-SiteExtension.ps1` (the net8.0/net9.0
-  override maps are already stubbed there) once the dependency down-level is agreed. A future .NET 11 app
-  needs **no** rebuild — the resolver's highest-≤ fallback runs it on the net10.0 payload and framework
-  roll-forward covers the newer runtime.
+  (with a highest-≤ fallback). Both **net9.0** and **net10.0** payloads are published; each bundles a
+  dependency set matched to that runtime (OpenTelemetry 1.12.0 + `Microsoft.Extensions.*` 9.0 for net9.0,
+  10.0 for net10.0), so the bundled versions line up with the app's shared framework (the runtime never
+  rolls a shared-framework assembly *down*). Because the profiler projects are `netstandard2.1`, they
+  recompile from source against each runtime's dependency set.
+  - **.NET 8 is not supported yet.** `Azure.Monitor.OpenTelemetry.Exporter 1.4.0` floors OpenTelemetry at
+    1.12.0, and OpenTelemetry 1.12.0 requires `Microsoft.Extensions.* >= 9.0.0` — so a net8.0 payload would
+    additionally require dropping the exporter below 1.4.0 (changing the profiler's exporter integration).
+    Enabling it is a follow-up: add `net8.0` to `$targetFrameworks` in `Build-SiteExtension.ps1` with a
+    net8-compatible exporter/OpenTelemetry set.
+  - A future **.NET 11** app needs **no** rebuild — the resolver's highest-≤ fallback runs it on the
+    net10.0 payload and framework roll-forward covers the newer runtime. Adding a native `net11.0` folder is
+    a one-line `$targetFrameworks` change when desired.
+  - *Build note:* per-TFM payloads recompile the shared `netstandard2.1` profiler projects against different
+    dependency versions, so `Build-SiteExtension.ps1` cleans `bin`/`obj` under `src` before each TFM publish
+    to prevent version bleed between payloads. Multi-TFM builds are therefore slower.
 - **A valid connection string is required.** With a bogus/placeholder connection string the profiler
   fails to construct its backend client during startup. Use a real `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 - **Legacy classic Application Insights 2.x activation is incomplete.** Detection/routing to the classic
