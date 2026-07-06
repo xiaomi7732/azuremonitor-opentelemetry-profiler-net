@@ -16,10 +16,12 @@
 
   NOTE: these are set under the global system.webServer/runtime section, so they apply to every worker
   on the site - including the SCM/Kudu pool. Scoping them to the main app pool
-  (system.applicationHost/applicationPools) is NOT honored by App Service's site-extension XDT engine
-  (verified: it applies to neither pool), so the global section is used. A consequence is that the
-  .NET-Core Kudu worker also loads StartupHook.dll and locks it, so the app AND the SCM site must be
-  recycled before upgrading/uninstalling the extension (see README).
+  (system.applicationHost/applicationPools/add name="%XDT_SITENAME%") is documented as supported by Kudu
+  and worth revisiting to keep the hook off the SCM worker; an earlier scoped attempt failed, but that was
+  confounded by the Microsoft.Web.Xdt version mismatch (see XdtTransforms.csproj) that aborted the whole
+  transform, so the scoping itself was never actually exercised. For now the global section is used. A
+  consequence is that the .NET-Core Kudu worker also loads StartupHook.dll and locks it, so the app AND the
+  SCM site must be recycled before upgrading/uninstalling the extension (see README).
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
   <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"

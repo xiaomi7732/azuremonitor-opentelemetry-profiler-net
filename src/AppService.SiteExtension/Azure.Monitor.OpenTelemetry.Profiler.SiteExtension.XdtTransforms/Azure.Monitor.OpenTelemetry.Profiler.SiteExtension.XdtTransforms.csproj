@@ -13,15 +13,9 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
     <!--
-      App Service's applicationHost.xdt transform sandbox only loads custom transform assemblies that are
-      strong-name signed (the shipping classic transform is signed with the Microsoft key 31bf3856ad364e35
-      via the official build; an unsigned assembly is refused with "Could not resolve '<transform>' as a
-      type of Transform" and the whole transform aborts).
-
-      In the official build (StrongNameSignAssembly=true) the assembly is delay-signed with the Microsoft
-      key inherited from src/Directory.Build.props. For local POC builds we FULL-sign with a committed key
-      so the produced DLL is strong-named and loadable, to test whether App Service accepts any strong name
-      or requires the Microsoft key specifically.
+      Strong-name signing (NOT what makes the custom transform load - see the Microsoft.Web.Xdt note below).
+      The official build (StrongNameSignAssembly=true) delay-signs with the Microsoft key inherited from
+      src/Directory.Build.props; local builds full-sign with a committed key to match the shipping layout.
     -->
     <SignAssembly Condition="'$(StrongNameSignAssembly)' != 'true'">true</SignAssembly>
     <DelaySign Condition="'$(StrongNameSignAssembly)' != 'true'">false</DelaySign>
@@ -29,8 +23,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Microsoft.Web.XmlTransform (XDT) base types; the App Service engine provides the runtime copy. -->
-    <PackageReference Include="Microsoft.Web.Xdt" />
+    <!--
+      Microsoft.Web.XmlTransform (XDT) base types. The App Service applicationHost.xdt transform host loads
+      its OWN copy of Microsoft.Web.XmlTransform (the one matching Microsoft.Web.Xdt 1.4.0). A custom
+      Transform is only recognized ("resolved as a type of Transform") when it derives from the SAME
+      Microsoft.Web.XmlTransform assembly identity the host loaded - binding redirects are NOT honored in
+      that sandbox. So we MUST pin to 1.4.0 to match; newer versions (e.g. 2.1.1) produce a different
+      assembly identity and the host rejects our transform with
+      "Could not resolve 'AppendListValueIfMissing' as a type of Transform".
+      This mirrors the shipping classic transform (ServiceProfiler/src/AppService.Extension pins 1.4.0 too).
+    -->
+    <PackageReference Include="Microsoft.Web.Xdt" VersionOverride="1.4.0" />
   </ItemGroup>
 
 </Project>
