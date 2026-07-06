@@ -60,36 +60,23 @@ $outDir      = Join-Path $repoRoot "Out\NuGets"
 # Uploader is a standalone out-of-proc process, independent of the profiled app's runtime.
 $uploaderFramework = "net8.0"
 
-# The profiler projects are netstandard2.1 (runtime-version-flexible); only the bundled framework/extension
-# dependency DLLs differ per runtime. We publish one HostingStartup closure per target framework, each with
-# the framework/extension package versions overridden to that major's baseline, so the bundled versions
-# match what the app's shared framework already provides (the runtime never rolls a shared-framework
-# assembly DOWN, so a 10.x bundle cannot load on a .NET 8/9 app). At runtime the StartupHook resolver picks
-# the payload\<version>\net{major}.0\ folder matching Environment.Version.Major.
-#
-# NOTE (net8.0): the repo's Azure.Monitor.OpenTelemetry.Exporter 1.4.0 floors OpenTelemetry at 1.12.0, and
-# OpenTelemetry 1.12.0 requires Microsoft.Extensions.* >= 9.0.0 - so net8.0 would additionally require
-# dropping the exporter below 1.4.0 (changes the profiler's exporter integration). net8.0 is therefore not
-# published yet; net9.0 + net10.0 are. Adding "net8.0" needs an exporter down-level (see plan.md "A2").
-$targetFrameworks = @("net9.0", "net10.0")
+# The profiler projects are netstandard2.1 (runtime-version-flexible). The HostingStartup project is
+# multi-targeted (net8.0;net9.0;net10.0); we publish its closure once per target framework so the runtime
+# gets a matching-TFM HostingStartup assembly. The bundled dependency DLLs (Microsoft.Extensions.*, OTel,
+# System.Text.Json, ...) use their 10.x versions, which ship net8.0/net9.0/net10.0 assets and therefore run
+# on all three runtimes - so NO per-runtime down-leveling is needed. At runtime the StartupHook resolver
+# picks the payload\<version>\net{major}.0\ folder matching Environment.Version.Major.
+$targetFrameworks = @("net8.0", "net9.0", "net10.0")
 
-# Per-TFM overrides for the version PROPERTIES defined in the Directory.Packages.props files. net10.0 uses
-# the repo defaults (OpenTelemetry 1.15.3 / extensions 10.0.0). net9.0 down-levels OpenTelemetry to 1.12.0
-# (the floor allowed by exporter 1.4.0) and the shared-framework extension packages to 9.0.x so the bundled
-# versions match a .NET 9 app's shared framework. The profiler builds from source, so it recompiles against
-# OpenTelemetry 1.12 for the net9.0 payload (no compiled-against-1.15 mismatch).
+# Per-TFM version-property overrides. Left empty on purpose: all TFMs build with the repo-default (10.x)
+# dependency versions, whose per-TFM NuGet assets are compatible with net8/net9/net10. If a future live test
+# on a real .NET 8/9 app shows a runtime type-identity conflict at the app<->profiler boundary (most likely
+# System.Diagnostics.DiagnosticSource, which drives request<->sample correlation), align ONLY that assembly
+# for the affected TFM here (e.g. "_SystemDiagnosticsDiagnosticSourceVersion" = "8.0.1") rather than
+# wholesale down-leveling. See plan.md "A2b".
 $tfmVersionOverrides = @{
-    "net9.0" = @{
-        "_OpenTelemetryVersion"                            = "1.12.0"
-        "_MicrosoftExtensionsVersion"                      = "9.0.0"
-        "_MicrosoftExtensionsOptionsVersion"               = "9.0.0"
-        "_SystemTextJsonVersion"                           = "9.0.0"
-        "_SystemDiagnosticsDiagnosticSourceVersion"        = "9.0.0"
-        "_SystemMemoryDataVersion"                         = "9.0.0"
-        "_SystemSecurityCryptographyProtectedDataVersion"  = "9.0.0"
-        "_SystemTextEncodingsWebVersion"                   = "9.0.0"
-        "_SystemIOHashingVersion"                          = "9.0.0"
-    }
+    "net8.0"  = @{}
+    "net9.0"  = @{}
     "net10.0" = @{}
 }
 
@@ -107,24 +94,11 @@ if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
 New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $outDir      | Out-Null
 
-# 2. Publish the HostingStartup closure once per target framework into payload\<version>\<tfm>\, overriding
-#    the framework/extension package versions to that major's baseline.
-#
-#    IMPORTANT: the profiler projects are shared netstandard2.1 libraries that get recompiled against each
-#    TFM's overridden dependency versions (e.g. OpenTelemetry 1.12.0 + Microsoft.Extensions.* 9.0 for net9.0
-#    vs 1.15.3 + 10.0 for net10.0). Because MSBuild/NuGet cache per-project bin/obj, a shared project built
-#    for one TFM would otherwise be reused for the next, bleeding the wrong versions into the payload. So we
-#    clean bin/obj under src (and shut down the build server) before each TFM publish to force a clean,
-#    consistent rebuild. This is why per-TFM builds are slower.
-$multiTfm = $targetFrameworks.Count -gt 1
+# 2. Publish the HostingStartup closure once per target framework into payload\<version>\<tfm>\. All TFMs
+#    build with the repo-default dependency versions, so there is no cross-TFM version bleed to guard
+#    against; the multi-targeted HostingStartup produces a matching-TFM assembly per folder while the shared
+#    netstandard2.1 profiler projects compile once and are reused.
 foreach ($tfm in $targetFrameworks) {
-    if ($multiTfm) {
-        Write-Host "==> Cleaning bin/obj under src for a clean $tfm build" -ForegroundColor Cyan
-        dotnet build-server shutdown 2>&1 | Out-Null
-        Get-ChildItem -Recurse -Directory -Path $srcDir -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -eq 'bin' -or $_.Name -eq 'obj' } |
-            ForEach-Object { Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue }
-    }
     $tfmDir = Join-Path $payloadRoot $tfm
     $overrideArgs = @()
     foreach ($kvp in $tfmVersionOverrides[$tfm].GetEnumerator()) {
