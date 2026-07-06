@@ -48,30 +48,26 @@ uses a custom `AppendListValueIfMissing` transform (shipped as
 `InsertIfMissing` which would be skipped when the variable already exists.
 
 The variables are set under the global `system.webServer/runtime` section, so they apply to every worker
-on the site. Scoping them to the main app pool only (`system.applicationHost/applicationPools`) is **not
-honored by App Service's site-extension XDT engine** (verified — it applies to neither pool), so the
-global section must be used.
+on the site — the same scope the canonical Application Insights / DiagnosticServices extension uses.
+(Scoping the env vars to the app pool only would diverge from that canonical pattern and break coexistence:
+the AI agent appends its value globally, so a pool-scoped append would not see it. The upgrade/lock concern
+that scoping was meant to address is instead solved by the versioned payload folder — see below.)
 
-### Upgrading / uninstalling (important)
+### Upgrading / uninstalling
 
-Because `DOTNET_STARTUP_HOOKS` is global, both the app worker **and** the .NET-Core SCM/Kudu worker load
-`StartupHook.dll` from the extension folder and memory-map (lock) it. Since Kudu performs the extension
-upgrade, it cannot overwrite a DLL it has loaded, so an in-place upgrade/uninstall fails with *"The
-process cannot access the file … because it is being used by another process."*
+Because `DOTNET_STARTUP_HOOKS` is global, both the app worker **and** the persistent .NET-Core SCM/Kudu
+worker load `StartupHook.dll` and memory-map (lock) it. To keep Kudu from having to overwrite a locked DLL
+during an upgrade, the payload is staged under a **version-stamped subfolder** (`payload/<version>/…`) and
+the `applicationHost.xdt` paths are generated with that version baked in. A new package version stages into
+a *new* folder, so Kudu writes only new paths and never touches the old, still-locked files — the previous
+version's payload is simply orphaned (cleaned up on the next full recycle). This mirrors how the AI agent
+versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\StartupHook\…`).
 
-To upgrade or uninstall, **recycle both the app and the SCM/Kudu site** so the locks release, then perform
-the operation:
-
-```powershell
-az webapp stop  -g <rg> -n <site>          # stop the app worker
-# recycle Kudu too (e.g. restart the site / kill the ~1 SCM w3wp via Kudu) so it releases StartupHook.dll
-# then upgrade or uninstall the extension, and:
-az webapp start -g <rg> -n <site>
-```
-
-A fully in-place, no-recycle upgrade would require loading the payload from a versioned shadow copy
-**outside** the extension folder (so the extension folder is never locked). That is the recommended
-future enhancement; the current POC accepts the recycle-before-upgrade constraint.
+> Historical note: earlier POC builds staged the payload at a fixed `payload/` path, so an in-place upgrade
+> failed with *"The process cannot access the file … because it is being used by another process."* and
+> required recycling both the app and the SCM/Kudu site first. The versioned layout removes that
+> requirement. Orphaned old `payload/<version>/` folders accumulating over many upgrades is a minor known
+> limitation (periodic cleanup is future work).
 
 ## Building the package
 
@@ -94,11 +90,12 @@ content/
   applicationHost.xdt
   Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll   (custom XDT transform)
   payload/
-    Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll
-    Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-    Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all dependencies)
-    Uploader/
-      Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
+    <version>/
+      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll
+      Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
+      Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all dependencies)
+      Uploader/
+        Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
 ```
 
 ## Installing on a Windows App Service (manual test)

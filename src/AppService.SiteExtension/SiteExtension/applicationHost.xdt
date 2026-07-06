@@ -14,14 +14,14 @@
   APPENDED (semicolon-separated) and de-duplicated, letting the extension coexist with other agents that
   set the same variables (e.g. the Application Insights auto-instrumentation agent).
 
-  NOTE: these are set under the global system.webServer/runtime section, so they apply to every worker
-  on the site - including the SCM/Kudu pool. Scoping them to the main app pool
-  (system.applicationHost/applicationPools/add name="%XDT_SITENAME%") is documented as supported by Kudu
-  and worth revisiting to keep the hook off the SCM worker; an earlier scoped attempt failed, but that was
-  confounded by the Microsoft.Web.Xdt version mismatch (see XdtTransforms.csproj) that aborted the whole
-  transform, so the scoping itself was never actually exercised. For now the global section is used. A
-  consequence is that the .NET-Core Kudu worker also loads StartupHook.dll and locks it, so the app AND the
-  SCM site must be recycled before upgrading/uninstalling the extension (see README).
+  NOTE: these are set under the global system.webServer/runtime section (the same scope the canonical
+  Application Insights / DiagnosticServices extension uses), so they apply to every worker on the site -
+  including the SCM/Kudu pool. To keep upgrades from failing when the SCM worker has already loaded and
+  locked our StartupHook.dll, the payload lives under a VERSION-STAMPED subfolder
+  (payload\{{PAYLOAD_SUBDIR}}\...); a new version stages into a new folder, so Kudu never has to overwrite
+  a DLL that a running worker holds open. This mirrors how the AI agent versions its own StartupHook path
+  (...\ApplicationInsightsAgent\<version>\core\StartupHook\...). The {{PAYLOAD_SUBDIR}} token is replaced
+  with the package version by Build-SiteExtension.ps1 at pack time.
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
   <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
@@ -41,7 +41,7 @@
       <environmentVariables xdt:Transform="InsertIfMissing">
 
         <add name="DOTNET_STARTUP_HOOKS"
-             value="%XDT_EXTENSIONPATH%\payload\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+             value="%XDT_EXTENSIONPATH%\payload\{{PAYLOAD_SUBDIR}}\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
              xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
         <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
@@ -49,7 +49,7 @@
              xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
 
         <add name="SP_UPLOADER_PATH"
-             value="%XDT_EXTENSIONPATH%\payload\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
+             value="%XDT_EXTENSIONPATH%\payload\{{PAYLOAD_SUBDIR}}\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
              xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
 
       </environmentVariables>

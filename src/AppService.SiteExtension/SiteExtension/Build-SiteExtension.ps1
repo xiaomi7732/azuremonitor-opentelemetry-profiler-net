@@ -7,13 +7,21 @@
         staging/
           applicationHost.xdt
           payload/
-            Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (assembly-resolution bootstrap)
-            Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll (detect + route profiler)
-            <all profiler + dependency assemblies>
-            Uploader/
-              Microsoft.ApplicationInsights.Profiler.Uploader.dll   (out-of-proc trace uploader)
+            <version>/
+              Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (assembly-resolution bootstrap)
+              Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll (detect + route profiler)
+              <all profiler + dependency assemblies>
+              Uploader/
+                Microsoft.ApplicationInsights.Profiler.Uploader.dll   (out-of-proc trace uploader)
     then packs it into Out/NuGets/Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.<version>.nupkg
     with the AzureSiteExtension tag so it appears in the Kudu Site Extensions gallery.
+
+    The payload is staged under a VERSION-STAMPED subfolder (payload\<version>\) so that upgrades never
+    have to overwrite a DLL that a running SCM/app worker still holds locked (the DOTNET_STARTUP_HOOKS /
+    ASPNETCORE_HOSTINGSTARTUPASSEMBLIES hooks are loaded by every .NET-Core worker on the site, including
+    the persistent Kudu/SCM worker). A new version stages into a new folder; the applicationHost.xdt is
+    generated with the version baked into the payload paths (the {{PAYLOAD_SUBDIR}} token). This mirrors how
+    the AI agent versions its own StartupHook path.
 
     The produced package targets net8.0 applications (the POC runtime). Apps on other runtimes need a
     payload published for the matching target framework.
@@ -45,7 +53,7 @@ $uploaderProj       = Join-Path $srcDir  "ServiceProfiler.EventPipe.Upload\Servi
 $nuspec             = Join-Path $here    "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.nuspec"
 
 $staging     = Join-Path $here "staging"
-$payload     = Join-Path $staging "payload"
+$payload     = Join-Path $staging "payload\$Version"
 $uploaderOut = Join-Path $payload "Uploader"
 $outDir      = Join-Path $repoRoot "Out\NuGets"
 
@@ -93,8 +101,15 @@ $xdtTransformsDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.Sit
 if (-not (Test-Path $xdtTransformsDll)) { throw "XDT transform assembly not found at $xdtTransformsDll." }
 Copy-Item $xdtTransformsDll -Destination $staging -Force
 
-# 6. Copy the applicationHost.xdt into the staging root.
-Copy-Item (Join-Path $here "applicationHost.xdt") -Destination $staging -Force
+# 6. Generate the applicationHost.xdt into the staging root, baking the version-stamped payload subfolder
+#    into the {{PAYLOAD_SUBDIR}} token so the DOTNET_STARTUP_HOOKS / SP_UPLOADER_PATH paths point at
+#    payload\<version>\.
+$xdtTemplate = Get-Content -Raw -Path (Join-Path $here "applicationHost.xdt")
+if ($xdtTemplate -notmatch '\{\{PAYLOAD_SUBDIR\}\}') {
+    throw "applicationHost.xdt is missing the {{PAYLOAD_SUBDIR}} token; cannot version-stamp the payload paths."
+}
+$xdtGenerated = $xdtTemplate -replace '\{\{PAYLOAD_SUBDIR\}\}', $Version
+Set-Content -Path (Join-Path $staging "applicationHost.xdt") -Value $xdtGenerated -Encoding UTF8
 
 # 7. Pack the site extension.
 $nuget = (Get-Command nuget -ErrorAction SilentlyContinue)?.Source
