@@ -75,14 +75,17 @@ versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\
 pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 0.1.0-poc
 ```
 
-This publishes the HostingStartup closure (both profiler stacks + dependencies) once per target framework
-(net8.0/net9.0/net10.0, all with the repo-default 10.x deps), plus the resolver hook and the uploader, into
-`staging/payload/<version>/`, builds the XDT transform, and packs everything (plus `applicationHost.xdt`,
-tagged `AzureSiteExtension`) into:
+This publishes the HostingStartup closure (both profiler stacks + dependencies), the resolver hook, and the
+uploader into `staging/payload/<version>/`, builds the XDT transform, and packs everything (plus
+`applicationHost.xdt`, tagged `AzureSiteExtension`) into:
 
 ```
 <repo>/Out/NuGets/Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.<version>.nupkg
 ```
+
+The payload is built **once** against the lowest supported baseline (.NET 8 / OpenTelemetry 1.8.1 /
+`Microsoft.Extensions.*` 8.0); a net8.0 assembly with 8.0 references runs on .NET 8, 9 and 10 (see
+"Runtime version support" below).
 
 Package layout:
 
@@ -92,16 +95,10 @@ content/
   Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll   (custom XDT transform)
   payload/
     <version>/
-      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (single, TFM-agnostic; selects the folder below)
-      net8.0/                                                 (one folder per shipped runtime)
-        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + dependencies, 10.x)
-      net9.0/
-        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + dependencies, 10.x)
-      net10.0/
-        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll
-        Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + dependencies, 10.x)
+      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll     (resolver; DOTNET_STARTUP_HOOKS points here)
+      Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll  (detect + route profiler)
+      Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all deps, 8.0 baseline)
+      OpenTelemetry.dll (1.8.1), Microsoft.Extensions.*.dll (8.0), ...
       Uploader/
         Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
 ```
@@ -133,23 +130,25 @@ code change** to the application. The `AppendListValueIfMissing` transform is ve
 
 ## Known limitations (POC)
 
-- **Runtime version support: .NET 8, 9, and 10.** The build stages one HostingStartup closure per target
-  framework (`payload/<version>/net{major}.0/`) and the resolver selects the folder matching the app's
-  runtime major (with a highest-≤ fallback). All folders bundle the repo-default **10.x** dependency set
-  (`Microsoft.Extensions.*`, `System.Text.Json`, OpenTelemetry, …); those packages ship **net8.0/net9.0/
-  net10.0 assets**, so they load and run on all three runtimes — no per-runtime down-leveling is needed. The
-  per-TFM folders exist because the HostingStartup **assembly** itself is compiled per target framework
-  (`net8.0`/`net9.0`/`net10.0`); the shared `netstandard2.1` profiler libraries are the same across them.
-  - A future **.NET 11** app needs **no** rebuild — the resolver's highest-≤ fallback runs it on the
-    net10.0 folder and framework roll-forward covers the newer runtime. Adding a native `net11.0` folder is
-    a one-line `$targetFrameworks` change when desired.
-  - **Correlation caveat (validate on a live .NET 8/9 app):** the profiler correlates CPU samples to
-    requests via `System.Diagnostics.DiagnosticSource` (`ActivitySource`/`Activity`). If a lower-runtime app
-    has an older `DiagnosticSource` loaded from its shared framework and the bundled 10.x copy ends up as a
-    second identity in-process, correlation could be affected. This is the one thing to verify on a real
-    .NET 8/.NET 9 OTel app; if it regresses, align **only** `DiagnosticSource` for that TFM via a
-    `_SystemDiagnosticsDiagnosticSourceVersion` override in `Build-SiteExtension.ps1` (the per-TFM override
-    map is already wired, just empty).
+- **Runtime version support: .NET 8, 9, and 10 — via a single low-baseline payload.** Codeless injection
+  runs the profiler *inside* the target app's already-resolved dependency graph. The app (and, for an
+  OpenTelemetry app, its own `OpenTelemetry` / `Azure.Core`) loads its shared-framework
+  `Microsoft.Extensions.*` **before** our HostingStartup runs, and the runtime can only roll an
+  already-loaded assembly **forward** (a higher loaded version satisfies a lower reference), never backward.
+  So the profiler must reference the **lowest** versions we support; those roll forward to whatever the app
+  loaded. The payload is therefore built **once**, targeting `net8.0`, against an **8.0 baseline**
+  (`OpenTelemetry 1.8.1` — its netstandard asset floors `Microsoft.Extensions.*` at 8.0; exporter `1.3.0`
+  permits that OTel). A net8.0 assembly + 8.0 refs run on .NET 8 (exact), .NET 9 and .NET 10 (roll-forward).
+  These down-level versions apply **only** to the site-extension payload (via `-p:` overrides in
+  `Build-SiteExtension.ps1`); the shipped `Azure.Monitor.OpenTelemetry.Profiler` NuGet is unchanged
+  (OpenTelemetry 1.15.3).
+  - **Minimum app dependency versions (the roll-forward floor):** the target app's **OpenTelemetry must be
+    ≥ 1.8.1** and **Azure.Core ≥ ~1.46**. Apps below that are unsupported — an app that pins an *older*
+    OpenTelemetry than the profiler was built against would crash with a `FileNotFoundException`, because the
+    profiler's reference can't be satisfied by the app's lower, already-loaded copy.
+  - **Why not bundle 10.x?** A 10.x payload crashes .NET 8/9 apps: the IIS in-process host loads the app's
+    8.0 `Microsoft.Extensions.Logging` before our hook, and the profiler's 10.0 reference can't up-level it
+    (verified live). Preloading the 10.x copy first doesn't help — the host already loaded 8.0.
 - **A valid connection string is required.** With a bogus/placeholder connection string the profiler
   fails to construct its backend client during startup. Use a real `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 - **Legacy classic Application Insights 2.x activation is incomplete.** Detection/routing to the classic

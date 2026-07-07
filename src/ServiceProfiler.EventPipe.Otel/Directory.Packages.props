@@ -12,6 +12,14 @@
     <_SystemCollectionsImmutableVersion>8.0.0</_SystemCollectionsImmutableVersion>
     <_SystemMemoryDataVersion>10.0.0</_SystemMemoryDataVersion>
     <_SystemSecurityCryptographyProtectedDataVersion>10.0.0</_SystemSecurityCryptographyProtectedDataVersion>
+    <!--
+      OpenTelemetry SDK version. Default 1.15.3 (unchanged for normal builds). Made overridable so the
+      codeless site-extension build can publish a LOW-baseline payload: OpenTelemetry's netstandard asset
+      fixes the Microsoft.Extensions.* floor (1.15.3 -> 10.0, 1.12.0 -> 9.0, 1.8.1 -> 8.0). The site
+      extension publishes with -p:_OpenTelemetryVersion=1.8.1 so the profiler references 8.0 framework
+      assemblies, which roll forward to whatever the target app already loaded (>= 8.0). See plan.md "A2c".
+    -->
+    <_OpenTelemetryVersion Condition="'$(_OpenTelemetryVersion)' == ''">1.15.3</_OpenTelemetryVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,5 +30,8 @@
     <PackageVersion Update="Microsoft.Diagnostics.NETCore.Client" Version="$(_MicrosoftDiagnosticsNETCoreClientVersion)" />
     <PackageVersion Update="System.Collections.Immutable" Version="$(_SystemCollectionsImmutableVersion)" />
     <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
+    <PackageVersion Update="OpenTelemetry" Version="$(_OpenTelemetryVersion)" />
+    <PackageVersion Update="OpenTelemetry.Api" Version="$(_OpenTelemetryVersion)" />
+    <PackageVersion Update="OpenTelemetry.Extensions.Hosting" Version="$(_OpenTelemetryVersion)" />
   </ItemGroup>
 </Project>

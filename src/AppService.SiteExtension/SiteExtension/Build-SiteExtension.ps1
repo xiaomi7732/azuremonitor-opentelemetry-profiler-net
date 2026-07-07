@@ -60,25 +60,39 @@ $outDir      = Join-Path $repoRoot "Out\NuGets"
 # Uploader is a standalone out-of-proc process, independent of the profiled app's runtime.
 $uploaderFramework = "net8.0"
 
-# The profiler projects are netstandard2.1 (runtime-version-flexible). The HostingStartup project is
-# multi-targeted (net8.0;net9.0;net10.0); we publish its closure once per target framework so the runtime
-# gets a matching-TFM HostingStartup assembly. The bundled dependency DLLs (Microsoft.Extensions.*, OTel,
-# System.Text.Json, ...) use their 10.x versions, which ship net8.0/net9.0/net10.0 assets and therefore run
-# on all three runtimes - so NO per-runtime down-leveling is needed. At runtime the StartupHook resolver
-# picks the payload\<version>\net{major}.0\ folder matching Environment.Version.Major.
-$targetFrameworks = @("net8.0", "net9.0", "net10.0")
+# LOW-BASELINE SINGLE PAYLOAD (see plan.md "A2c").
+# The codeless profiler is injected into a running app whose shared-framework Microsoft.Extensions.* (and,
+# for OTel apps, its own OpenTelemetry / Azure.Core) are already loaded BEFORE our HostingStartup runs. The
+# runtime can only roll an already-loaded assembly FORWARD (a higher loaded version satisfies a lower
+# reference), never backward. So the profiler must reference the LOWEST version we support; those refs then
+# roll forward to whatever the target app loaded. We therefore build ONE payload targeting net8.0 against an
+# 8.0 dependency baseline (OpenTelemetry 1.8.1 -> its netstandard asset floors Microsoft.Extensions.* at
+# 8.0; exporter 1.3.0 is the version that permits OTel 1.8.1). A net8.0 assembly + 8.0 refs run on .NET 8
+# (exact), .NET 9 and .NET 10 (roll-forward) - one folder, no per-runtime variants.
+#
+# Requirement this imposes on target apps: OpenTelemetry >= 1.8.1 and Azure.Core >= ~1.46 (documented).
+$baselineFramework = "net8.0"
 
-# Per-TFM version-property overrides. Left empty on purpose: all TFMs build with the repo-default (10.x)
-# dependency versions, whose per-TFM NuGet assets are compatible with net8/net9/net10. If a future live test
-# on a real .NET 8/9 app shows a runtime type-identity conflict at the app<->profiler boundary (most likely
-# System.Diagnostics.DiagnosticSource, which drives request<->sample correlation), align ONLY that assembly
-# for the affected TFM here (e.g. "_SystemDiagnosticsDiagnosticSourceVersion" = "8.0.1") rather than
-# wholesale down-leveling. See plan.md "A2b".
-$tfmVersionOverrides = @{
-    "net8.0"  = @{}
-    "net9.0"  = @{}
-    "net10.0" = @{}
+# Version-property overrides for the low baseline. Defaults are unchanged for the shipped profiler NuGet;
+# these only apply to this site-extension publish. The *.Abstractions packages need higher servicing patches
+# than their impls (capped at 8.0.1) due to transitive floors, so they are pinned independently (build-time
+# floors only; the app's 8.0.x framework satisfies them at runtime).
+$baselineOverrides = @{
+    "_AzureMonitorOpenTelemetryExporterVersion"                  = "1.3.0"
+    "_OpenTelemetryVersion"                                      = "1.8.1"
+    "_MicrosoftExtensionsVersion"                                = "8.0.0"
+    "_MicrosoftExtensionsOptionsVersion"                         = "8.0.2"
+    "_MicrosoftExtensionsLoggingAbstractionsVersion"             = "8.0.3"
+    "_MicrosoftExtensionsDependencyInjectionAbstractionsVersion" = "8.0.2"
+    "_SystemTextJsonVersion"                                     = "8.0.6"
+    "_SystemDiagnosticsDiagnosticSourceVersion"                  = "8.0.1"
+    "_SystemMemoryDataVersion"                                   = "8.0.1"
+    "_SystemSecurityCryptographyProtectedDataVersion"           = "8.0.0"
+    "_SystemTextEncodingsWebVersion"                             = "8.0.0"
+    "_SystemIOHashingVersion"                                    = "8.0.0"
 }
+$baselineArgs = @()
+foreach ($kvp in $baselineOverrides.GetEnumerator()) { $baselineArgs += "-p:$($kvp.Key)=$($kvp.Value)" }
 
 function Invoke-Checked([string]$description, [scriptblock]$action) {
     Write-Host "==> $description" -ForegroundColor Cyan
@@ -94,33 +108,29 @@ if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
 New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $outDir      | Out-Null
 
-# 2. Publish the HostingStartup closure once per target framework into payload\<version>\<tfm>\. All TFMs
-#    build with the repo-default dependency versions, so there is no cross-TFM version bleed to guard
-#    against; the multi-targeted HostingStartup produces a matching-TFM assembly per folder while the shared
-#    netstandard2.1 profiler projects compile once and are reused.
-foreach ($tfm in $targetFrameworks) {
-    $tfmDir = Join-Path $payloadRoot $tfm
-    $overrideArgs = @()
-    foreach ($kvp in $tfmVersionOverrides[$tfm].GetEnumerator()) {
-        $overrideArgs += "-p:$($kvp.Key)=$($kvp.Value)"
-    }
-    Invoke-Checked "Publishing HostingStartup payload ($tfm)" {
-        dotnet publish $hostingStartupProj -c $Configuration -f $tfm -o $tfmDir --nologo @overrideArgs
-    }
+# 2. Publish the HostingStartup closure (net8.0, low baseline) flat into payload\<version>\. Clean bin/obj
+#    first so the shared netstandard2.1 profiler projects recompile against the 8.0 baseline (they may have
+#    been built against the repo-default 10.x by another build).
+Write-Host "==> Cleaning src bin/obj for a clean low-baseline build" -ForegroundColor Cyan
+dotnet build-server shutdown 2>&1 | Out-Null
+Get-ChildItem -Recurse -Directory -Path $srcDir -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -eq 'bin' -or $_.Name -eq 'obj' } |
+    ForEach-Object { Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue }
+Invoke-Checked "Publishing HostingStartup payload ($baselineFramework, 8.0 baseline)" {
+    dotnet publish $hostingStartupProj -c $Configuration -f $baselineFramework -o $payloadRoot --nologo @baselineArgs
 }
 
-# 3. Build the resolver StartupHook once (BCL-only, TFM-agnostic) and copy its single assembly to the
-#    payload root. It runs on every runtime and selects the matching net{major}.0 subfolder at load time.
+# 3. Build the resolver StartupHook (BCL-only) and copy its single assembly next to the payload it resolves.
 Invoke-Checked "Building StartupHook resolver" {
-    dotnet build $startupHookProj -c $Configuration -f $uploaderFramework --nologo
+    dotnet build $startupHookProj -c $Configuration -f $baselineFramework --nologo
 }
-$startupHookDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$uploaderFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+$startupHookDll = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\bin\$Configuration\$baselineFramework\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
 if (-not (Test-Path $startupHookDll)) { throw "StartupHook assembly not found at $startupHookDll." }
 Copy-Item $startupHookDll -Destination $payloadRoot -Force
 
 # 4. Publish the out-of-proc uploader once into payload\<version>\Uploader.
-Invoke-Checked "Publishing the trace uploader ($uploaderFramework)" {
-    dotnet publish $uploaderProj -c $Configuration -f $uploaderFramework -o $uploaderOut --nologo
+Invoke-Checked "Publishing the trace uploader ($baselineFramework)" {
+    dotnet publish $uploaderProj -c $Configuration -f $baselineFramework -o $uploaderOut --nologo
 }
 
 # 5. Build the applicationHost.xdt custom transform (net472) and copy just its assembly into the
