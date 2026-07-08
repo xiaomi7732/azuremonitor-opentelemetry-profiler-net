@@ -9,6 +9,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AgentStringProvider = Microsoft.ApplicationInsights.Profiler.Shared.Services.AgentStringProvider<Azure.Monitor.OpenTelemetry.Profiler.AssemblyMarker>;
@@ -118,7 +119,9 @@ public static class ServiceCollectionExtensions
                 ActivatorUtilities.CreateInstance<ServiceProfilerAgentBootstrap>(p);
         });
 
-        services.AddHostedService<ProfilerBackgroundService>();
+        services.AddSingleton<IHostedService>(p => new SafeProfilerHostedService(
+            () => ActivatorUtilities.CreateInstance<ProfilerBackgroundService>(p),
+            p.GetRequiredService<ILogger<SafeProfilerHostedService>>()));
     }
 
     internal static T GetRequiredOptions<T>(IServiceProvider p)

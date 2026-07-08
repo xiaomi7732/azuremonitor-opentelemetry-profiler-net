@@ -78,4 +78,23 @@ public class ProfilerBootstrapperRoutingTests
         // Bootstrap failures must never break host startup.
         new ProfilerBootstrapper(detector.Object).Configure(builder.Object);
     }
+
+    [Fact]
+    internal void Apply_WhenOpenTelemetryRegistrationThrows_DeferredCallbackDoesNotPropagate()
+    {
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+
+        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.OpenTelemetry);
+        Action<IServiceCollection> register = Assert.Single(captured);
+
+        // A services collection whose enumeration throws simulates an incompatible-dependency failure
+        // (e.g. a MissingMethodException from a version the profiler was compiled against but the app does
+        // not provide) surfacing inside AddAzureMonitorProfiler. The deferred ConfigureServices callback -
+        // which runs inside the app's host build - MUST swallow it, otherwise the host crashes.
+        Mock<IServiceCollection> throwing = new();
+        throwing.Setup(s => s.GetEnumerator()).Throws(new MissingMethodException("simulated version skew"));
+
+        // Must not throw.
+        register(throwing.Object);
+    }
 }
