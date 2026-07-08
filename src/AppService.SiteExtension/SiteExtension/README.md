@@ -29,7 +29,7 @@ current one transitively pulls in the OpenTelemetry SDK:
 |---|---|
 | `Azure.Monitor.OpenTelemetry.AspNetCore` (distro) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
 | `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` **3.x** (OpenTelemetry-based) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
-| `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` **2.x** (legacy classic) | **Classic** — `AddApplicationInsightsTelemetry()` + `AddServiceProfiler()` |
+| `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` **2.x** (legacy classic, **≥ 2.23.0**) | **Classic** — `AddApplicationInsightsTelemetry()` + `AddServiceProfiler()` |
 | any `OpenTelemetry*` package (manual OTel) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
 | none of the above | nothing enabled |
 
@@ -37,6 +37,23 @@ This mirrors the profiler's [supported-SDK matrix](../../../README.md): the curr
 `Microsoft.ApplicationInsights.AspNetCore` (3.x) is an OpenTelemetry-based wrapper, so it uses the
 OpenTelemetry profiler; the legacy classic 2.x line uses the classic Application Insights profiler that
 this repo also builds (`Microsoft.ApplicationInsights.Profiler.AspNetCore`).
+
+For the classic path, the supported floor is **Application Insights SDK ≥ 2.23.0** (2.22.0 and earlier are
+deprecated and unsupported for codeless). The payload compiles the classic bits against 2.23.0; an app on
+2.23.0+ loads an assembly version that satisfies that reference (roll-forward). An app on a below-floor,
+deprecated SDK does **not** crash — activation is fail-safe (see "Fail-safe activation" below) and simply
+disables the profiler.
+
+### Fail-safe activation
+
+Codeless activation must never take down the host application. The `HostingStartup` registers the profiler
+inside a deferred `ConfigureServices` callback whose body is isolated behind a non-inlined helper invoked
+under try/catch, so even a missing/incompatible-assembly failure — the failure a below-floor dependency
+version produces at JIT time — is caught and logged, and the app starts **without** the profiler instead of
+crashing. Downstream, the profiler's hosted services also self-contain their startup failures (the classic
+`ServiceProfilerAgentBootstrap` catches all activation errors unless `AllowsCrash` is set; the OpenTelemetry
+path uses `SafeProfilerHostedService`). The net effect: a below-floor SDK, a bad connection string, or a
+future breaking dependency change disables profiling and leaves the application running.
 
 ### Coexistence (applicationHost.xdt append + de-dup)
 
@@ -149,9 +166,14 @@ code change** to the application. The `AppendListValueIfMissing` transform is ve
   - **Why not bundle 10.x?** A 10.x payload crashes .NET 8/9 apps: the IIS in-process host loads the app's
     8.0 `Microsoft.Extensions.Logging` before our hook, and the profiler's 10.0 reference can't up-level it
     (verified live). Preloading the 10.x copy first doesn't help — the host already loaded 8.0.
-- **A valid connection string is required.** With a bogus/placeholder connection string the profiler
-  fails to construct its backend client during startup. Use a real `APPLICATIONINSIGHTS_CONNECTION_STRING`.
-- **Legacy classic Application Insights 2.x activation is incomplete.** Detection/routing to the classic
-  profiler works, but full activation on .NET 10 still hits an Application Insights SDK wiring issue in
-  the early-injection context (`TelemetryConfiguration` not resolvable for the classic profiler's
-  `AuthTokenProvider`). The OpenTelemetry path (distro / AI SDK 3.x / manual OTel) is verified end-to-end.
+- **A valid connection string is required for the profiler to actually run.** With a
+  bogus/placeholder/malformed connection string the profiler cannot reach the backend and disables itself
+  (logged), but the application keeps running (fail-safe). Use a real
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` for the profiler to capture and upload traces.
+- **Classic Application Insights 2.x is supported (≥ 2.23.0) on .NET 8, 9 and 10.** Detection/routing and
+  full activation are verified locally on all three runtimes: the classic profiler bootstraps,
+  `TelemetryConfiguration` and its dependent services resolve, and (with a real connection string) the agent
+  goes Active. The earlier ".NET 10 `TelemetryConfiguration` not resolvable" problem was a downstream symptom
+  of a below-floor (2.22) version-skew crash and no longer occurs with the 2.23.0 floor + fail-safe
+  activation. End-to-end trace upload on a live App Service is the remaining owner-verified step (as with the
+  OpenTelemetry path).

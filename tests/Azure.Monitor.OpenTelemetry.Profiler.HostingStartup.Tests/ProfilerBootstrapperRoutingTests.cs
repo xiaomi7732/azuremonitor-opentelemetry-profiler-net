@@ -97,4 +97,24 @@ public class ProfilerBootstrapperRoutingTests
         // Must not throw.
         register(throwing.Object);
     }
+
+    [Fact]
+    internal void Apply_WhenClassicRegistrationThrows_DeferredCallbackDoesNotPropagate()
+    {
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+
+        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.LegacyApplicationInsights);
+        Action<IServiceCollection> register = Assert.Single(captured);
+
+        // A services collection whose enumeration throws simulates a classic activation failure - e.g. an
+        // application on a below-floor, deprecated Application Insights SDK (older than 2.23.0) whose
+        // assembly cannot satisfy the version the profiler was compiled against. The deferred
+        // ConfigureServices callback - which runs inside the app's host build - MUST swallow it, otherwise
+        // the host crashes.
+        Mock<IServiceCollection> throwing = new();
+        throwing.Setup(s => s.GetEnumerator()).Throws(new MissingMethodException("simulated version skew"));
+
+        // Must not throw.
+        register(throwing.Object);
+    }
 }
