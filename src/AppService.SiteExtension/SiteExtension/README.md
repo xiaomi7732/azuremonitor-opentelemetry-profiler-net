@@ -1,6 +1,6 @@
-# Codeless Azure Monitor Profiler — Windows App Service Site Extension (POC)
+# Codeless Azure Monitor Profiler — Windows App Service Site Extension (Beta)
 
-This is a **proof of concept** that enables the Azure Monitor profiler on a Windows App Service
+This is a **public beta** that enables the Azure Monitor profiler on a Windows App Service
 **without any code change, NuGet reference, or recompile** in the target application. It packages the
 profiler as a Kudu/SCM **Site Extension** that injects an ASP.NET Core `IHostingStartup` at process
 start. The HostingStartup detects the app's telemetry stack and enables the matching profiler.
@@ -94,7 +94,7 @@ a *new* folder, so Kudu writes only new paths and never touches the old, still-l
 version's payload is simply orphaned (cleaned up on the next full recycle). This mirrors how the AI agent
 versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\StartupHook\…`).
 
-> Historical note: earlier POC builds staged the payload at a fixed `payload/` path, so an in-place upgrade
+> Historical note: earlier builds staged the payload at a fixed `payload/` path, so an in-place upgrade
 > failed with *"The process cannot access the file … because it is being used by another process."* and
 > required recycling both the app and the SCM/Kudu site first. The versioned layout removes that
 > requirement. Orphaned old `payload/<version>/` folders accumulating over many upgrades is a minor known
@@ -103,7 +103,7 @@ versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\
 ## Building the package
 
 ```powershell
-pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 0.1.0-poc
+pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta.1
 ```
 
 This publishes the stack-agnostic router + resolver hook into `staging/payload/<version>/`, each profiler
@@ -187,11 +187,15 @@ and DI, so those shared assemblies (OpenTelemetry, `Microsoft.Extensions.*`, the
    worker via Kudu (`/api/processes` → the process whose `APP_POOL_ID` equals the site name, not the
    `~1`-prefixed SCM worker).
 
-## Verified locally (smoke test)
+## Verified
 
-Running a published ASP.NET Core app with the extension's environment variables pointed at the built
-payload produces (OpenTelemetry app shown; a classic Application Insights 2.x app routes to `classic/`
-and enables the classic profiler symmetrically):
+**Live App Service (end-to-end).** On a Windows App Service, both an OpenTelemetry app and a classic
+Application Insights 2.x app activate codelessly and their captured traces upload and appear in Application
+Insights — no code change to the application.
+
+**Local smoke test.** Running a published ASP.NET Core app with the extension's environment variables pointed
+at the built payload produces (OpenTelemetry app shown; a classic Application Insights 2.x app routes to
+`classic/` and enables the classic profiler symmetrically):
 
 ```
 [Azure.Monitor.OpenTelemetry.Profiler.StartupHook] Detected telemetry stack: OpenTelemetry
@@ -206,7 +210,7 @@ loads and initializes — end-to-end codeless activation, with **no code change*
 `AppendListValueIfMissing` transform is verified to append + de-dup + insert against a sample
 `applicationHost.config`.
 
-## Known limitations (POC)
+## Known limitations (beta)
 
 - **.NET apps only.** This profiler targets .NET / ASP.NET Core. On non-.NET Windows App Service stacks
   (Node.js, Python, Java, PHP) the extension does nothing — a safe no-op (see "Applies to" above). Supporting
@@ -241,5 +245,5 @@ loads and initializes — end-to-end codeless activation, with **no code change*
   `TelemetryConfiguration` and its dependent services resolve, and (with a real connection string) the agent
   goes Active. The earlier ".NET 10 `TelemetryConfiguration` not resolvable" problem was a downstream symptom
   of a below-floor (2.22) version-skew crash and no longer occurs with the 2.23.0 floor + fail-safe
-  activation. End-to-end trace upload on a live App Service is the remaining owner-verified step (as with the
+  activation. Live App Service end-to-end trace upload is verified for the classic path (as for the
   OpenTelemetry path).

@@ -41,12 +41,12 @@
     Build configuration. Default: Release.
 
 .PARAMETER Version
-    Package version. Default: 0.1.0-poc.
+    Package version. Default: 1.0.0-beta.1.
 #>
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "0.1.0-poc"
+    [string]$Version = "1.0.0-beta.1"
 )
 
 $ErrorActionPreference = "Stop"
