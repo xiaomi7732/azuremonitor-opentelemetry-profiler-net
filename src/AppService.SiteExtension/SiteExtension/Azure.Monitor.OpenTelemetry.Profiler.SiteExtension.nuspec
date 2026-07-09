@@ -3,7 +3,7 @@
   <metadata>
     <id>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension</id>
     <version>$version$</version>
-    <title>Azure Monitor OpenTelemetry Profiler (Codeless Site Extension)</title>
+    <title>Azure Monitor Profiler (Codeless)</title>
     <authors>Microsoft</authors>
     <owners>Microsoft,MicrosoftServiceProfiler</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
