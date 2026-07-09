@@ -12,9 +12,13 @@ on the application's worker process:
 
 | Component | Assembly | Env var | Role |
 |---|---|---|---|
-| Resolver hook | `Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll` | `DOTNET_STARTUP_HOOKS` | Runs before `Main`; installs an `AssemblyLoadContext.Resolving` fallback so the staged payload (which is not on the app's probing path) is loadable. Only fills gaps — the app's own assemblies always win. |
-| Activation | `Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll` | `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` | Detects the telemetry stack from the app's own `*.deps.json` and enables the matching profiler. |
-| Uploader | `Microsoft.ApplicationInsights.Profiler.Uploader.dll` | `SP_UPLOADER_PATH` | The out-of-proc trace uploader the profiler launches to upload captured traces. |
+| Resolver + router selector | `Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll` | `DOTNET_STARTUP_HOOKS` | Runs before `Main`. Detects the app's telemetry stack (a dependency-free `*.deps.json` scan), records the decision, and installs an `AssemblyLoadContext.Resolving` fallback scoped to **only** that stack's payload subfolder (`otel/` or `classic/`) plus the payload root. Only fills gaps — the app's own assemblies always win. |
+| Activation (router) | `Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll` | `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` | A **stack-agnostic** router (no reference to either profiler stack). Reads the recorded decision and reflectively invokes the matching per-stack *activator* (`…OpenTelemetryActivator` in `otel/` or `…ClassicActivator` in `classic/`), which enables the real profiler. |
+| Uploader | `Microsoft.ApplicationInsights.Profiler.Uploader.dll` | `SP_UPLOADER_PATH` | The out-of-proc trace uploader the profiler launches to upload captured traces. **Shared** by both stacks (both locate it via this variable). |
+
+Each profiler stack lives in its own payload subfolder with its **own** self-contained dependency closure,
+so the two stacks' dependencies are never unified — see [Dependency isolation](#dependency-isolation-per-stack-payload-folders).
+Only one stack activates per app; the uploader is shared.
 
 The connection string is taken from the application's existing `APPLICATIONINSIGHTS_CONNECTION_STRING`
 app setting.
@@ -92,15 +96,16 @@ versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\
 pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 0.1.0-poc
 ```
 
-This publishes the HostingStartup closure (both profiler stacks + dependencies), the resolver hook, and the
-uploader into `staging/payload/<version>/`, builds the XDT transform, and packs everything (plus
-`applicationHost.xdt`, tagged `AzureSiteExtension`) into:
+This publishes the stack-agnostic router + resolver hook into `staging/payload/<version>/`, each profiler
+stack into its own subfolder (`otel/` / `classic/`) via a separate publish, and the shared uploader into
+`Uploader/`; builds the XDT transform; and packs everything (plus `applicationHost.xdt`, tagged
+`AzureSiteExtension`) into:
 
 ```
 <repo>/Out/NuGets/Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.<version>.nupkg
 ```
 
-The payload is built **once** against the lowest supported baseline (.NET 8 / OpenTelemetry 1.8.1 /
+Each stack's payload is built against the lowest supported baseline (.NET 8 / OpenTelemetry 1.8.1 /
 `Microsoft.Extensions.*` 8.0); a net8.0 assembly with 8.0 references runs on .NET 8, 9 and 10 (see
 "Runtime version support" below).
 
@@ -112,13 +117,54 @@ content/
   Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll   (custom XDT transform)
   payload/
     <version>/
-      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll     (resolver; DOTNET_STARTUP_HOOKS points here)
-      Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll  (detect + route profiler)
-      Azure.Monitor.OpenTelemetry.Profiler.dll        (+ classic profiler + all deps, 8.0 baseline)
-      OpenTelemetry.dll (1.8.1), Microsoft.Extensions.*.dll (8.0), ...
+      Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll     (detect + scope resolver per stack)
+      Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll  (stack-agnostic router)
+      Microsoft.AspNetCore.Hosting.dll, Microsoft.Extensions.*.dll  (router's minimal, app-shared closure)
+      otel/
+        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator.dll
+        Azure.Monitor.OpenTelemetry.Profiler.dll (+ OTel profiler closure, its OWN dep versions, 8.0 baseline)
+      classic/
+        Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator.dll
+        Microsoft.ApplicationInsights.Profiler.AspNetCore.dll (+ classic closure, its OWN dep versions)
       Uploader/
-        Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)
+        Microsoft.ApplicationInsights.Profiler.Uploader.dll (+ dependencies)   (SHARED by both stacks)
 ```
+
+## Dependency isolation (per-stack payload folders)
+
+The OpenTelemetry and classic profiler stacks are **published separately, each into its own subfolder**
+(`otel/` / `classic/`) by a distinct `dotnet publish`. This keeps their dependency closures fully
+independent: a package that both stacks reference can resolve to a **different version in each folder**
+instead of being unified to a single (highest) version.
+
+Concrete example from a built payload — `Microsoft.Diagnostics.NETCore.Client` (referenced by both stacks):
+
+```
+otel/    Microsoft.Diagnostics.NETCore.Client.dll -> 0.2.621003
+classic/ Microsoft.Diagnostics.NETCore.Client.dll -> 0.2.607501
+```
+
+Previously (single flat folder) both were force-unified to `0.2.621003`, running the classic stack on a
+version it was not built against. With per-stack folders each keeps the version it shipped with.
+
+How the isolation holds at load time:
+
+- The **router** at the payload root has no compile-time reference to either stack, so publishing it pulls
+  neither closure — root contains only the router, the `StartupHook`, and the router's minimal (app-shared)
+  hosting closure.
+- The `StartupHook` detects the stack up front and scopes the `AssemblyLoadContext.Resolving` fallback to
+  **the detected stack's subfolder first, then the payload root**. The *other* stack's subfolder is never on
+  the probe path, so the two stacks' assemblies can never be loaded together (and never unify). Only one
+  stack activates per app, so this costs nothing.
+- The router → activator seam passes the app's `IServiceCollection`
+  (`Microsoft.Extensions.DependencyInjection.Abstractions`), a type shared with and owned by the application,
+  so it crosses the boundary with the correct identity via roll-forward.
+
+This isolates the two stacks **from each other**. It does not (and cannot) isolate a profiler from the
+*app's* telemetry stack: the profiler registers into the app's `TracerProvider` / `TelemetryConfiguration`
+and DI, so those shared assemblies (OpenTelemetry, `Microsoft.Extensions.*`, the Application Insights SDK,
+`Azure.Core`) still roll forward onto the app's loaded copies — which is exactly what the low-baseline design
+(below) ensures.
 
 ## Installing on a Windows App Service (manual test)
 
@@ -134,16 +180,21 @@ content/
 ## Verified locally (smoke test)
 
 Running a published ASP.NET Core app with the extension's environment variables pointed at the built
-payload produces:
+payload produces (OpenTelemetry app shown; a classic Application Insights 2.x app routes to `classic/`
+and enables the classic profiler symmetrically):
 
 ```
-[Azure.Monitor.OpenTelemetry.Profiler.StartupHook] Assembly resolver installed for payload directory: ...
+[Azure.Monitor.OpenTelemetry.Profiler.StartupHook] Detected telemetry stack: OpenTelemetry
+[Azure.Monitor.OpenTelemetry.Profiler.StartupHook] Assembly resolver installed. Probe order: ...\payload\<version>\otel, ...\payload\<version>
 [Azure.Monitor.OpenTelemetry.Profiler.HostingStartup] info: Detected a supported OpenTelemetry-based telemetry stack. Enabling the Azure Monitor OpenTelemetry profiler.
 ```
 
-The full profiler DI pipeline then loads and initializes — end-to-end codeless activation, with **no
-code change** to the application. The `AppendListValueIfMissing` transform is verified to append + de-dup
-+ insert against a sample `applicationHost.config`.
+Note the probe order lists only the detected stack's subfolder plus the payload root — the other stack's
+folder is never on the path, so the two stacks stay isolated (see
+[Dependency isolation](#dependency-isolation-per-stack-payload-folders)). The full profiler DI pipeline then
+loads and initializes — end-to-end codeless activation, with **no code change** to the application. The
+`AppendListValueIfMissing` transform is verified to append + de-dup + insert against a sample
+`applicationHost.config`.
 
 ## Known limitations (POC)
 

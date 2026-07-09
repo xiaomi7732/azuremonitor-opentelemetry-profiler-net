@@ -11,10 +11,9 @@
     <IsPackable>false</IsPackable>
     <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
     <!--
-      Don't centrally pin transitive dependencies for this project. It references the OpenTelemetry
-      profiler projects, whose transitive Microsoft.Diagnostics.NETCore.Client (0.2.621003) is higher
-      than the repo-root central pin (0.2.607501); with transitive pinning on that would be an NU1109
-      downgrade. Disabling it lets the transitive version resolve to what the graph requires, so this
+      Don't centrally pin transitive dependencies for this project. Microsoft.AspNetCore.Hosting pulls in a
+      transitive Microsoft.Extensions.* closure; with central transitive pinning on, the repo-root pins would
+      need to cover every one of those. Disabling it lets them resolve to what the graph requires, so this
       folder needs no Directory.Packages.props of its own.
     -->
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
@@ -25,15 +24,17 @@
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
   </ItemGroup>
 
-  <!-- OpenTelemetry profiler for OTel-based stacks; classic profiler for legacy Application Insights 2.x. -->
-  <ItemGroup>
-    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
-    <ProjectReference Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
-  </ItemGroup>
-
+  <!--
+    The router is intentionally STACK-AGNOSTIC: it has no reference to either profiler stack, so publishing
+    it pulls neither closure. It only needs the ASP.NET Core hosting-startup contract plus IServiceCollection
+    (both shared with, and owned by, the target application at runtime). The per-stack activators
+    (Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator /
+    Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator) are loaded reflectively at runtime
+    from their own payload subfolders - see ReflectionProfilerActivatorInvoker.
+  -->
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

@@ -21,51 +21,96 @@ public class ProfilerBootstrapperRoutingTests
         return (builder, captured);
     }
 
-    [Fact]
-    internal void Apply_WhenOpenTelemetry_RegistersProfilerServices()
+    private static ProfilerBootstrapper CreateBootstrapper(
+        TelemetryStack detected,
+        IProfilerActivatorInvoker invoker)
     {
-        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
-
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.OpenTelemetry);
-
-        // Exactly one ConfigureServices registration, and running it must populate the container.
-        Action<IServiceCollection> register = Assert.Single(captured);
-        ServiceCollection services = new();
-        register(services);
-        Assert.NotEmpty(services);
+        Mock<ITelemetryStackDetector> detector = new();
+        detector.Setup(d => d.Detect()).Returns(detected);
+        return new ProfilerBootstrapper(detector.Object, invoker);
     }
 
     [Fact]
-    internal void Apply_WhenLegacyApplicationInsights_RegistersConfigureServices()
+    internal void Apply_WhenOpenTelemetry_DeferredCallbackInvokesOpenTelemetryActivator()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
 
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.LegacyApplicationInsights);
+        bootstrapper.Apply(builder.Object, TelemetryStack.OpenTelemetry);
 
-        Assert.Single(captured);
+        // Exactly one deferred ConfigureServices registration; running it invokes the OpenTelemetry activator.
+        Action<IServiceCollection> register = Assert.Single(captured);
+        invoker.Verify(i => i.Invoke(It.IsAny<TelemetryStack>(), It.IsAny<IServiceCollection>()), Times.Never);
+
+        ServiceCollection services = new();
+        register(services);
+        invoker.Verify(i => i.Invoke(TelemetryStack.OpenTelemetry, services), Times.Once);
+    }
+
+    [Fact]
+    internal void Apply_WhenLegacyApplicationInsights_DeferredCallbackInvokesClassicActivator()
+    {
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
+
+        bootstrapper.Apply(builder.Object, TelemetryStack.LegacyApplicationInsights);
+
+        Action<IServiceCollection> register = Assert.Single(captured);
+        ServiceCollection services = new();
+        register(services);
+        invoker.Verify(i => i.Invoke(TelemetryStack.LegacyApplicationInsights, services), Times.Once);
     }
 
     [Fact]
     internal void Apply_WhenNone_DoesNotRegisterAnything()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
 
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.None);
+        bootstrapper.Apply(builder.Object, TelemetryStack.None);
 
         Assert.Empty(captured);
         builder.Verify(b => b.ConfigureServices(It.IsAny<Action<IServiceCollection>>()), Times.Never);
+        invoker.Verify(i => i.Invoke(It.IsAny<TelemetryStack>(), It.IsAny<IServiceCollection>()), Times.Never);
     }
 
     [Fact]
     internal void Configure_DispatchesDetectedStack()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
-        Mock<ITelemetryStackDetector> detector = new();
-        detector.Setup(d => d.Detect()).Returns(TelemetryStack.OpenTelemetry);
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.OpenTelemetry, invoker.Object);
 
-        new ProfilerBootstrapper(detector.Object).Configure(builder.Object);
+        bootstrapper.Configure(builder.Object);
 
         Assert.Single(captured);
+    }
+
+    [Fact]
+    internal void Configure_PrefersRecordedDecisionOverDetector()
+    {
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        // Detector would say "None", but the StartupHook recorded "OpenTelemetry" - the recording must win.
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
+
+        AppContext.SetData(DetectedStackAppContextData.Key, TelemetryStack.OpenTelemetry.ToString());
+        try
+        {
+            bootstrapper.Configure(builder.Object);
+
+            Action<IServiceCollection> register = Assert.Single(captured);
+            ServiceCollection services = new();
+            register(services);
+            invoker.Verify(i => i.Invoke(TelemetryStack.OpenTelemetry, services), Times.Once);
+        }
+        finally
+        {
+            AppContext.SetData(DetectedStackAppContextData.Key, null);
+        }
     }
 
     [Fact]
@@ -74,47 +119,30 @@ public class ProfilerBootstrapperRoutingTests
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> _) = CreateBuilder();
         Mock<ITelemetryStackDetector> detector = new();
         detector.Setup(d => d.Detect()).Throws(new InvalidOperationException("boom"));
+        ProfilerBootstrapper bootstrapper = new(detector.Object, Mock.Of<IProfilerActivatorInvoker>());
 
         // Bootstrap failures must never break host startup.
-        new ProfilerBootstrapper(detector.Object).Configure(builder.Object);
+        bootstrapper.Configure(builder.Object);
     }
 
     [Fact]
-    internal void Apply_WhenOpenTelemetryRegistrationThrows_DeferredCallbackDoesNotPropagate()
+    internal void Apply_WhenActivatorInvokeThrows_DeferredCallbackDoesNotPropagate()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        // Simulates an incompatible-dependency failure (e.g. a MissingMethodException/FileNotFoundException
+        // from a version the activator was compiled against but the app does not provide) surfacing while
+        // loading/invoking the activator. The deferred ConfigureServices callback - which runs inside the
+        // app's host build - MUST swallow it, otherwise the host crashes.
+        invoker
+            .Setup(i => i.Invoke(It.IsAny<TelemetryStack>(), It.IsAny<IServiceCollection>()))
+            .Throws(new MissingMethodException("simulated version skew"));
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
 
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.OpenTelemetry);
+        bootstrapper.Apply(builder.Object, TelemetryStack.OpenTelemetry);
         Action<IServiceCollection> register = Assert.Single(captured);
 
-        // A services collection whose enumeration throws simulates an incompatible-dependency failure
-        // (e.g. a MissingMethodException from a version the profiler was compiled against but the app does
-        // not provide) surfacing inside AddAzureMonitorProfiler. The deferred ConfigureServices callback -
-        // which runs inside the app's host build - MUST swallow it, otherwise the host crashes.
-        Mock<IServiceCollection> throwing = new();
-        throwing.Setup(s => s.GetEnumerator()).Throws(new MissingMethodException("simulated version skew"));
-
         // Must not throw.
-        register(throwing.Object);
-    }
-
-    [Fact]
-    internal void Apply_WhenClassicRegistrationThrows_DeferredCallbackDoesNotPropagate()
-    {
-        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
-
-        ProfilerBootstrapper.Apply(builder.Object, TelemetryStack.LegacyApplicationInsights);
-        Action<IServiceCollection> register = Assert.Single(captured);
-
-        // A services collection whose enumeration throws simulates a classic activation failure - e.g. an
-        // application on a below-floor, deprecated Application Insights SDK (older than 2.23.0) whose
-        // assembly cannot satisfy the version the profiler was compiled against. The deferred
-        // ConfigureServices callback - which runs inside the app's host build - MUST swallow it, otherwise
-        // the host crashes.
-        Mock<IServiceCollection> throwing = new();
-        throwing.Setup(s => s.GetEnumerator()).Throws(new MissingMethodException("simulated version skew"));
-
-        // Must not throw.
-        register(throwing.Object);
+        register(new ServiceCollection());
     }
 }

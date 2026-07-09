@@ -6,14 +6,35 @@
     <!-- Must stay dependency-free: this loads before Main to bootstrap assembly resolution. -->
     <Nullable>enable</Nullable>
     <LangVersion>12.0</LangVersion>
-    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Enabled so the linked detection sources (shared with the router) compile without per-file usings.
+         This only imports BCL namespaces at compile time; it adds no package/assembly dependencies. -->
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.Tests" Key="$(TestPublicKey)" />
+    <!--
+      No InternalsVisibleTo to the HostingStartup.Tests project: this assembly compiles linked copies of the
+      router's internal detection types (TelemetryStack, DepsFileTelemetryStackDetector, ...). Exposing them
+      to the test assembly - which also sees the router's copies - would make those types ambiguous (CS0433).
+      The tests exercise those types through the router assembly only.
+    -->
+  </ItemGroup>
+
+  <!--
+    Linked (shared) source from the HostingStartup router so the StartupHook can perform the SAME BCL-only
+    telemetry-stack detection up front and scope the assembly resolver to the matching payload subfolder.
+    Linked (not referenced) so the StartupHook stays fully dependency-free - it loads before Main. Each
+    assembly compiles its own copy; they exchange the decision as a string via AppContext, never the enum.
+  -->
+  <ItemGroup>
+    <Compile Include="..\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\TelemetryStack.cs" Link="Shared\TelemetryStack.cs" />
+    <Compile Include="..\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\ITelemetryStackDetector.cs" Link="Shared\ITelemetryStackDetector.cs" />
+    <Compile Include="..\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\DepsFileTelemetryStackDetector.cs" Link="Shared\DepsFileTelemetryStackDetector.cs" />
+    <Compile Include="..\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\BootstrapLog.cs" Link="Shared\BootstrapLog.cs" />
+    <Compile Include="..\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\DetectedStackAppContextData.cs" Link="Shared\DetectedStackAppContextData.cs" />
   </ItemGroup>
 
 </Project>

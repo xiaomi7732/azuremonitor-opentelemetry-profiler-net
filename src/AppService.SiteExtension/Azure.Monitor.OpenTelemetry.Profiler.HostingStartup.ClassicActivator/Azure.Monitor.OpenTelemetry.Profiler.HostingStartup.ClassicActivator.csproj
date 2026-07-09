@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator</AssemblyName>
+    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <!-- Codeless-injection assembly loaded reflectively by the router; not part of the public API surface. -->
+    <IsPackable>false</IsPackable>
+    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+    <!--
+      Don't centrally pin transitive dependencies here. The classic profiler brings its own
+      Microsoft.ApplicationInsights (2.23.x) closure. Disabling transitive pinning lets the graph resolve what
+      it requires. This stack is published into its OWN payload subfolder (classic\) so its dependency
+      versions never unify with the OpenTelemetry stack's.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe\ServiceProfiler.EventPipe.AspNetCore\ServiceProfiler.EventPipe.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

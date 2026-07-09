@@ -25,10 +25,12 @@
   (...\ApplicationInsightsAgent\<version>\core\StartupHook\...). The {{PAYLOAD_SUBDIR}} token is replaced
   with the package version by Build-SiteExtension.ps1 at pack time.
 
-  The versioned payload folder holds everything flat: StartupHook.dll, the HostingStartup + profiler closure
-  (built against the .NET 8 baseline so it runs on .NET 8/9/10 via roll-forward), and Uploader\. Only
-  DOTNET_STARTUP_HOOKS and SP_UPLOADER_PATH carry a path (both into that folder); the HostingStartup is
-  resolved by NAME from the same folder by the hook, so the XDT needs no per-framework branching.
+  The versioned payload folder holds the resolver StartupHook.dll and the stack-agnostic HostingStartup
+  router at its root, each profiler stack's closure in its own subfolder (payload\<version>\otel\ and
+  \classic\, built against the .NET 8 baseline so it runs on .NET 8/9/10 via roll-forward), and a shared
+  Uploader\. Only DOTNET_STARTUP_HOOKS and SP_UPLOADER_PATH carry a path (both into that folder); the
+  HostingStartup is resolved by NAME from the same folder by the hook, so the XDT needs no per-framework or
+  per-stack branching (the hook picks the right stack subfolder at runtime).
 -->
 <configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
   <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"

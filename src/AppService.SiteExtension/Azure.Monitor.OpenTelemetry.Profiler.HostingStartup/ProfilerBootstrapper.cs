@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using System.Runtime.CompilerServices;
-using Azure.Monitor.OpenTelemetry.Profiler;
 using Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,8 +11,14 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 
 /// <summary>
 /// Codeless entry point activated by the ASP.NET Core runtime when this assembly is listed in
-/// <c>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</c>. It detects the application's telemetry stack and enables
-/// the matching profiler without any code change in the target application.
+/// <c>ASPNETCORE_HOSTINGSTARTUPASSEMBLIES</c>. It routes to the profiler that matches the application's
+/// telemetry stack without any code change in the target application.
+///
+/// This router is deliberately <b>stack-agnostic</b>: it has no compile-time reference to either profiler
+/// stack. It reflectively invokes a per-stack <em>activator</em> (via
+/// <see cref="IProfilerActivatorInvoker"/>) that lives in its own payload subfolder with its own dependency
+/// closure. Combined with the <c>StartupHook</c> scoping the assembly resolver to just the detected stack's
+/// subfolder, this keeps the two stacks' dependencies fully isolated from each other.
 ///
 /// Activation is fail-safe: every failure - during detection, during the deferred
 /// <see cref="IWebHostBuilder.ConfigureServices"/> callback that registers the profiler (e.g. a
@@ -25,15 +29,17 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 public sealed class ProfilerBootstrapper : IHostingStartup
 {
     private readonly ITelemetryStackDetector _detector;
+    private readonly IProfilerActivatorInvoker _activatorInvoker;
 
     public ProfilerBootstrapper()
-        : this(new DepsFileTelemetryStackDetector())
+        : this(new DepsFileTelemetryStackDetector(), new ReflectionProfilerActivatorInvoker())
     {
     }
 
-    internal ProfilerBootstrapper(ITelemetryStackDetector detector)
+    internal ProfilerBootstrapper(ITelemetryStackDetector detector, IProfilerActivatorInvoker activatorInvoker)
     {
         _detector = detector ?? throw new ArgumentNullException(nameof(detector));
+        _activatorInvoker = activatorInvoker ?? throw new ArgumentNullException(nameof(activatorInvoker));
     }
 
     /// <inheritdoc />
@@ -46,7 +52,7 @@ public sealed class ProfilerBootstrapper : IHostingStartup
 
         try
         {
-            TelemetryStack stack = _detector.Detect();
+            TelemetryStack stack = ResolveStack();
             Apply(builder, stack);
         }
         catch (Exception ex)
@@ -56,57 +62,46 @@ public sealed class ProfilerBootstrapper : IHostingStartup
     }
 
     /// <summary>
+    /// Determines the stack to activate. Prefers the decision the <c>StartupHook</c> already recorded (it
+    /// also scoped the assembly resolver to that stack's payload subfolder, so activating a different stack
+    /// here would fail to resolve). Falls back to detecting locally when the hook did not run - e.g. in unit
+    /// tests, or if <c>DOTNET_STARTUP_HOOKS</c> was not applied.
+    /// </summary>
+    private TelemetryStack ResolveStack()
+    {
+        if (AppContext.GetData(DetectedStackAppContextData.Key) is string recorded
+            && Enum.TryParse(recorded, out TelemetryStack stack))
+        {
+            return stack;
+        }
+
+        return _detector.Detect();
+    }
+
+    /// <summary>
     /// Applies the routing decision. A supported OpenTelemetry-based stack enables the Azure Monitor
     /// OpenTelemetry profiler; the legacy classic Application Insights SDK (2.x) enables the classic
     /// Application Insights profiler; anything else enables nothing.
     ///
     /// The profiler-registration work runs inside a deferred <c>ConfigureServices</c> callback (executed
-    /// later, during the application's host build). Each callback delegates to a dedicated
-    /// <see cref="MethodImplOptions.NoInlining"/> helper (<see cref="EnableOpenTelemetryProfiler"/> /
-    /// <see cref="EnableClassicProfiler"/>) invoked inside try/catch: if the profiler cannot be registered -
-    /// most importantly when the application brought an incompatible (or below-floor) version of a shared
-    /// dependency (OpenTelemetry, the Application Insights SDK, Microsoft.Extensions.*, Azure.Core) than our
-    /// code was compiled against - the failure is logged and the application starts WITHOUT the profiler
-    /// instead of crashing.
-    ///
-    /// The helpers MUST stay separate and non-inlined: a missing/incompatible-assembly failure is raised
-    /// when the runtime JIT-compiles the method that directly references the external extension methods. By
-    /// isolating those references behind a non-inlined call, that JIT failure surfaces at the guarded call
-    /// site (inside the try) rather than while JIT-compiling the callback lambda itself (before the try
-    /// executes), so it is actually caught.
+    /// later, during the application's host build) guarded by <see cref="TryActivate"/>: if the profiler
+    /// cannot be registered - most importantly when the application brought an incompatible (or below-floor)
+    /// version of a shared dependency (OpenTelemetry, the Application Insights SDK, Microsoft.Extensions.*,
+    /// Azure.Core) than the activator was compiled against - the failure is logged and the application starts
+    /// WITHOUT the profiler instead of crashing.
     /// </summary>
-    internal static void Apply(IWebHostBuilder builder, TelemetryStack stack)
+    internal void Apply(IWebHostBuilder builder, TelemetryStack stack)
     {
         switch (stack)
         {
             case TelemetryStack.OpenTelemetry:
                 BootstrapLog.Info("Detected a supported OpenTelemetry-based telemetry stack. Enabling the Azure Monitor OpenTelemetry profiler.");
-                builder.ConfigureServices(services =>
-                {
-                    try
-                    {
-                        EnableOpenTelemetryProfiler(services);
-                    }
-                    catch (Exception ex)
-                    {
-                        BootstrapLog.Error("Failed to enable the Azure Monitor OpenTelemetry profiler; the application will start without it.", ex);
-                    }
-                });
+                builder.ConfigureServices(services => TryActivate(stack, services));
                 break;
 
             case TelemetryStack.LegacyApplicationInsights:
                 BootstrapLog.Info("Detected the classic Application Insights SDK (2.x). Enabling the classic Application Insights profiler.");
-                builder.ConfigureServices(services =>
-                {
-                    try
-                    {
-                        EnableClassicProfiler(services);
-                    }
-                    catch (Exception ex)
-                    {
-                        BootstrapLog.Error("Failed to enable the classic Application Insights profiler; the application will start without it.", ex);
-                    }
-                });
+                builder.ConfigureServices(services => TryActivate(stack, services));
                 break;
 
             default:
@@ -116,28 +111,20 @@ public sealed class ProfilerBootstrapper : IHostingStartup
     }
 
     /// <summary>
-    /// Registers the Azure Monitor OpenTelemetry profiler. Kept separate and non-inlined so that any
-    /// assembly-load/JIT failure from an incompatible dependency version surfaces at the guarded call site
-    /// in <see cref="Apply"/> instead of crashing the host. See <see cref="Apply"/> for details.
+    /// Reflectively enables the profiler for <paramref name="stack"/>, swallowing any failure. This runs
+    /// inside the application's host build, so it MUST NOT propagate - an unhandled exception here crashes
+    /// the host. Isolating the reflective activator invocation (which is where an incompatible-dependency
+    /// load failure surfaces) behind this guarded call keeps activation fail-safe.
     /// </summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void EnableOpenTelemetryProfiler(IServiceCollection services)
+    private void TryActivate(TelemetryStack stack, IServiceCollection services)
     {
-        services.AddAzureMonitorProfiler();
-    }
-
-    /// <summary>
-    /// Registers the classic Application Insights profiler. Mirrors the classic HostingStartup
-    /// (HostingStartup30): ensure the Application Insights telemetry pipeline the profiler depends on is
-    /// present, then add the profiler. Both calls are idempotent. Kept separate and non-inlined so that any
-    /// assembly-load/JIT failure (e.g. an application on a below-floor, deprecated Application Insights SDK
-    /// older than 2.23.0) surfaces at the guarded call site in <see cref="Apply"/> instead of crashing the
-    /// host. See <see cref="Apply"/> for details.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void EnableClassicProfiler(IServiceCollection services)
-    {
-        services.AddApplicationInsightsTelemetry();
-        services.AddServiceProfiler();
+        try
+        {
+            _activatorInvoker.Invoke(stack, services);
+        }
+        catch (Exception ex)
+        {
+            BootstrapLog.Error("Failed to enable the profiler; the application will start without it.", ex);
+        }
     }
 }

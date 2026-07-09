@@ -8,13 +8,24 @@
           applicationHost.xdt
           payload/
             <version>/
-              Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (assembly-resolution bootstrap)
-              Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll (detect + route profiler)
-              <all profiler + dependency assemblies>
+              Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll   (detect + scope resolver per stack)
+              Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.dll (stack-agnostic router)
+              otel/
+                Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator.dll
+                <OpenTelemetry profiler closure - its OWN dependency versions>
+              classic/
+                Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator.dll
+                <classic profiler closure - its OWN dependency versions>
               Uploader/
-                Microsoft.ApplicationInsights.Profiler.Uploader.dll   (out-of-proc trace uploader)
+                Microsoft.ApplicationInsights.Profiler.Uploader.dll   (out-of-proc trace uploader, SHARED)
     then packs it into Out/NuGets/Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.<version>.nupkg
     with the AzureSiteExtension tag so it appears in the Kudu Site Extensions gallery.
+
+    Each profiler stack is published into its OWN subfolder (otel\ / classic\) by a SEPARATE dotnet publish,
+    so the two stacks' dependency closures are never unified into a single shared version. Only one stack
+    activates at runtime: the StartupHook detects the app's telemetry stack, records the decision, and scopes
+    the assembly resolver to that stack's subfolder only. The uploader is shared (both stacks locate it via
+    %SP_UPLOADER_PATH%).
 
     The payload is staged under a VERSION-STAMPED subfolder (payload\<version>\) so that upgrades never
     have to overwrite a DLL that a running SCM/app worker still holds locked (the DOTNET_STARTUP_HOOKS /
@@ -47,6 +58,8 @@ $srcDir    = Split-Path -Parent $extRoot
 $repoRoot  = Split-Path -Parent $srcDir
 
 $hostingStartupProj = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.csproj"
+$otelActivatorProj    = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator.csproj"
+$classicActivatorProj = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator\Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator.csproj"
 $startupHookProj    = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.StartupHook\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.csproj"
 $xdtTransformsProj  = Join-Path $extRoot "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.csproj"
 $uploaderProj       = Join-Path $srcDir  "ServiceProfiler.EventPipe.Upload\ServiceProfiler.EventPipe.Upload.csproj"
@@ -54,6 +67,8 @@ $nuspec             = Join-Path $here    "Azure.Monitor.OpenTelemetry.Profiler.S
 
 $staging     = Join-Path $here "staging"
 $payloadRoot = Join-Path $staging "payload\$Version"
+$otelOut     = Join-Path $payloadRoot "otel"
+$classicOut  = Join-Path $payloadRoot "classic"
 $uploaderOut = Join-Path $payloadRoot "Uploader"
 $outDir      = Join-Path $repoRoot "Out\NuGets"
 
@@ -108,7 +123,9 @@ if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
 New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $outDir      | Out-Null
 
-# 2. Publish the HostingStartup closure (net8.0, low baseline) flat into payload\<version>\. Clean bin/obj
+# 2. Publish the stack-agnostic router (net8.0, low baseline) flat into payload\<version>\, then publish each
+#    profiler stack into its OWN subfolder (otel\ / classic\) via a SEPARATE dotnet publish so the two stacks'
+#    dependency closures are resolved independently and never unified into one shared version. Clean bin/obj
 #    first so the shared netstandard2.1 profiler projects recompile against the 8.0 baseline (they may have
 #    been built against the repo-default 10.x by another build).
 Write-Host "==> Cleaning src bin/obj for a clean low-baseline build" -ForegroundColor Cyan
@@ -116,8 +133,14 @@ dotnet build-server shutdown 2>&1 | Out-Null
 Get-ChildItem -Recurse -Directory -Path $srcDir -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -eq 'bin' -or $_.Name -eq 'obj' } |
     ForEach-Object { Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue }
-Invoke-Checked "Publishing HostingStartup payload ($baselineFramework, 8.0 baseline)" {
+Invoke-Checked "Publishing HostingStartup router ($baselineFramework, 8.0 baseline)" {
     dotnet publish $hostingStartupProj -c $Configuration -f $baselineFramework -o $payloadRoot --nologo @baselineArgs
+}
+Invoke-Checked "Publishing OpenTelemetry activator + closure into otel\ ($baselineFramework, 8.0 baseline)" {
+    dotnet publish $otelActivatorProj -c $Configuration -f $baselineFramework -o $otelOut --nologo @baselineArgs
+}
+Invoke-Checked "Publishing classic activator + closure into classic\ ($baselineFramework, 8.0 baseline)" {
+    dotnet publish $classicActivatorProj -c $Configuration -f $baselineFramework -o $classicOut --nologo @baselineArgs
 }
 
 # 3. Build the resolver StartupHook (BCL-only) and copy its single assembly next to the payload it resolves.
