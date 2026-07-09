@@ -1,17 +1,17 @@
-# Codeless Azure Monitor Profiler — Windows App Service Site Extension (Beta)
+# Codeless Azure Monitor Profiler — App Service (Beta)
 
-This is a **public beta** that enables the Azure Monitor profiler on a Windows App Service
-**without any code change, NuGet reference, or recompile** in the target application. It packages the
-profiler as a Kudu/SCM **Site Extension** that injects an ASP.NET Core `IHostingStartup` at process
-start. The HostingStartup detects the app's telemetry stack and enables the matching profiler.
+This is a **public beta** that enables the Azure Monitor profiler on an Azure App Service
+**without any code change, NuGet reference, or recompile** in the target application. It injects an ASP.NET
+Core `IHostingStartup` at process start; the HostingStartup detects the app's telemetry stack and enables the
+matching profiler. Delivery differs per OS: a Kudu/SCM **Site Extension** on **Windows App Service**, and a
+staging **script** (payload to `/home` + App Settings) on **Linux App Service** (blessed .NET stack) — see the
+per-platform sections below.
 
-> **Applies to .NET (ASP.NET Core) apps only.** This is a .NET EventPipe profiler. On a Windows App Service
-> running Node.js, Python, Java, or PHP the extension is a **safe no-op**: the injected variables
+> **Applies to .NET (ASP.NET Core) apps only.** This is a .NET EventPipe profiler. On an App Service
+> running Node.js, Python, Java, or PHP the enablement is a **safe no-op**: the injected variables
 > (`DOTNET_STARTUP_HOOKS` / `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`) are .NET-runtime-only and ignored by those
 > workers, the `StartupHook` only ever loads inside a .NET process, and even where a .NET process does load
-> it (the always-.NET Kudu/SCM worker) detection returns `None` without an app `*.deps.json` and nothing is
-> activated. The Kudu Site Extensions gallery cannot filter by runtime stack, so it may be *offered* to
-> non-.NET apps — installing it there simply does nothing.
+> it detection returns `None` without an app `*.deps.json` and nothing is activated.
 
 ## How it works
 
@@ -187,6 +187,64 @@ and DI, so those shared assemblies (OpenTelemetry, `Microsoft.Extensions.*`, the
    worker via Kudu (`/api/processes` → the process whose `APP_POOL_ID` equals the site name, not the
    `~1`-prefixed SCM worker).
 
+## Enabling on a Linux App Service (blessed .NET stack)
+
+Linux App Service has **no Kudu site-extension gallery and no `applicationHost.xdt`**, so instead of a
+`.nupkg` the same portable payload is delivered as a zip and enabled with a script that stages it under the
+app's persistent `/home` and sets the three injection variables as **App Settings**. The payload is identical
+to the Windows one (StartupHook + router at the root, `otel/`, `classic/`, shared `Uploader/`); only the
+delivery differs.
+
+**Prerequisites**
+- Azure CLI (`az`) installed and logged in (`az login`) — cross-platform.
+- The app is the **blessed .NET stack** on Linux App Service (custom containers are out of scope — see
+  Known limitations), with `/home` persistent storage (default).
+- `APPLICATIONINSIGHTS_CONNECTION_STRING` set on the app.
+
+**Build the Linux payload zip** (produced by the same build):
+
+```powershell
+pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta.1
+# -> <repo>/Out/Linux/AzureMonitorProfiler.1.0.0-beta.1.zip
+```
+
+**Enable** (pick either script — identical behavior; `pwsh` runs on Linux/macOS/Windows, so neither is
+Windows-only):
+
+```bash
+# bash
+./enable-linux-appservice.sh -g <resource-group> -n <app-name> [--slot <slot>]
+```
+
+```powershell
+# PowerShell 7+
+pwsh ./Enable-LinuxAppService.ps1 -ResourceGroup <resource-group> -Name <app-name> [-Slot <slot>]
+```
+
+The script: resolves the SCM (Kudu) host and an AAD token (works even when SCM basic auth is disabled),
+stages the zip to a version-stamped `/home/AzureMonitorProfiler/<version>/` via Kudu
+`PUT /api/zip/home/...`, then sets `DOTNET_STARTUP_HOOKS`, `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`
+(**append + de-duplicate**, so it coexists with the platform App Insights agent / user-set hooks) and
+`SP_UPLOADER_PATH` via `az webapp config appsettings set` — which restarts the app. Confirm activation in the
+log stream:
+
+```
+[Azure.Monitor.OpenTelemetry.Profiler.StartupHook] Detected telemetry stack: OpenTelemetry
+[Azure.Monitor.OpenTelemetry.Profiler.HostingStartup] info: ... Enabling the ... profiler.
+```
+
+**Dependencies to run the enable step:** only `az` (logged in) and `curl` (bash) / built-in `Invoke-RestMethod`
+(pwsh). **No .NET SDK and no Windows are required** — the script uploads a prebuilt zip and sets App Settings.
+Building the zip is a separate step (needs the .NET SDK + `pwsh`, on any OS).
+
+**Uninstall:** re-run with `--disable` (bash) / `-Disable` (pwsh) — it removes only our env-var entries
+(de-dup-aware) and leaves the staged `/home` folder for manual cleanup.
+
+**Notes:** `/home` is persisted and shared across all scale-out instances, so a single stage covers every
+instance; App Settings apply site-wide. Live end-to-end trace upload from a Linux App Service is verified;
+payload load, telemetry-stack detection, per-stack resolver, and activation for both stacks were validated on
+Linux.
+
 ## Verified
 
 **Live App Service (end-to-end).** On a Windows App Service, both an OpenTelemetry app and a classic
@@ -212,9 +270,12 @@ loads and initializes — end-to-end codeless activation, with **no code change*
 
 ## Known limitations (beta)
 
-- **.NET apps only.** This profiler targets .NET / ASP.NET Core. On non-.NET Windows App Service stacks
-  (Node.js, Python, Java, PHP) the extension does nothing — a safe no-op (see "Applies to" above). Supporting
+- **.NET apps only.** This profiler targets .NET / ASP.NET Core. On non-.NET App Service stacks
+  (Node.js, Python, Java, PHP) the enablement does nothing — a safe no-op (see "Applies to" above). Supporting
   those runtimes would require entirely different profiling technology and is out of scope.
+- **Platforms: Windows App Service (site extension) and Linux App Service blessed .NET stack (enable script).**
+  Linux **custom containers** and non-App-Service container hosts are out of scope for this beta (no `/home`
+  site-extension model; stage the payload in the image and set the env vars as container env vars instead).
 - **Runtime version support: .NET 8, 9, and 10 — via a single low-baseline payload.** Codeless injection
   runs the profiler *inside* the target app's already-resolved dependency graph. The app (and, for an
   OpenTelemetry app, its own `OpenTelemetry` / `Azure.Core`) loads its shared-framework

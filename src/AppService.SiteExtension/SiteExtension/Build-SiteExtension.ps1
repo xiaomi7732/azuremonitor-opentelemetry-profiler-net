@@ -194,3 +194,18 @@ $package = Join-Path $outDir "Azure.Monitor.OpenTelemetry.Profiler.SiteExtension
 Write-Host ""
 Write-Host "Site extension package created:" -ForegroundColor Green
 Write-Host "  $package"
+
+# 8. Emit a portable Linux payload zip (Linux App Service delivery). Linux has no Kudu site-extension gallery
+#    and no applicationHost.xdt, so the enable script stages this zip under /home and sets the injection env
+#    vars as App Settings. The zip contains the SAME portable payload (StartupHook + router at root, otel\,
+#    classic\, shared Uploader\) - i.e. the CONTENTS of payload\<version>\ - WITHOUT applicationHost.xdt or the
+#    XDT transform (those are Windows-only and live at the staging root, not inside payload\). Extracting this
+#    zip into /home/AzureMonitorProfiler/<version>/ places the assemblies directly there.
+$linuxOutDir = Join-Path $repoRoot "Out\Linux"
+New-Item -ItemType Directory -Force -Path $linuxOutDir | Out-Null
+$linuxZip = Join-Path $linuxOutDir "AzureMonitorProfiler.$Version.zip"
+if (Test-Path $linuxZip) { Remove-Item -Force $linuxZip }
+Compress-Archive -Path (Join-Path $payloadRoot '*') -DestinationPath $linuxZip -CompressionLevel Optimal
+Write-Host ""
+Write-Host "Linux payload zip created:" -ForegroundColor Green
+Write-Host "  $linuxZip"
