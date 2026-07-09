@@ -224,9 +224,11 @@ loads and initializes — end-to-end codeless activation, with **no code change*
   `Build-SiteExtension.ps1`); the shipped `Azure.Monitor.OpenTelemetry.Profiler` NuGet is unchanged
   (OpenTelemetry 1.15.3).
   - **Minimum app dependency versions (the roll-forward floor):** the target app's **OpenTelemetry must be
-    ≥ 1.8.1** and **Azure.Core ≥ ~1.46**. Apps below that are unsupported — an app that pins an *older*
-    OpenTelemetry than the profiler was built against would crash with a `FileNotFoundException`, because the
-    profiler's reference can't be satisfied by the app's lower, already-loaded copy.
+    ≥ 1.8.1** and **Azure.Core ≥ 1.46.1** (the payload is built against Azure.Core 1.46.1 — the lowest the
+    dependency graph allows, since Azure.Identity 1.14.0 floors it there). Apps below that are unsupported —
+    an app that pins an *older* OpenTelemetry or Azure.Core than the profiler was built against would crash
+    with a `FileNotFoundException`, because the profiler's reference can't be satisfied by the app's lower,
+    already-loaded copy.
   - **Why not bundle 10.x?** A 10.x payload crashes .NET 8/9 apps: the IIS in-process host loads the app's
     8.0 `Microsoft.Extensions.Logging` before our hook, and the profiler's 10.0 reference can't up-level it
     (verified live). Preloading the 10.x copy first doesn't help — the host already loaded 8.0.

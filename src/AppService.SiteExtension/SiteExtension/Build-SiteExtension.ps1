@@ -105,6 +105,11 @@ $baselineOverrides = @{
     "_SystemSecurityCryptographyProtectedDataVersion"           = "8.0.0"
     "_SystemTextEncodingsWebVersion"                             = "8.0.0"
     "_SystemIOHashingVersion"                                    = "8.0.0"
+    # Azure.Core is a direct reference of the OpenTelemetry profiler; down-level it too so the payload's
+    # floor matches the documented minimum (>= 1.46.1). 1.46.1 is the lowest the graph allows - Azure.Identity
+    # 1.14.0 floors Azure.Core at 1.46.1. Without this the payload would ship the repo-default 1.50, silently
+    # raising the real floor above what the README documents and breaking apps on Azure.Core 1.46-1.49.
+    "_AzureCoreVersion"                                          = "1.46.1"
 }
 $baselineArgs = @()
 foreach ($kvp in $baselineOverrides.GetEnumerator()) { $baselineArgs += "-p:$($kvp.Key)=$($kvp.Value)" }
