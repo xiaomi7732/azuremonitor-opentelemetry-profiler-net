@@ -12,9 +12,10 @@
       Codeless Azure App Service (Windows) Site Extension that enables the Azure Monitor profiler without
       any code change, NuGet reference, or recompile. It injects an ASP.NET Core HostingStartup that
       detects whether the application uses OpenTelemetry or the classic Application Insights SDK and
-      enables the matching profiler. PROOF OF CONCEPT.
+      enables the matching profiler. Targets .NET / ASP.NET Core apps only; it has no effect on Node.js,
+      Python, Java, or PHP App Service apps (a safe no-op there). PROOF OF CONCEPT.
     </description>
-    <summary>Codeless Azure Monitor profiler enablement for Windows App Service (POC).</summary>
+    <summary>Codeless Azure Monitor profiler enablement for .NET apps on Windows App Service (POC).</summary>
     <tags>AzureSiteExtension Azure Monitor OpenTelemetry Profiler Performance ApplicationInsights AspNetCore</tags>
   </metadata>
   <files>

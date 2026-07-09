@@ -5,6 +5,14 @@ This is a **proof of concept** that enables the Azure Monitor profiler on a Wind
 profiler as a Kudu/SCM **Site Extension** that injects an ASP.NET Core `IHostingStartup` at process
 start. The HostingStartup detects the app's telemetry stack and enables the matching profiler.
 
+> **Applies to .NET (ASP.NET Core) apps only.** This is a .NET EventPipe profiler. On a Windows App Service
+> running Node.js, Python, Java, or PHP the extension is a **safe no-op**: the injected variables
+> (`DOTNET_STARTUP_HOOKS` / `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`) are .NET-runtime-only and ignored by those
+> workers, the `StartupHook` only ever loads inside a .NET process, and even where a .NET process does load
+> it (the always-.NET Kudu/SCM worker) detection returns `None` without an app `*.deps.json` and nothing is
+> activated. The Kudu Site Extensions gallery cannot filter by runtime stack, so it may be *offered* to
+> non-.NET apps — installing it there simply does nothing.
+
 ## How it works
 
 The site extension stages the payload and sets three environment variables (via `applicationHost.xdt`)
@@ -198,6 +206,9 @@ loads and initializes — end-to-end codeless activation, with **no code change*
 
 ## Known limitations (POC)
 
+- **.NET apps only.** This profiler targets .NET / ASP.NET Core. On non-.NET Windows App Service stacks
+  (Node.js, Python, Java, PHP) the extension does nothing — a safe no-op (see "Applies to" above). Supporting
+  those runtimes would require entirely different profiling technology and is out of scope.
 - **Runtime version support: .NET 8, 9, and 10 — via a single low-baseline payload.** Codeless injection
   runs the profiler *inside* the target app's already-resolved dependency graph. The app (and, for an
   OpenTelemetry app, its own `OpenTelemetry` / `Azure.Core`) loads its shared-framework

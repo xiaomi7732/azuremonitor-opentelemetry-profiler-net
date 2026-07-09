@@ -114,6 +114,23 @@ public class ProfilerBootstrapperRoutingTests
     }
 
     [Fact]
+    internal void Configure_WhenNoStackDetected_NonDotNetApp_DoesNotInvokeActivator()
+    {
+        // Models a non-.NET App Service app: the StartupHook records nothing (a non-.NET worker never loads
+        // it) and detection returns None, so the router must not register anything or attempt to load/invoke
+        // any activator - the extension is a safe no-op.
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
+
+        bootstrapper.Configure(builder.Object);
+
+        Assert.Empty(captured);
+        builder.Verify(b => b.ConfigureServices(It.IsAny<Action<IServiceCollection>>()), Times.Never);
+        invoker.Verify(i => i.Invoke(It.IsAny<TelemetryStack>(), It.IsAny<IServiceCollection>()), Times.Never);
+    }
+
+    [Fact]
     internal void Configure_WhenDetectorThrows_DoesNotThrow()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> _) = CreateBuilder();

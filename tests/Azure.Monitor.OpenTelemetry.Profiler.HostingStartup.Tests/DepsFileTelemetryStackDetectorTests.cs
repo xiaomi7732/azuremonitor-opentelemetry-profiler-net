@@ -70,6 +70,15 @@ public class DepsFileTelemetryStackDetectorTests
     }
 
     [Fact]
+    internal void Detect_WhenNoDepsJson_AsNonDotNetApp_ReturnsNone()
+    {
+        // A non-.NET App Service app (Node.js/Python/Java/PHP) has no managed entry assembly and thus no
+        // *.deps.json, so detection yields None and the profiler is never activated - a safe no-op.
+        DepsFileTelemetryStackDetector detector = new(depsFilePathProvider: () => null, readAllText: _ => null);
+        Assert.Equal(TelemetryStack.None, detector.Detect());
+    }
+
+    [Fact]
     internal void Detect_ReadsAndClassifiesProvidedDeps()
     {
         DepsFileTelemetryStackDetector detector = new(
