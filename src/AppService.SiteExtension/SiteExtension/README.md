@@ -58,11 +58,13 @@ disables the profiler.
 
 ### Fail-safe activation
 
-Codeless activation must never take down the host application. The `HostingStartup` registers the profiler
-inside a deferred `ConfigureServices` callback whose body is isolated behind a non-inlined helper invoked
-under try/catch, so even a missing/incompatible-assembly failure — the failure a below-floor dependency
-version produces at JIT time — is caught and logged, and the app starts **without** the profiler instead of
-crashing. Downstream, the profiler's hosted services also self-contain their startup failures (the classic
+Codeless activation must never take down the host application. The stack-agnostic `HostingStartup` router
+has **no compile-time reference to either profiler stack**; inside a deferred `ConfigureServices` callback it
+**reflectively** loads and invokes the per-stack activator (`Assembly.Load` → `GetType` → `Enable`), and that
+whole reflective invocation is wrapped in try/catch. So even a missing/incompatible-assembly failure — the
+failure a below-floor dependency version produces — surfaces as a caught reflection/load exception, is
+logged, and the app starts **without** the profiler instead of crashing. Downstream, the profiler's hosted
+services also self-contain their startup failures (the classic
 `ServiceProfilerAgentBootstrap` catches all activation errors unless `AllowsCrash` is set; the OpenTelemetry
 path uses `SafeProfilerHostedService`). The net effect: a below-floor SDK, a bad connection string, or a
 future breaking dependency change disables profiling and leaves the application running.
