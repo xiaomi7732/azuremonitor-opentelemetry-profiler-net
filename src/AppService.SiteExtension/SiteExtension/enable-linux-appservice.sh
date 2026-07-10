@@ -59,42 +59,44 @@ DEFAULT_HOST=$(az webapp show -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --query defau
 SCM_HOST=$(printf '%s' "$DEFAULT_HOST" | sed 's/\./.scm./')
 TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv)
 
-# --- Append + de-duplicate a value into a semicolon-separated list (mirrors the Windows AppendListValueIfMissing XDT) ---
-append_dedup() { # $1 = current list, $2 = value to ensure present  -> prints new list
-  local current="$1" value="$2" out="" item
-  local IFS=';'
+# --- List helpers. DOTNET_STARTUP_HOOKS is delimited by Path.PathSeparator (":" on Linux!), while
+#     ASPNETCORE_HOSTINGSTARTUPASSEMBLIES is ";"-delimited on all platforms - so pass the right separator. ---
+append_dedup() { # $1 = current list, $2 = value to ensure present, $3 = separator -> prints new list
+  local current="$1" value="$2" sep="$3" out="" item
+  local IFS="$sep"
   for item in $current; do
     [[ -z "$item" || "$item" == "$value" ]] && continue
-    out="${out:+$out;}$item"
+    out="${out:+$out$sep}$item"
   done
-  out="${out:+$out;}$value"
+  out="${out:+$out$sep}$value"
   printf '%s' "$out"
 }
 
-remove_from_list() { # $1 = current list, $2 = value to remove -> prints new list
-  local current="$1" value="$2" out="" item
-  local IFS=';'
+remove_from_list() { # $1 = current list, $2 = value to remove, $3 = separator -> prints new list
+  local current="$1" value="$2" sep="$3" out="" item
+  local IFS="$sep"
   for item in $current; do
     [[ -z "$item" || "$item" == "$value" ]] && continue
-    out="${out:+$out;}$item"
+    out="${out:+$out$sep}$item"
   done
   printf '%s' "$out"
 }
 
-# Append our versioned StartupHook path, removing ANY prior version of our hook first (upgrades stage into a
-# new /home/AzureMonitorProfiler/<version>/ folder; App Settings persist, so a plain append+dedup would leave
-# the old versioned hook in DOTNET_STARTUP_HOOKS and it would run first and load the stale payload).
-append_hook_replacing_prior() { # $1 = current list, $2 = new hook path -> prints new list
-  local current="$1" newpath="$2" out="" item
-  local IFS=';'
+# Rebuild the DOTNET_STARTUP_HOOKS list: drop any prior version of OUR StartupHook (upgrades stage into a new
+# /home/AzureMonitorProfiler/<version>/ folder and App Settings persist, so a plain dedup would leave the old
+# hook, which runs first and loads the stale payload), then append $2 when non-empty. Pure bash (no grep), so
+# it can't trip `set -e` on the disable path where nothing matches.
+rebuild_hook_list() { # $1 = current list, $2 = new hook path ("" to only remove), $3 = separator -> prints new list
+  local current="$1" newpath="$2" sep="$3" out="" item
+  local IFS="$sep"
   for item in $current; do
     [[ -z "$item" || "$item" == "$newpath" ]] && continue
     case "$item" in
       */AzureMonitorProfiler/*/Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll) continue;;
     esac
-    out="${out:+$out;}$item"
+    out="${out:+$out$sep}$item"
   done
-  out="${out:+$out;}$newpath"
+  [[ -n "$newpath" ]] && out="${out:+$out$sep}$newpath"
   printf '%s' "$out"
 }
 
@@ -108,9 +110,9 @@ CUR_HSA=$(get_setting ASPNETCORE_HOSTINGSTARTUPASSEMBLIES)
 
 if [[ "$DISABLE" -eq 1 ]]; then
   echo "Disabling the codeless profiler on $APP${SLOT:+ (slot: $SLOT)}..."
-  # Remove only OUR entries; leave anything else other agents added.
-  NEW_HOOKS=$(remove_from_list "$CUR_HOOKS" "$(printf '%s' "$CUR_HOOKS" | tr ';' '\n' | grep -E "$REMOTE_BASE/.*/Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll$" | head -1)")
-  NEW_HSA=$(remove_from_list "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY")
+  # Remove only OUR entries (any staged version); leave anything else other agents added.
+  NEW_HOOKS=$(rebuild_hook_list "$CUR_HOOKS" "" ":")
+  NEW_HSA=$(remove_from_list "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY" ";")
   SETTINGS=()
   [[ -n "$NEW_HOOKS" ]] && SETTINGS+=("DOTNET_STARTUP_HOOKS=$NEW_HOOKS") || az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names DOTNET_STARTUP_HOOKS >/dev/null
   [[ -n "$NEW_HSA" ]]   && SETTINGS+=("ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$NEW_HSA") || az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names ASPNETCORE_HOSTINGSTARTUPASSEMBLIES >/dev/null
@@ -146,8 +148,8 @@ HTTP=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT \
 [[ "$HTTP" =~ ^2 ]] || die "Kudu zip upload failed (HTTP $HTTP)."
 echo "  staged (HTTP $HTTP)."
 
-NEW_HOOKS=$(append_hook_replacing_prior "$CUR_HOOKS" "$HOOK_PATH")
-NEW_HSA=$(append_dedup "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY")
+NEW_HOOKS=$(rebuild_hook_list "$CUR_HOOKS" "$HOOK_PATH" ":")
+NEW_HSA=$(append_dedup "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY" ";")
 
 echo "Setting App Settings (this restarts the app)..."
 SETTINGS=(

@@ -45,28 +45,30 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) { Die "Azure CLI 'az' n
 
 $slotArgs = @(); if ($Slot) { $slotArgs = @('--slot', $Slot) }
 
-# Append + de-duplicate a value into a semicolon-separated list (mirrors the Windows AppendListValueIfMissing XDT).
-function Append-Dedup([string]$current, [string]$value) {
+# List helpers. DOTNET_STARTUP_HOOKS is delimited by Path.PathSeparator (":" on Linux!), while
+# ASPNETCORE_HOSTINGSTARTUPASSEMBLIES is ";"-delimited on all platforms - so pass the right separator.
+function Append-Dedup([string]$current, [string]$value, [string]$sep) {
     $items = @()
-    if ($current) { $items = @($current.Split(';') | Where-Object { $_ -and $_ -ne $value }) }
-    return ((@($items) + $value) -join ';')
+    if ($current) { $items = @($current.Split([char]$sep) | Where-Object { $_ -and $_ -ne $value }) }
+    return ((@($items) + $value) -join $sep)
 }
-function Remove-FromList([string]$current, [string]$value) {
+function Remove-FromList([string]$current, [string]$value, [string]$sep) {
     if (-not $current) { return '' }
-    return (@($current.Split(';') | Where-Object { $_ -and $_ -ne $value }) -join ';')
+    return (@($current.Split([char]$sep) | Where-Object { $_ -and $_ -ne $value }) -join $sep)
 }
-# Append our versioned StartupHook path, removing ANY prior version of our hook first (upgrades stage into a
-# new /home/AzureMonitorProfiler/<version>/ folder and App Settings persist, so a plain append+dedup would
-# leave the old versioned hook in DOTNET_STARTUP_HOOKS and it would run first and load the stale payload).
-function Append-HookReplacingPrior([string]$current, [string]$newPath) {
+# Rebuild the DOTNET_STARTUP_HOOKS list: drop any prior version of our hook (upgrades stage into a new
+# /home/AzureMonitorProfiler/<version>/ folder and App Settings persist, so a plain dedup would leave the old
+# hook, which runs first and loads the stale payload), then append $newPath when non-empty.
+function Rebuild-HookList([string]$current, [string]$newPath, [string]$sep) {
     $items = @()
     if ($current) {
-        $items = @($current.Split(';') | Where-Object {
+        $items = @($current.Split([char]$sep) | Where-Object {
             $_ -and $_ -ne $newPath -and
             $_ -notmatch '[/\\]AzureMonitorProfiler[/\\].*[/\\]Azure\.Monitor\.OpenTelemetry\.Profiler\.StartupHook\.dll$'
         })
     }
-    return ((@($items) + $newPath) -join ';')
+    if ($newPath) { return ((@($items) + $newPath) -join $sep) }
+    return ($items -join $sep)
 }
 function Get-Setting([string]$name) {
     return (& az webapp config appsettings list -g $ResourceGroup -n $Name @slotArgs --query "[?name=='$name'].value | [0]" -o tsv)
@@ -77,10 +79,8 @@ $curHsa   = Get-Setting 'ASPNETCORE_HOSTINGSTARTUPASSEMBLIES'
 
 if ($Disable) {
     Write-Host "Disabling the codeless profiler on $Name$(if($Slot){" (slot: $Slot)"})..."
-    $ourHook = $null
-    if ($curHooks) { $ourHook = $curHooks.Split(';') | Where-Object { $_ -match "$RemoteBase/.*/Azure\.Monitor\.OpenTelemetry\.Profiler\.StartupHook\.dll$" } | Select-Object -First 1 }
-    $newHooks = if ($ourHook) { Remove-FromList $curHooks $ourHook } else { $curHooks }
-    $newHsa   = Remove-FromList $curHsa $HostingStartupAssembly
+    $newHooks = Rebuild-HookList $curHooks '' ':'
+    $newHsa   = Remove-FromList $curHsa $HostingStartupAssembly ';'
     $set = @()
     if ($newHooks) { $set += "DOTNET_STARTUP_HOOKS=$newHooks" } else { & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names DOTNET_STARTUP_HOOKS 1>$null }
     if ($newHsa)   { $set += "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$newHsa" } else { & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names ASPNETCORE_HOSTINGSTARTUPASSEMBLIES 1>$null }
@@ -121,8 +121,8 @@ try {
 } catch { Die "Kudu zip upload failed: $($_.Exception.Message)" }
 Write-Host "  staged."
 
-$newHooks = Append-HookReplacingPrior $curHooks $hookPath
-$newHsa   = Append-Dedup $curHsa $HostingStartupAssembly
+$newHooks = Rebuild-HookList $curHooks $hookPath ':'
+$newHsa   = Append-Dedup $curHsa $HostingStartupAssembly ';'
 
 Write-Host "Setting App Settings (this restarts the app)..."
 $settings = @(

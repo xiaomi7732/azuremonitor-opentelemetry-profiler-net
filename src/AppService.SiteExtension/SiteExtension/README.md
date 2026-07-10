@@ -257,7 +257,10 @@ pwsh ./Enable-LinuxAppService.ps1 -ResourceGroup <resource-group> -Name <app-nam
 The script: resolves the SCM (Kudu) host and an AAD token (works even when SCM basic auth is disabled),
 stages the zip to a version-stamped `/home/AzureMonitorProfiler/<version>/` via Kudu
 `PUT /api/zip/home/...`, then sets `DOTNET_STARTUP_HOOKS`, `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`
-(**append + de-duplicate**, so it coexists with the platform App Insights agent / user-set hooks) and
+(**append + de-duplicate**, so it coexists with the platform App Insights agent / user-set hooks; note
+`DOTNET_STARTUP_HOOKS` is joined with `:` — `Path.PathSeparator` on Linux — while
+`ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` uses `;`, and on upgrade any prior versioned hook of ours is removed
+first) and
 `SP_UPLOADER_PATH` via `az webapp config appsettings set` — which restarts the app. Confirm activation in the
 log stream:
 
