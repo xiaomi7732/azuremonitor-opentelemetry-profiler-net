@@ -31,4 +31,12 @@ internal enum TelemetryStack
     /// activation (a second EventPipe session).
     /// </summary>
     AlreadyInstrumented,
+
+    /// <summary>
+    /// No supported SDK is referenced in the app's build (<c>*.deps.json</c>), but the App Service
+    /// pre-installed Application Insights codeless agent is instrumenting the app at runtime. The profiler
+    /// cannot be enabled against the agent's repacked, below-floor classic SDK, so codeless enablement does
+    /// not activate and instead logs a recommendation to add a supported SDK NuGet package.
+    /// </summary>
+    AgentInstrumentedNoSdk,
 }

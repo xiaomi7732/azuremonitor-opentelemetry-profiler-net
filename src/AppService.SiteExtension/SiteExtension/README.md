@@ -54,6 +54,15 @@ detection uses the exact `"<pkg>/"` library key, so it does not confuse the publ
 `Azure.Monitor.OpenTelemetry.Profiler.Core` dependency. (The profiler's own `Add*` registration is also
 idempotent, as a secondary guard.)
 
+**App Service App Insights agent, no SDK referenced.** If the app references no supported SDK in its build
+but the App Service pre-installed Application Insights agent is instrumenting it at runtime (detected via the
+`ApplicationInsightsAgent_EXTENSION_VERSION` app setting), the profiler **cannot** attach to the agent's
+telemetry — the agent injects a repacked, below-floor classic SDK (`Microsoft.ApplicationInsights.ILRepack`,
+~2.21) whose assembly identity/version our profiler can't bind to. In that case codeless enablement does not
+activate and instead logs an actionable recommendation to **add a supported SDK NuGet** to the app and
+redeploy (`Azure.Monitor.OpenTelemetry.AspNetCore` — OpenTelemetry, recommended — or
+`Microsoft.ApplicationInsights.AspNetCore`); the profiler then activates automatically on the next detection.
+
 This mirrors the profiler's [supported-SDK matrix](../../../README.md): the current
 `Microsoft.ApplicationInsights.AspNetCore` (3.x) is an OpenTelemetry-based wrapper, so it uses the
 OpenTelemetry profiler; the legacy classic 2.x line uses the classic Application Insights profiler that

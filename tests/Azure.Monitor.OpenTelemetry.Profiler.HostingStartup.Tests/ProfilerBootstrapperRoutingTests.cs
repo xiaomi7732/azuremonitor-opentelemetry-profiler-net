@@ -147,6 +147,22 @@ public class ProfilerBootstrapperRoutingTests
     }
 
     [Fact]
+    internal void Apply_WhenAgentInstrumentedNoSdk_BacksOffAndRegistersNothing()
+    {
+        // App Service AI agent instruments at runtime but no SDK is referenced: we only log a recommendation,
+        // never activate.
+        (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> captured) = CreateBuilder();
+        Mock<IProfilerActivatorInvoker> invoker = new();
+        ProfilerBootstrapper bootstrapper = CreateBootstrapper(TelemetryStack.None, invoker.Object);
+
+        bootstrapper.Apply(builder.Object, TelemetryStack.AgentInstrumentedNoSdk);
+
+        Assert.Empty(captured);
+        builder.Verify(b => b.ConfigureServices(It.IsAny<Action<IServiceCollection>>()), Times.Never);
+        invoker.Verify(i => i.Invoke(It.IsAny<TelemetryStack>(), It.IsAny<IServiceCollection>()), Times.Never);
+    }
+
+    [Fact]
     internal void Configure_WhenDetectorThrows_DoesNotThrow()
     {
         (Mock<IWebHostBuilder> builder, List<Action<IServiceCollection>> _) = CreateBuilder();

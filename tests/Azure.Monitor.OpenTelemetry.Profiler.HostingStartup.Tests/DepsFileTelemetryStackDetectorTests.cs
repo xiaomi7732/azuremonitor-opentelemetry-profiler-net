@@ -106,4 +106,40 @@ public class DepsFileTelemetryStackDetectorTests
 
         Assert.Equal(TelemetryStack.OpenTelemetry, detector.Detect());
     }
+
+    [Fact]
+    internal void Detect_WhenNoSdkButAppServiceAiAgentPresent_ReturnsAgentInstrumentedNoSdk()
+    {
+        // Models the App Service pre-installed App Insights agent instrumenting the app at runtime while the
+        // app references no supported SDK in its build.
+        DepsFileTelemetryStackDetector detector = new(
+            depsFilePathProvider: () => @"C:\app\SampleApp.deps.json",
+            readAllText: _ => NeitherDeps,
+            environmentVariableProvider: name => name == "ApplicationInsightsAgent_EXTENSION_VERSION" ? "~3" : null);
+
+        Assert.Equal(TelemetryStack.AgentInstrumentedNoSdk, detector.Detect());
+    }
+
+    [Fact]
+    internal void Detect_WhenNoSdkAndNoAgent_ReturnsNone()
+    {
+        DepsFileTelemetryStackDetector detector = new(
+            depsFilePathProvider: () => @"C:\app\SampleApp.deps.json",
+            readAllText: _ => NeitherDeps,
+            environmentVariableProvider: _ => null);
+
+        Assert.Equal(TelemetryStack.None, detector.Detect());
+    }
+
+    [Fact]
+    internal void Detect_WhenSupportedSdkAndAgentPresent_SdkWins()
+    {
+        // A referenced supported SDK takes precedence over the agent overlay (the profiler activates normally).
+        DepsFileTelemetryStackDetector detector = new(
+            depsFilePathProvider: () => @"C:\app\SampleApp.deps.json",
+            readAllText: _ => OpenTelemetryDeps,
+            environmentVariableProvider: _ => "~3");
+
+        Assert.Equal(TelemetryStack.OpenTelemetry, detector.Detect());
+    }
 }

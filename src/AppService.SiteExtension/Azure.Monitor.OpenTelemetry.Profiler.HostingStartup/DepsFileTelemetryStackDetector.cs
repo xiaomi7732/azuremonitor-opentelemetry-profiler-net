@@ -19,21 +19,50 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 /// </remarks>
 internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
 {
+    // Set by the App Service pre-installed Application Insights codeless agent (DiagnosticServices). Its
+    // presence means telemetry is being instrumented at RUNTIME by the agent - which our build-time
+    // *.deps.json scan cannot see - so an otherwise-undetected app is still emitting telemetry.
+    private const string AppServiceAiAgentEnvVar = "ApplicationInsightsAgent_EXTENSION_VERSION";
+
     private readonly Func<string?> _depsFilePathProvider;
     private readonly Func<string, string?> _readAllText;
+    private readonly Func<string, string?> _environmentVariableProvider;
 
     public DepsFileTelemetryStackDetector()
         : this(GetEntryAssemblyDepsPath, TryReadAllText)
     {
     }
 
-    internal DepsFileTelemetryStackDetector(Func<string?> depsFilePathProvider, Func<string, string?> readAllText)
+    internal DepsFileTelemetryStackDetector(
+        Func<string?> depsFilePathProvider,
+        Func<string, string?> readAllText,
+        Func<string, string?>? environmentVariableProvider = null)
     {
         _depsFilePathProvider = depsFilePathProvider ?? throw new ArgumentNullException(nameof(depsFilePathProvider));
         _readAllText = readAllText ?? throw new ArgumentNullException(nameof(readAllText));
+        _environmentVariableProvider = environmentVariableProvider ?? Environment.GetEnvironmentVariable;
     }
 
     public TelemetryStack Detect()
+    {
+        TelemetryStack stack = DetectFromDeps();
+
+        // If nothing was detected from the build (*.deps.json), the app may still be instrumented at runtime
+        // by the App Service Application Insights codeless agent. We cannot enable the profiler against that
+        // (it injects a repacked, below-floor classic SDK), but we can surface an actionable recommendation
+        // instead of a bare "no supported stack".
+        if (stack == TelemetryStack.None && IsAppServiceAiAgentPresent())
+        {
+            return TelemetryStack.AgentInstrumentedNoSdk;
+        }
+
+        return stack;
+    }
+
+    private bool IsAppServiceAiAgentPresent() =>
+        !string.IsNullOrEmpty(_environmentVariableProvider(AppServiceAiAgentEnvVar));
+
+    private TelemetryStack DetectFromDeps()
     {
         string? path = _depsFilePathProvider();
         if (string.IsNullOrEmpty(path))
