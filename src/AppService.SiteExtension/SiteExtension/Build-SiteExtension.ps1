@@ -205,7 +205,11 @@ $linuxOutDir = Join-Path $repoRoot "Out\Linux"
 New-Item -ItemType Directory -Force -Path $linuxOutDir | Out-Null
 $linuxZip = Join-Path $linuxOutDir "AzureMonitorProfiler.$Version.zip"
 if (Test-Path $linuxZip) { Remove-Item -Force $linuxZip }
-Compress-Archive -Path (Join-Path $payloadRoot '*') -DestinationPath $linuxZip -CompressionLevel Optimal
+# Use ZipFile.CreateFromDirectory (not Compress-Archive) so entry paths always use '/' separators. Windows
+# PowerShell 5.1's Compress-Archive writes '\' entry names, which Kudu's .NET extraction on Linux treats as
+# literal flat filenames - that would flatten otel/ classic/ Uploader/ and break the per-stack resolver.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::CreateFromDirectory($payloadRoot, $linuxZip)
 Write-Host ""
 Write-Host "Linux payload zip created:" -ForegroundColor Green
 Write-Host "  $linuxZip"

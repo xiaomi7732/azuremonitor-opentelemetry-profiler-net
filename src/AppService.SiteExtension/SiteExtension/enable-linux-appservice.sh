@@ -81,6 +81,23 @@ remove_from_list() { # $1 = current list, $2 = value to remove -> prints new lis
   printf '%s' "$out"
 }
 
+# Append our versioned StartupHook path, removing ANY prior version of our hook first (upgrades stage into a
+# new /home/AzureMonitorProfiler/<version>/ folder; App Settings persist, so a plain append+dedup would leave
+# the old versioned hook in DOTNET_STARTUP_HOOKS and it would run first and load the stale payload).
+append_hook_replacing_prior() { # $1 = current list, $2 = new hook path -> prints new list
+  local current="$1" newpath="$2" out="" item
+  local IFS=';'
+  for item in $current; do
+    [[ -z "$item" || "$item" == "$newpath" ]] && continue
+    case "$item" in
+      */AzureMonitorProfiler/*/Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll) continue;;
+    esac
+    out="${out:+$out;}$item"
+  done
+  out="${out:+$out;}$newpath"
+  printf '%s' "$out"
+}
+
 get_setting() { # $1 = name -> prints current value ("" if unset)
   az webapp config appsettings list -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" \
     --query "[?name=='$1'].value | [0]" -o tsv 2>/dev/null || true
@@ -129,7 +146,7 @@ HTTP=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT \
 [[ "$HTTP" =~ ^2 ]] || die "Kudu zip upload failed (HTTP $HTTP)."
 echo "  staged (HTTP $HTTP)."
 
-NEW_HOOKS=$(append_dedup "$CUR_HOOKS" "$HOOK_PATH")
+NEW_HOOKS=$(append_hook_replacing_prior "$CUR_HOOKS" "$HOOK_PATH")
 NEW_HSA=$(append_dedup "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY")
 
 echo "Setting App Settings (this restarts the app)..."

@@ -55,6 +55,19 @@ function Remove-FromList([string]$current, [string]$value) {
     if (-not $current) { return '' }
     return (@($current.Split(';') | Where-Object { $_ -and $_ -ne $value }) -join ';')
 }
+# Append our versioned StartupHook path, removing ANY prior version of our hook first (upgrades stage into a
+# new /home/AzureMonitorProfiler/<version>/ folder and App Settings persist, so a plain append+dedup would
+# leave the old versioned hook in DOTNET_STARTUP_HOOKS and it would run first and load the stale payload).
+function Append-HookReplacingPrior([string]$current, [string]$newPath) {
+    $items = @()
+    if ($current) {
+        $items = @($current.Split(';') | Where-Object {
+            $_ -and $_ -ne $newPath -and
+            $_ -notmatch '[/\\]AzureMonitorProfiler[/\\].*[/\\]Azure\.Monitor\.OpenTelemetry\.Profiler\.StartupHook\.dll$'
+        })
+    }
+    return ((@($items) + $newPath) -join ';')
+}
 function Get-Setting([string]$name) {
     return (& az webapp config appsettings list -g $ResourceGroup -n $Name @slotArgs --query "[?name=='$name'].value | [0]" -o tsv)
 }
@@ -97,7 +110,7 @@ $uploaderPath  = "$remoteDir/Uploader/Microsoft.ApplicationInsights.Profiler.Upl
 # Resolve SCM host + AAD token (works even when SCM basic auth is disabled).
 $defaultHost = & az webapp show -g $ResourceGroup -n $Name @slotArgs --query defaultHostName -o tsv
 if ($LASTEXITCODE -ne 0 -or -not $defaultHost) { Die "Could not find app '$Name' in resource group '$ResourceGroup'." }
-$scmHost = $defaultHost -replace '\.', '.scm.', 1
+$scmHost = $defaultHost -replace '^([^.]+)\.', '$1.scm.'
 $token = & az account get-access-token --resource https://management.azure.com --query accessToken -o tsv
 
 Write-Host "Staging payload to $remoteDir on $Name$(if($Slot){" (slot: $Slot)"}) ..."
@@ -108,7 +121,7 @@ try {
 } catch { Die "Kudu zip upload failed: $($_.Exception.Message)" }
 Write-Host "  staged."
 
-$newHooks = Append-Dedup $curHooks $hookPath
+$newHooks = Append-HookReplacingPrior $curHooks $hookPath
 $newHsa   = Append-Dedup $curHsa $HostingStartupAssembly
 
 Write-Host "Setting App Settings (this restarts the app)..."
