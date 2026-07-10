@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text.Json;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
@@ -22,9 +23,9 @@ internal readonly struct DependencyFloorViolation
 }
 
 /// <summary>
-/// Pre-flight check that compares the versions of shared assemblies the application has already loaded against
-/// the versions the chosen profiler payload was built against (its <c>*.deps.json</c> floors). It lets the
-/// router back off with a specific, actionable log when a below-floor dependency would make activation fail,
+/// Pre-flight check that compares the versions of shared assemblies the application has already loaded
+/// (in the default load context, where the profiler binds) against the versions the chosen profiler payload
+/// was built against (its <c>*.deps.json</c> floors). It lets the router back off with a specific, actionable log when a below-floor dependency would make activation fail,
 /// instead of relying solely on the fail-safe try/catch to swallow a JIT-time
 /// <see cref="System.IO.FileNotFoundException"/>. It is best-effort and additive: it only sees assemblies
 /// already loaded at check time, so the guarded activation remains the backstop for anything that loads later.
@@ -65,7 +66,11 @@ internal sealed class PayloadDependencyFloorChecker : IDependencyFloorChecker
             }
 
             IReadOnlyDictionary<string, Version> floors = ReadFloorsFromDepsJson(System.IO.File.ReadAllText(depsPath));
-            IEnumerable<AssemblyName> loaded = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetName());
+            // Only the DEFAULT load context matters: the profiler payload is loaded there (the StartupHook
+            // resolver hooks AssemblyLoadContext.Default, and the activator is loaded via Assembly.Load). A
+            // below-floor dependency isolated in a custom AssemblyLoadContext (e.g. a plugin) cannot conflict
+            // with the profiler's binding, so scoping to the default context avoids a false back-off.
+            IEnumerable<AssemblyName> loaded = AssemblyLoadContext.Default.Assemblies.Select(a => a.GetName());
             return FindViolations(floors, loaded);
         }
         catch
