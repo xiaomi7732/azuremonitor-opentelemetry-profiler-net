@@ -88,6 +88,20 @@ services also self-contain their startup failures (the classic
 path uses `SafeProfilerHostedService`). The net effect: a below-floor SDK, a bad connection string, or a
 future breaking dependency change disables profiling and leaves the application running.
 
+#### Pre-flight dependency-floor check
+
+Before invoking the activator, the router runs a best-effort **pre-flight**: it reads the chosen payload's
+`*.deps.json` (which records the exact `assemblyVersion` each shipped assembly was built against — the binding
+floors) and compares those to the assemblies the application has **already loaded**. If a loaded shared
+dependency is **below** its floor, activation is skipped up front with a specific, actionable log
+(*"the application loaded X <ver> but the profiler requires >= <floor>; upgrade X and redeploy"*) instead of
+letting activation throw a caught `FileNotFoundException`/`TypeLoadException`. This is **additive** — the
+try/catch above remains the backstop for dependencies that load only after the check. Note it flags
+dependencies that bump their **assembly** version per release (Azure.Core, `Microsoft.Extensions.*`,
+`System.Text.Json`, `System.Diagnostics.DiagnosticSource`); OpenTelemetry pins a fixed `assemblyVersion`
+(`1.0.0.0`) across releases, so an OpenTelemetry below the API floor is still caught by the backstop rather
+than the pre-flight.
+
 ### Coexistence (applicationHost.xdt append + de-dup)
 
 `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` and `DOTNET_STARTUP_HOOKS` are semicolon-separated lists that other

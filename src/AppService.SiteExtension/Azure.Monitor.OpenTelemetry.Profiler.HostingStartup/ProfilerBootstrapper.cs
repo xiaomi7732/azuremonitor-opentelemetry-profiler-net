@@ -30,16 +30,21 @@ public sealed class ProfilerBootstrapper : IHostingStartup
 {
     private readonly ITelemetryStackDetector _detector;
     private readonly IProfilerActivatorInvoker _activatorInvoker;
+    private readonly IDependencyFloorChecker _floorChecker;
 
     public ProfilerBootstrapper()
-        : this(new DepsFileTelemetryStackDetector(), new ReflectionProfilerActivatorInvoker())
+        : this(new DepsFileTelemetryStackDetector(), new ReflectionProfilerActivatorInvoker(), new PayloadDependencyFloorChecker())
     {
     }
 
-    internal ProfilerBootstrapper(ITelemetryStackDetector detector, IProfilerActivatorInvoker activatorInvoker)
+    internal ProfilerBootstrapper(
+        ITelemetryStackDetector detector,
+        IProfilerActivatorInvoker activatorInvoker,
+        IDependencyFloorChecker? floorChecker = null)
     {
         _detector = detector ?? throw new ArgumentNullException(nameof(detector));
         _activatorInvoker = activatorInvoker ?? throw new ArgumentNullException(nameof(activatorInvoker));
+        _floorChecker = floorChecker ?? NoDependencyFloorChecker.Instance;
     }
 
     /// <inheritdoc />
@@ -128,6 +133,22 @@ public sealed class ProfilerBootstrapper : IHostingStartup
     {
         try
         {
+            // Pre-flight: if the app has already loaded a shared dependency below the version the payload was
+            // built against, activation would fail to bind. Back off with a specific, actionable log instead
+            // of relying on the catch below to swallow a JIT-time load exception. Best-effort (only sees
+            // already-loaded assemblies); the catch remains the backstop for anything that loads later.
+            IReadOnlyList<DependencyFloorViolation> violations = _floorChecker.CheckLoadedAgainstPayloadFloors(stack);
+            if (violations.Count > 0)
+            {
+                foreach (DependencyFloorViolation v in violations)
+                {
+                    BootstrapLog.Error($"Cannot enable the profiler: the application loaded {v.Name} {v.Loaded} but the profiler requires >= {v.Required}. Upgrade {v.Name} (or the telemetry SDK that brings it) and redeploy.");
+                }
+
+                BootstrapLog.Info("Codeless profiler activation skipped due to below-floor dependency versions (see errors above). The application continues to run normally.");
+                return;
+            }
+
             _activatorInvoker.Invoke(stack, services);
         }
         catch (Exception ex)
