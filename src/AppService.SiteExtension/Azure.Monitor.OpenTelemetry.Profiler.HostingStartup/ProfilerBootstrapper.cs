@@ -104,6 +104,10 @@ public sealed class ProfilerBootstrapper : IHostingStartup
                 builder.ConfigureServices(services => TryActivate(stack, services));
                 break;
 
+            case TelemetryStack.AlreadyInstrumented:
+                BootstrapLog.Info("The application already references an Azure Monitor profiler NuGet package (Azure.Monitor.OpenTelemetry.Profiler or Microsoft.ApplicationInsights.Profiler.AspNetCore); codeless enablement backs off to avoid double activation. The profiler is expected to be enabled by the application's own code.");
+                break;
+
             default:
                 BootstrapLog.Error("No supported telemetry stack (OpenTelemetry, the Azure Monitor OpenTelemetry distro, the OpenTelemetry-based Application Insights SDK 3.x, or the classic Application Insights SDK 2.x) was detected. The profiler will NOT be activated.");
                 break;

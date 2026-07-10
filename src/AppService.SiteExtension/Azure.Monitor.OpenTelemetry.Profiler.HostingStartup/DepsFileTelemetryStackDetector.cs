@@ -65,6 +65,16 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     /// </remarks>
     internal static TelemetryStack DetectFromDepsJson(string depsJson)
     {
+        // 0. Back off if the app already references an EventPipe profiler NuGet - it activates the profiler in
+        //    its own code, so codeless enablement must not activate a second time (double EventPipe session).
+        //    Uses the exact "<pkg>/" library-key marker so "Azure.Monitor.OpenTelemetry.Profiler" does not
+        //    match its dependency "Azure.Monitor.OpenTelemetry.Profiler.Core".
+        if (ContainsExactPackage(depsJson, "Azure.Monitor.OpenTelemetry.Profiler")
+            || ContainsExactPackage(depsJson, "Microsoft.ApplicationInsights.Profiler.AspNetCore"))
+        {
+            return TelemetryStack.AlreadyInstrumented;
+        }
+
         // 1. Azure Monitor OpenTelemetry distro - unambiguous, supported OpenTelemetry signal.
         if (ContainsPackageToken(depsJson, "Azure.Monitor.OpenTelemetry.AspNetCore"))
         {
@@ -110,6 +120,15 @@ internal sealed class DepsFileTelemetryStackDetector : ITelemetryStackDetector
     /// </summary>
     private static bool ContainsPackageToken(string depsJson, string package) =>
         depsJson.IndexOf("\"" + package, StringComparison.OrdinalIgnoreCase) >= 0;
+
+    /// <summary>
+    /// Returns true when the document contains an exact package library key of the form
+    /// <c>"&lt;package&gt;/&lt;version&gt;"</c>. The trailing <c>/</c> ensures an exact package match rather
+    /// than a prefix - e.g. <c>Azure.Monitor.OpenTelemetry.Profiler</c> does not match its dependency
+    /// <c>Azure.Monitor.OpenTelemetry.Profiler.Core</c>.
+    /// </summary>
+    private static bool ContainsExactPackage(string depsJson, string package) =>
+        depsJson.IndexOf("\"" + package + "/", StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>
     /// Extracts the major version from a <c>.deps.json</c> library key of the exact form

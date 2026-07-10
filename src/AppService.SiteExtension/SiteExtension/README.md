@@ -39,11 +39,20 @@ current one transitively pulls in the OpenTelemetry SDK:
 
 | App references | Profiler enabled |
 |---|---|
+| `Azure.Monitor.OpenTelemetry.Profiler` **or** `Microsoft.ApplicationInsights.Profiler.AspNetCore` (a profiler NuGet) | **nothing — codeless backs off** (the app activates the profiler in its own code) |
 | `Azure.Monitor.OpenTelemetry.AspNetCore` (distro) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
 | `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` **3.x** (OpenTelemetry-based) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
 | `Microsoft.ApplicationInsights.AspNetCore` / `.WorkerService` **2.x** (legacy classic, **≥ 2.23.0**) | **Classic** — `AddApplicationInsightsTelemetry()` + `AddServiceProfiler()` |
 | any `OpenTelemetry*` package (manual OTel) | **OpenTelemetry** — `AddAzureMonitorProfiler()` |
 | none of the above | nothing enabled |
+
+**Back-off when already referenced (checked first).** If the app's `*.deps.json` already references a profiler
+NuGet — `Azure.Monitor.OpenTelemetry.Profiler` (OTel) or `Microsoft.ApplicationInsights.Profiler.AspNetCore`
+(classic) — the app is expected to call `AddAzureMonitorProfiler()` / `AddServiceProfiler()` itself, so codeless
+enablement **backs off and activates nothing** to avoid double activation (a second EventPipe session). The
+detection uses the exact `"<pkg>/"` library key, so it does not confuse the public package with its
+`Azure.Monitor.OpenTelemetry.Profiler.Core` dependency. (The profiler's own `Add*` registration is also
+idempotent, as a secondary guard.)
 
 This mirrors the profiler's [supported-SDK matrix](../../../README.md): the current
 `Microsoft.ApplicationInsights.AspNetCore` (3.x) is an OpenTelemetry-based wrapper, so it uses the
@@ -267,6 +276,26 @@ folder is never on the path, so the two stacks stay isolated (see
 loads and initializes — end-to-end codeless activation, with **no code change** to the application. The
 `AppendListValueIfMissing` transform is verified to append + de-dup + insert against a sample
 `applicationHost.config`.
+
+## Diagnostics (startup file logging)
+
+The codeless injection runs very early (the `StartupHook` before `Main`, the router during host build), so its
+diagnostics are easy to miss in the log stream. Set the **`SP_STARTUP_LOG`** environment variable to also
+capture the full StartupHook → HostingStartup trace to a file:
+
+- unset / empty → **off** (stdout + `Trace` only; the default).
+- `1` or `true` → **on**, default path `<HOME>/LogFiles/AzureMonitorProfiler/startup_<pid>.log` (`HOME` is the
+  App Service persistent root: `D:\home` on Windows, `/home` on Linux — so the file is readable via Kudu and
+  log streaming). Falls back to the temp dir when `HOME` is unset.
+- any other value → treated as an explicit log file path.
+
+Each line is `UTC-timestamp [PID <pid>] <level> <component>: <message>`; files are **per-PID**, so the app
+worker and the always-.NET SCM/Kudu worker never contend. All file IO is fail-safe — a failure disables the
+file sink and falls back to stdout/`Trace`; it never affects host startup.
+
+Enable it on **Windows App Service** by adding the `SP_STARTUP_LOG` app setting (Configuration → Application
+settings). On **Linux App Service**, pass `--debug` (`enable-linux-appservice.sh`) / `-DebugLog`
+(`Enable-LinuxAppService.ps1`), which sets `SP_STARTUP_LOG=1` for you.
 
 ## Known limitations (beta)
 

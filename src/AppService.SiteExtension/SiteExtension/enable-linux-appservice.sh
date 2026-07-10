@@ -15,15 +15,18 @@
 #
 # Usage:
 #   ./enable-linux-appservice.sh -g <resource-group> -n <app-name> [--slot <slot>] \
-#        [--payload-zip <path>] [--payload-version <version>]
+#        [--payload-zip <path>] [--payload-version <version>] [--debug]
 #   ./enable-linux-appservice.sh -g <resource-group> -n <app-name> [--slot <slot>] --disable
+#
+#   --debug   Also set SP_STARTUP_LOG=1 so the injection writes a diagnostic file under
+#             /home/LogFiles/AzureMonitorProfiler/ (readable via Kudu / log streaming).
 
 set -euo pipefail
 
 HOSTINGSTARTUP_ASSEMBLY="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
 REMOTE_BASE="/home/AzureMonitorProfiler"
 
-RG=""; APP=""; SLOT=""; PAYLOAD_ZIP=""; PAYLOAD_VERSION=""; DISABLE=0
+RG=""; APP=""; SLOT=""; PAYLOAD_ZIP=""; PAYLOAD_VERSION=""; DISABLE=0; DEBUGLOG=0
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
@@ -35,6 +38,7 @@ while [[ $# -gt 0 ]]; do
     --slot) SLOT="$2"; shift 2;;
     --payload-zip) PAYLOAD_ZIP="$2"; shift 2;;
     --payload-version) PAYLOAD_VERSION="$2"; shift 2;;
+    --debug) DEBUGLOG=1; shift;;
     --disable) DISABLE=1; shift;;
     -h|--help) usage 0;;
     *) die "Unknown argument: $1 (see --help)";;
@@ -93,7 +97,7 @@ if [[ "$DISABLE" -eq 1 ]]; then
   SETTINGS=()
   [[ -n "$NEW_HOOKS" ]] && SETTINGS+=("DOTNET_STARTUP_HOOKS=$NEW_HOOKS") || az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names DOTNET_STARTUP_HOOKS >/dev/null
   [[ -n "$NEW_HSA" ]]   && SETTINGS+=("ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$NEW_HSA") || az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names ASPNETCORE_HOSTINGSTARTUPASSEMBLIES >/dev/null
-  az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names SP_UPLOADER_PATH >/dev/null || true
+  az webapp config appsettings delete -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --setting-names SP_UPLOADER_PATH SP_STARTUP_LOG >/dev/null || true
   [[ ${#SETTINGS[@]} -gt 0 ]] && az webapp config appsettings set -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --settings "${SETTINGS[@]}" >/dev/null
   echo "Disabled. The staged payload under $REMOTE_BASE was left in place (delete manually via Kudu if desired)."
   exit 0
@@ -129,10 +133,13 @@ NEW_HOOKS=$(append_dedup "$CUR_HOOKS" "$HOOK_PATH")
 NEW_HSA=$(append_dedup "$CUR_HSA" "$HOSTINGSTARTUP_ASSEMBLY")
 
 echo "Setting App Settings (this restarts the app)..."
-az webapp config appsettings set -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --settings \
-  "DOTNET_STARTUP_HOOKS=$NEW_HOOKS" \
-  "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$NEW_HSA" \
-  "SP_UPLOADER_PATH=$UPLOADER_PATH" >/dev/null
+SETTINGS=(
+  "DOTNET_STARTUP_HOOKS=$NEW_HOOKS"
+  "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$NEW_HSA"
+  "SP_UPLOADER_PATH=$UPLOADER_PATH"
+)
+[[ "$DEBUGLOG" -eq 1 ]] && SETTINGS+=("SP_STARTUP_LOG=1")
+az webapp config appsettings set -g "$RG" -n "$APP" "${SLOT_ARGS[@]}" --settings "${SETTINGS[@]}" >/dev/null
 
 cat <<EOF
 

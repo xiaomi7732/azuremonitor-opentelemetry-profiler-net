@@ -29,6 +29,7 @@ param(
     [string]$Slot,
     [string]$PayloadZip,
     [string]$PayloadVersion,
+    [switch]$DebugLog,
     [switch]$Disable
 )
 
@@ -70,7 +71,7 @@ if ($Disable) {
     $set = @()
     if ($newHooks) { $set += "DOTNET_STARTUP_HOOKS=$newHooks" } else { & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names DOTNET_STARTUP_HOOKS 1>$null }
     if ($newHsa)   { $set += "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$newHsa" } else { & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names ASPNETCORE_HOSTINGSTARTUPASSEMBLIES 1>$null }
-    & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names SP_UPLOADER_PATH 1>$null 2>$null
+    & az webapp config appsettings delete -g $ResourceGroup -n $Name @slotArgs --setting-names SP_UPLOADER_PATH SP_STARTUP_LOG 1>$null 2>$null
     if ($set.Count -gt 0) { & az webapp config appsettings set -g $ResourceGroup -n $Name @slotArgs --settings $set 1>$null }
     Write-Host "Disabled. The staged payload under $RemoteBase was left in place (delete manually via Kudu if desired)."
     exit 0
@@ -111,10 +112,13 @@ $newHooks = Append-Dedup $curHooks $hookPath
 $newHsa   = Append-Dedup $curHsa $HostingStartupAssembly
 
 Write-Host "Setting App Settings (this restarts the app)..."
-& az webapp config appsettings set -g $ResourceGroup -n $Name @slotArgs --settings `
-    "DOTNET_STARTUP_HOOKS=$newHooks" `
-    "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$newHsa" `
-    "SP_UPLOADER_PATH=$uploaderPath" 1>$null
+$settings = @(
+    "DOTNET_STARTUP_HOOKS=$newHooks",
+    "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES=$newHsa",
+    "SP_UPLOADER_PATH=$uploaderPath"
+)
+if ($DebugLog) { $settings += "SP_STARTUP_LOG=1" }
+& az webapp config appsettings set -g $ResourceGroup -n $Name @slotArgs --settings $settings 1>$null
 
 Write-Host ""
 Write-Host "Done. The codeless profiler is enabled on '$Name'$(if($Slot){" (slot: $Slot)"})." -ForegroundColor Green

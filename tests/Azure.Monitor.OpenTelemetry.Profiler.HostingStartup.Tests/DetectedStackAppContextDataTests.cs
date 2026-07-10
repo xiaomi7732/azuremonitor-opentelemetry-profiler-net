@@ -11,6 +11,7 @@ public class DetectedStackAppContextDataTests
     [InlineData(TelemetryStack.OpenTelemetry, "otel")]
     [InlineData(TelemetryStack.LegacyApplicationInsights, "classic")]
     [InlineData(TelemetryStack.None, "")]
+    [InlineData(TelemetryStack.AlreadyInstrumented, "")]
     internal void ToPayloadSubfolder_MapsStackToFolder(TelemetryStack stack, string expected)
     {
         Assert.Equal(expected, DetectedStackAppContextData.ToPayloadSubfolder(stack));

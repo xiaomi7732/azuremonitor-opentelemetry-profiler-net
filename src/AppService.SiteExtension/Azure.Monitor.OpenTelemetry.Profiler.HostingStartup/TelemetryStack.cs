@@ -23,4 +23,12 @@ internal enum TelemetryStack
     /// Application Insights Profiler for ASP.NET Core instead.
     /// </summary>
     LegacyApplicationInsights,
+
+    /// <summary>
+    /// The application already references an EventPipe profiler NuGet package
+    /// (<c>Azure.Monitor.OpenTelemetry.Profiler</c> or <c>Microsoft.ApplicationInsights.Profiler.AspNetCore</c>)
+    /// and therefore activates the profiler in its own code. Codeless enablement backs off to avoid double
+    /// activation (a second EventPipe session).
+    /// </summary>
+    AlreadyInstrumented,
 }

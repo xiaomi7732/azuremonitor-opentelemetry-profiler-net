@@ -37,6 +37,22 @@ public class DepsFileTelemetryStackDetectorTests
         { "libraries": { "SampleApp/1.0.0": {}, "Newtonsoft.Json/13.0.3": {} } }
         """;
 
+    // App already references the OpenTelemetry profiler NuGet (note its .Core dependency is also present).
+    private const string OtelProfilerReferencedDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Azure.Monitor.OpenTelemetry.Profiler/1.0.0-beta2": {}, "Azure.Monitor.OpenTelemetry.Profiler.Core/1.0.0-beta2": {}, "OpenTelemetry/1.9.0": {} } }
+        """;
+
+    // App already references the classic Application Insights profiler NuGet.
+    private const string ClassicProfilerReferencedDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Microsoft.ApplicationInsights.Profiler.AspNetCore/2.7.0": {}, "Microsoft.ApplicationInsights.AspNetCore/2.23.0": {} } }
+        """;
+
+    // Only the profiler's .Core dependency is present (not the public package) - must NOT be treated as
+    // already-referenced; falls through to normal detection (OpenTelemetry here).
+    private const string OtelProfilerCoreOnlyDeps = """
+        { "libraries": { "SampleApp/1.0.0": {}, "Azure.Monitor.OpenTelemetry.Profiler.Core/1.0.0": {}, "OpenTelemetry/1.9.0": {} } }
+        """;
+
     [Theory]
     [InlineData(OpenTelemetryDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(AzureMonitorDistroDeps, TelemetryStack.OpenTelemetry)]
@@ -45,6 +61,9 @@ public class DepsFileTelemetryStackDetectorTests
     [InlineData(WorkerService2xDeps, TelemetryStack.LegacyApplicationInsights)]
     [InlineData(WorkerService3xDeps, TelemetryStack.OpenTelemetry)]
     [InlineData(NeitherDeps, TelemetryStack.None)]
+    [InlineData(OtelProfilerReferencedDeps, TelemetryStack.AlreadyInstrumented)]
+    [InlineData(ClassicProfilerReferencedDeps, TelemetryStack.AlreadyInstrumented)]
+    [InlineData(OtelProfilerCoreOnlyDeps, TelemetryStack.OpenTelemetry)]
     internal void DetectFromDepsJson_ClassifiesStack(string depsJson, TelemetryStack expected)
     {
         Assert.Equal(expected, DepsFileTelemetryStackDetector.DetectFromDepsJson(depsJson));

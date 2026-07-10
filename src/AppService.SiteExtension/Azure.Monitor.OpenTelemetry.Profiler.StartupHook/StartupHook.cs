@@ -29,8 +29,6 @@ using Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 /// </summary>
 internal sealed class StartupHook
 {
-    private const string LogPrefix = "[Azure.Monitor.OpenTelemetry.Profiler.StartupHook] ";
-
     public static void Initialize()
     {
         try
@@ -38,7 +36,7 @@ internal sealed class StartupHook
             string? payloadRoot = Path.GetDirectoryName(typeof(StartupHook).Assembly.Location);
             if (string.IsNullOrEmpty(payloadRoot) || !Directory.Exists(payloadRoot))
             {
-                Log("Could not determine the payload directory; assembly resolver not installed.");
+                Log("Could not determine the payload directory; assembly resolver not installed.", "error");
                 return;
             }
 
@@ -81,7 +79,7 @@ internal sealed class StartupHook
         }
         catch (Exception ex)
         {
-            Log("Failed to install the assembly resolver: " + ex);
+            Log("Failed to install the assembly resolver: " + ex, "error");
         }
     }
 
@@ -104,7 +102,7 @@ internal sealed class StartupHook
             }
             else
             {
-                Log("Expected payload subfolder not found (the stack will not be resolvable): " + stackDirectory);
+                Log("Expected payload subfolder not found (the stack will not be resolvable): " + stackDirectory, "error");
             }
         }
 
@@ -120,20 +118,15 @@ internal sealed class StartupHook
         }
         catch (Exception ex)
         {
-            Log("Telemetry stack detection failed; treating as None. " + ex);
+            Log("Telemetry stack detection failed; treating as None. " + ex, "error");
             return TelemetryStack.None;
         }
     }
 
-    private static void Log(string message)
+    private static void Log(string message, string level = "info")
     {
-        try
-        {
-            Console.WriteLine(LogPrefix + message);
-        }
-        catch
-        {
-            // Logging must never break host startup.
-        }
+        // Route through the shared BootstrapLog so StartupHook diagnostics also reach the optional
+        // SP_STARTUP_LOG file sink alongside the HostingStartup router's lines (same per-PID file).
+        BootstrapLog.Write("StartupHook", level, message);
     }
 }
