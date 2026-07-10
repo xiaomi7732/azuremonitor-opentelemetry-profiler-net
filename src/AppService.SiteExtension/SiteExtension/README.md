@@ -59,9 +59,10 @@ but the App Service pre-installed Application Insights agent is instrumenting it
 `ApplicationInsightsAgent_EXTENSION_VERSION` app setting), the profiler **cannot** attach to the agent's
 telemetry — the agent injects a repacked, below-floor classic SDK (`Microsoft.ApplicationInsights.ILRepack`,
 ~2.21) whose assembly identity/version our profiler can't bind to. In that case codeless enablement does not
-activate and instead logs an actionable recommendation to **add a supported SDK NuGet** to the app and
-redeploy (`Azure.Monitor.OpenTelemetry.AspNetCore` — OpenTelemetry, recommended — or
-`Microsoft.ApplicationInsights.AspNetCore`); the profiler then activates automatically on the next detection.
+activate and instead logs an actionable recommendation to add the latest
+**`Microsoft.ApplicationInsights.AspNetCore`** NuGet (version **3.0 or later**, which is OpenTelemetry-based)
+to the app and redeploy; the profiler then activates automatically on the next detection (via the
+OpenTelemetry path, since AI AspNetCore 3.x is OpenTelemetry-based).
 
 This mirrors the profiler's [supported-SDK matrix](../../../README.md): the current
 `Microsoft.ApplicationInsights.AspNetCore` (3.x) is an OpenTelemetry-based wrapper, so it uses the

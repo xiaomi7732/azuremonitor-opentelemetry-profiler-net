@@ -109,7 +109,7 @@ public sealed class ProfilerBootstrapper : IHostingStartup
                 break;
 
             case TelemetryStack.AgentInstrumentedNoSdk:
-                BootstrapLog.Info("The App Service Application Insights agent is instrumenting this application at runtime, but the application does not reference a supported telemetry SDK in its build (*.deps.json), so the codeless profiler cannot be enabled against it. To enable the profiler, add a supported SDK NuGet package to the application and redeploy: 'Azure.Monitor.OpenTelemetry.AspNetCore' (OpenTelemetry, recommended) or 'Microsoft.ApplicationInsights.AspNetCore' (Application Insights SDK). The profiler will then activate automatically.");
+                BootstrapLog.Info("The App Service Application Insights agent is instrumenting this application at runtime, but the application does not reference a supported telemetry SDK in its build (*.deps.json), so the codeless profiler cannot be enabled against it. To enable the profiler, add the latest 'Microsoft.ApplicationInsights.AspNetCore' NuGet package (version 3.0 or later, which is OpenTelemetry-based) to the application and redeploy. The profiler will then activate automatically.");
                 break;
 
             default:
