@@ -229,18 +229,32 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
                 string currentTraceFilePath = _currentTraceFilePath ?? throw new InvalidOperationException("Current trace file path is not set. This should not happen. Please contact the project owner.");
 
-                await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
-                    currentTraceFilePath,
-                    currentSessionId.Value,
-                    stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
-                    sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                    source,
-                    averageCPUUsage: cpuUsage,
-                    averageMemoryUsage: memoryUsage
-                    ), cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
+                        currentTraceFilePath,
+                        currentSessionId.Value,
+                        stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
+                        sampleActivities ?? Enumerable.Empty<SampleActivity>(),
+                        source,
+                        averageCPUUsage: cpuUsage,
+                        averageMemoryUsage: memoryUsage
+                        ), cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // The profiler already stopped successfully (the trace was disabled above);
+                    // only the post-stop processing / trace upload failed. Surface the unexpected
+                    // failure so it can be investigated, but do not fault the stop itself.
+                    _logger.LogError(ex, "Post-stop processing (trace upload) failed after the profiler was stopped.");
+                }
             }
             finally
             {
+                // The inner try guarantees this runs on every path that started post-stop
+                // processing, releasing the profiling semaphore exactly once. No additional
+                // release is performed elsewhere, so a concurrent StartServiceProfilerAsync
+                // cannot have its freshly acquired semaphore released by this stop.
                 ReleaseSemaphoreForProfiling();
             }
 
@@ -252,20 +266,6 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         {
             _logger.LogDebug(ex, "Unexpected error happens on stopping service profiler tracing.");
             throw;
-        }
-        finally
-        {
-            try
-            {
-                if (profilerStopped)
-                {
-                    ReleaseSemaphoreForProfiling();
-                }
-            }
-            catch (SemaphoreFullException ex)
-            {
-                _logger.LogWarning(ex, "Additional releasing of semaphore upon stopping profiler. This should not happen very often. Please contact the project owner otherwise.");
-            }
         }
     }
 
