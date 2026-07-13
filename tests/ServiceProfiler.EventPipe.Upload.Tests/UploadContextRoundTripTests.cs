@@ -23,7 +23,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
     /// </summary>
     public class UploadContextRoundTripTests
     {
-        [Fact]
+        [WindowsOnlyFact]
         public void ProducerOutput_RoundTripsToUploadContext_AllFields()
         {
             // Use a session id with sub-second precision so a lossy timestamp format would be caught.
@@ -68,7 +68,7 @@ namespace ServiceProfiler.EventPipe.Upload.Tests
             Assert.True(bound.UseNamedPipe);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void ProducerOutput_WithOptionalFieldsOmitted_RoundTrips()
         {
             DateTimeOffset sessionId = new DateTimeOffset(2024, 1, 2, 3, 4, 5, TimeSpan.Zero).AddTicks(7654321);
