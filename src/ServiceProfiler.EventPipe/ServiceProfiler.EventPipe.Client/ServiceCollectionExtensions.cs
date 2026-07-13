@@ -314,6 +314,9 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
         services.AddSingleton<SubprocessLogForwarder>();
+        // Classic profiler: the ILogger pipeline is not wired to the customer's Application
+        // Insights, so forward uploader logs through the profiler's dedicated telemetry channel.
+        services.AddSingleton<IUploaderLogForwarderSink, UploaderLogForwarderSink>();
 
         services.AddTransient<ITraceUploader, TraceUploaderProxy>();
 

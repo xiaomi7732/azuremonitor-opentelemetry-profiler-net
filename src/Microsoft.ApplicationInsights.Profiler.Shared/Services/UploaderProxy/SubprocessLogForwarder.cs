@@ -3,6 +3,7 @@
 // -----------------------------------------------------------------------------
 
 using System;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
@@ -20,14 +21,21 @@ namespace Microsoft.ApplicationInsights.Profiler.Shared.Services.UploaderProxy;
 /// This class recognizes the standard prefixes (trce, dbug, info, warn, fail, crit)
 /// and maps them to <see cref="LogLevel"/> values. Continuation lines (no recognized prefix)
 /// inherit the level of the preceding line.
+///
+/// In addition to the local <see cref="ILogger"/>, lines at <see cref="LogLevel.Information"/>
+/// and above are forwarded to the customer's Application Insights via
+/// <see cref="IUploaderLogForwarderSink"/> (a no-op in hosts whose logging pipeline is already
+/// wired to Application Insights).
 /// </remarks>
 internal sealed class SubprocessLogForwarder
 {
     private readonly ILogger _logger;
+    private readonly IUploaderLogForwarderSink _customerSink;
 
-    public SubprocessLogForwarder(ILogger<SubprocessLogForwarder> logger)
+    public SubprocessLogForwarder(ILogger<SubprocessLogForwarder> logger, IUploaderLogForwarderSink customerSink)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _customerSink = customerSink ?? throw new ArgumentNullException(nameof(customerSink));
     }
 
     /// <summary>
@@ -57,7 +65,15 @@ internal sealed class SubprocessLogForwarder
                 currentLevel = parsed;
             }
 
-            _logger.Log(currentLevel, "[Uploader] {line}", trimmed.ToString());
+            string message = "[Uploader] " + trimmed.ToString();
+            _logger.Log(currentLevel, "{line}", message);
+
+            // Forward Information and above to the customer's Application Insights. Debug/Trace
+            // lines are local diagnostics only and are not sent to the customer's resource.
+            if (currentLevel >= LogLevel.Information && currentLevel < LogLevel.None)
+            {
+                _customerSink.Track(currentLevel, message);
+            }
         }
     }
 
