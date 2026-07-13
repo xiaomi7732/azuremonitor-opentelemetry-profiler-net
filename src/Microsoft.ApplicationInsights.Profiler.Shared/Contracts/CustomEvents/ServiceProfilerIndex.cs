@@ -21,4 +21,6 @@ internal record ServiceProfilerIndex
     public double AverageMemoryUsage { get; init; }
 
     public string CloudRoleName { get; init; } = null!;
+
+    public string? AppVersion { get; init; }
 }
