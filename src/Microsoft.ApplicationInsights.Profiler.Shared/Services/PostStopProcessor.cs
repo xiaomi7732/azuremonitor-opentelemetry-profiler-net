@@ -101,7 +101,7 @@ internal class PostStopProcessor : IPostStopProcessor
         _logger.LogDebug("There are {sampleNumber} samples before validation.", sampleCount);
         if (sampleCount == 0 && uploadMode != UploadMode.Always)
         {
-            _logger.LogWarning("Skip uploading. No samples collected and upload mode is {mode}.", uploadMode);
+            _logger.LogInformation("No trace was uploaded because no samples were collected during this profiling session (no traffic). This is expected when the application received no requests while profiling; the profiler stopped normally. Upload mode: {mode}.", uploadMode);
             return false;
         }
 
@@ -194,9 +194,14 @@ internal class PostStopProcessor : IPostStopProcessor
             // Trace is uploaded.
             int validSampleCount = e.Samples.Count();
             _logger.LogDebug("Sent {validSampleCount} valid custom events to AI. Valid sample count equals total sample count: {result}", validSampleCount, validSampleCount == sampleCount);
+            return true;
         }
 
-        return true;
+        // The upload was attempted (there were samples and a valid uploader) but produced no
+        // upload context. This is an unexpected failure - not a by-design skip - so surface it
+        // at error level so it can be investigated. Stopping the profiler itself still succeeded.
+        _logger.LogError("Trace upload did not complete successfully: the uploader returned no upload context.");
+        return false;
     }
 
     private IPCAdditionalData CreateAdditionalData(

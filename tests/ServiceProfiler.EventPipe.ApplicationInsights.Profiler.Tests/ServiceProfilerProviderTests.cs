@@ -57,6 +57,37 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             }
         }
 
+        [Fact]
+        public async Task ShouldReportStopSucceededWhenNoSamplesCollected()
+        {
+            // Regression test for issue #166: when there is no traffic (no samples collected),
+            // the upload is skipped by design. That must NOT be reported as a stop failure -
+            // StopServiceProfilerAsync should still return true.
+            bool isUploaderCalled = false;
+            ServiceProvider testServiceProvider = CreateServiceProvider(TimeSpan.FromSeconds(5), TimeSpan.Zero,
+                uploaderExecuteCallback: () => { isUploaderCalled = true; });
+
+            try
+            {
+                using (ServiceProfilerProvider target = testServiceProvider.GetRequiredService<ServiceProfilerProvider>())
+                {
+                    SchedulingPolicy schedulingPolicy = testServiceProvider.GetRequiredService<SchedulingPolicy>();
+
+                    await target.StartServiceProfilerAsync(schedulingPolicy, default);
+
+                    // Intentionally do not add any sample activity: upload is skipped by design.
+                    bool stopResult = await target.StopServiceProfilerAsync(schedulingPolicy, default);
+
+                    Assert.True(stopResult);
+                    Assert.False(isUploaderCalled);
+                }
+            }
+            finally
+            {
+                await testServiceProvider.DisposeAsync();
+            }
+        }
+
         #region Private
         private ServiceProvider CreateServiceProvider(
             TimeSpan duration,

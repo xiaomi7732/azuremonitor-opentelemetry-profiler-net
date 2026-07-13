@@ -208,11 +208,28 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
             try
             {
-                await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Fail to disable EventPipe profiling.");
+                    _appInsightsSinks.LogInformation(StopProfilerFailed);
+                    throw;
+                }
+
+                // The profiler has stopped successfully once the trace is disabled. This is
+                // independent of whether the trace is subsequently uploaded: uploading can be
+                // skipped by design (e.g. no samples collected / upload disabled), which must not
+                // be treated as a stop failure. Any unexpected upload failure is logged by the
+                // post-stop processor so it can be investigated.
+                profilerStopped = true;
+                _appInsightsSinks.LogInformation(StopProfilerSucceeded);
 
                 string currentTraceFilePath = _currentTraceFilePath ?? throw new InvalidOperationException("Current trace file path is not set. This should not happen. Please contact the project owner.");
 
-                profilerStopped = await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
+                await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
                     currentTraceFilePath,
                     currentSessionId.Value,
                     stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
@@ -221,14 +238,6 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
                     averageCPUUsage: cpuUsage,
                     averageMemoryUsage: memoryUsage
                     ), cancellationToken).ConfigureAwait(false);
-
-                _appInsightsSinks.LogInformation(profilerStopped ? StopProfilerSucceeded : StopProfilerFailed);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Fail to disable EventPipe profiling.");
-                _appInsightsSinks.LogInformation(StopProfilerFailed);
-                throw;
             }
             finally
             {
