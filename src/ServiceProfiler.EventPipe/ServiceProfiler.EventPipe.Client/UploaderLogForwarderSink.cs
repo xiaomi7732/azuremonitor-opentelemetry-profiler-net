@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Profiler.Core.Logging;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
@@ -17,22 +16,23 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.Orchestration;
 /// profiler's <see cref="ILogger"/> pipeline is not connected to the customer's resource, so this
 /// sink is required for uploader logs to appear there.
 /// </summary>
+/// <remarks>
+/// Only the customer's logger is targeted (never Microsoft's anonymous-telemetry logger): uploader
+/// stdout can contain customer-specific details (paths, machine/role names, blob URIs, errors) and
+/// must not be sent to Microsoft's resource.
+/// </remarks>
 internal sealed class UploaderLogForwarderSink : IUploaderLogForwarderSink
 {
-    private readonly IEnumerable<IAppInsightsLogger> _loggers;
+    private readonly IAppInsightsLogger _customerLogger;
 
-    public UploaderLogForwarderSink(IEnumerable<IAppInsightsLogger> loggers)
+    public UploaderLogForwarderSink(CustomerAppInsightsLogger customerLogger)
     {
-        _loggers = loggers ?? throw new ArgumentNullException(nameof(loggers));
+        _customerLogger = customerLogger?.Logger ?? throw new ArgumentNullException(nameof(customerLogger));
     }
 
     public void Track(LogLevel level, string message)
     {
-        SeverityLevel severityLevel = ToSeverityLevel(level);
-        foreach (IAppInsightsLogger logger in _loggers)
-        {
-            logger.TrackTrace(message, severityLevel);
-        }
+        _customerLogger.TrackTrace(message, ToSeverityLevel(level));
     }
 
     private static SeverityLevel ToSeverityLevel(LogLevel level) => level switch

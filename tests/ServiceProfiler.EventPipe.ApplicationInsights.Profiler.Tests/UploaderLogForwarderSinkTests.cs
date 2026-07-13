@@ -21,16 +21,14 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         [InlineData(LogLevel.Warning, SeverityLevel.Warning)]
         [InlineData(LogLevel.Error, SeverityLevel.Error)]
         [InlineData(LogLevel.Critical, SeverityLevel.Critical)]
-        public void Track_MapsLogLevelToSeverityAndForwardsToAllLoggers(LogLevel level, SeverityLevel expected)
+        public void Track_MapsLogLevelToSeverityAndForwardsToCustomerLogger(LogLevel level, SeverityLevel expected)
         {
-            Mock<IAppInsightsLogger> logger1 = new();
-            Mock<IAppInsightsLogger> logger2 = new();
-            var sink = new UploaderLogForwarderSink(new[] { logger1.Object, logger2.Object });
+            Mock<IAppInsightsLogger> customerLogger = new();
+            var sink = new UploaderLogForwarderSink(new CustomerAppInsightsLogger(customerLogger.Object));
 
             sink.Track(level, "[Uploader] hello");
 
-            logger1.Verify(l => l.TrackTrace("[Uploader] hello", expected, It.IsAny<IDictionary<string, string>>(), It.IsAny<bool>()), Times.Once);
-            logger2.Verify(l => l.TrackTrace("[Uploader] hello", expected, It.IsAny<IDictionary<string, string>>(), It.IsAny<bool>()), Times.Once);
+            customerLogger.Verify(l => l.TrackTrace("[Uploader] hello", expected, It.IsAny<IDictionary<string, string>>(), It.IsAny<bool>()), Times.Once);
         }
     }
 }
