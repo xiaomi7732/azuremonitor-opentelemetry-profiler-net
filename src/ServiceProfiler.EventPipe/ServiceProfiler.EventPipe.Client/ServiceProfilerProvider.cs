@@ -241,11 +241,14 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
                         averageMemoryUsage: memoryUsage
                         ), cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // The profiler already stopped successfully (the trace was disabled above);
                     // only the post-stop processing / trace upload failed. Surface the unexpected
                     // failure so it can be investigated, but do not fault the stop itself.
+                    // Cancellation (OperationCanceledException) is excluded: it is a benign,
+                    // caller-requested outcome (e.g. host shutdown) and is allowed to propagate
+                    // rather than being logged as an error.
                     _logger.LogError(ex, "Post-stop processing (trace upload) failed after the profiler was stopped.");
                 }
             }
