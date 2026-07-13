@@ -2,14 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup</AssemblyName>
-    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>12.0</LangVersion>
-    <!-- This is a codeless-injection assembly, not part of the public API surface. -->
     <IsPackable>false</IsPackable>
-    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
     <!--
       Don't centrally pin transitive dependencies for this project. Microsoft.AspNetCore.Hosting pulls in a
       transitive Microsoft.Extensions.* closure; with central transitive pinning on, the repo-root pins would

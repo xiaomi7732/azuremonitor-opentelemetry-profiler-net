@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Chain to the repo's src-level Directory.Build.props (LangVersion, EnablePublicAPIAnalyzers, central
+       package management, etc.) - a nested Directory.Build.props replaces rather than merges, so import it. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!-- Nullable is not enabled repo-wide (only the ServiceProfiler.EventPipe subtree sets it), so enable it
+         here for all the codeless site-extension projects instead of per-project. -->
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

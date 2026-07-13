@@ -1,0 +1,4 @@
+#nullable enable
+Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ProfilerBootstrapper
+Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ProfilerBootstrapper.ProfilerBootstrapper() -> void
+Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ProfilerBootstrapper.Configure(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void

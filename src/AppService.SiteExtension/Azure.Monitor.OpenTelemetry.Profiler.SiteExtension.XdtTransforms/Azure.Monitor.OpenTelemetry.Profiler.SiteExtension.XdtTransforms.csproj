@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms</AssemblyName>
-    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms</RootNamespace>
     <!-- Loaded by the App Service applicationHost.xdt engine (.NET Framework), so target net472. -->
     <IsPackable>false</IsPackable>
     <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
@@ -11,15 +9,6 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-
-    <!--
-      Strong-name signing (NOT what makes the custom transform load - see the Microsoft.Web.Xdt note below).
-      The official build (StrongNameSignAssembly=true) delay-signs with the Microsoft key inherited from
-      src/Directory.Build.props; local builds full-sign with a committed key to match the shipping layout.
-    -->
-    <SignAssembly Condition="'$(StrongNameSignAssembly)' != 'true'">true</SignAssembly>
-    <DelaySign Condition="'$(StrongNameSignAssembly)' != 'true'">false</DelaySign>
-    <AssemblyOriginatorKeyFile Condition="'$(StrongNameSignAssembly)' != 'true'">$(MSBuildProjectDirectory)\XdtTransforms.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

@@ -17,10 +17,10 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator;
 /// The <see cref="Enable"/> signature (public static, single <see cref="IServiceCollection"/> parameter) is
 /// the contract the router invokes by name; keep it in sync with the OpenTelemetry activator.
 /// </summary>
-public static class ClassicProfilerActivator
+internal static class ClassicProfilerActivator
 {
     /// <summary>Registers the classic Application Insights profiler into <paramref name="services"/>.</summary>
-    public static void Enable(IServiceCollection services)
+    internal static void Enable(IServiceCollection services)
     {
         services.AddApplicationInsightsTelemetry();
         services.AddServiceProfiler();

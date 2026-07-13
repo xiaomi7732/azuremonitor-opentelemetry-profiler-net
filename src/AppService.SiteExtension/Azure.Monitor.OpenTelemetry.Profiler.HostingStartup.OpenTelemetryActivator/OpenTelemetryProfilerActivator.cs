@@ -13,8 +13,8 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActiv
 /// The <see cref="Enable"/> signature (public static, single <see cref="IServiceCollection"/> parameter) is
 /// the contract the router invokes by name; keep it in sync with the classic activator.
 /// </summary>
-public static class OpenTelemetryProfilerActivator
+internal static class OpenTelemetryProfilerActivator
 {
     /// <summary>Registers the Azure Monitor OpenTelemetry profiler into <paramref name="services"/>.</summary>
-    public static void Enable(IServiceCollection services) => services.AddAzureMonitorProfiler();
+    internal static void Enable(IServiceCollection services) => services.AddAzureMonitorProfiler();
 }

@@ -2,14 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator</AssemblyName>
-    <RootNamespace>Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>12.0</LangVersion>
-    <!-- Codeless-injection assembly loaded reflectively by the router; not part of the public API surface. -->
+    <!-- Codeless-injection assembly loaded reflectively by the router; no public API surface (all internal). -->
     <IsPackable>false</IsPackable>
-    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
     <!--
       Don't centrally pin transitive dependencies here. The OpenTelemetry profiler's transitive
       Microsoft.Diagnostics.NETCore.Client is higher than the repo-root central pin; with transitive pinning

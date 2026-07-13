@@ -8,7 +8,8 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.HostingStartup;
 
 /// <summary>
 /// Activates a profiler by reflectively loading the per-stack activator assembly and invoking its
-/// <c>public static void Enable(IServiceCollection)</c> entry point.
+/// <c>internal static void Enable(IServiceCollection)</c> entry point (internal, invoked with NonPublic
+/// binding so the activator exposes no public API surface).
 ///
 /// This is the seam that keeps the two profiler stacks isolated. The router (this assembly) has NO
 /// compile-time reference to either profiler stack, so publishing it pulls neither closure. Each stack is
@@ -46,7 +47,7 @@ internal sealed class ReflectionProfilerActivatorInvoker : IProfilerActivatorInv
 
         MethodInfo enable = activatorType.GetMethod(
             EnableMethodName,
-            BindingFlags.Public | BindingFlags.Static,
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
             binder: null,
             types: new[] { typeof(IServiceCollection) },
             modifiers: null)
