@@ -43,6 +43,14 @@ internal abstract class OrchestratorEventPipe : Orchestrator
     // Guarded by _policyChangeHandler alongside _currentProfilingPolicy.
     private IAsyncDisposable? _currentLease = null;
 
+    // Describes the policy-change operation that currently holds _policyChangeHandler, for
+    // diagnostics when another operation cannot acquire the gate within its timeout. It is written
+    // by the gate holder (right after acquiring, cleared before releasing) and read WITHOUT the gate
+    // by a timed-out waiter, so it is volatile for cross-thread visibility. Reporting this is far
+    // more useful than _currentProfilingPolicy, which is null while a start is mid-flight (assigned
+    // only after the provider starts) or while a stop is tearing down (cleared before release).
+    private volatile PolicyChangeActivity? _policyChangeInProgress;
+
     // Set during disposal so an in-flight StartProfilingAsync releases its lease instead of
     // retaining it (the normal stop path won't run during shutdown). Volatile for visibility.
     private volatile bool _disposed = false;
@@ -219,6 +227,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             _semaphoreTasks.TryAdd(waitSemaphoreTask, 0);
             if (await waitSemaphoreTask.ConfigureAwait(false))
             {
+                _policyChangeInProgress = new PolicyChangeActivity("start", policy.Source);
                 try
                 {
                     if (_currentProfilingPolicy == null)
@@ -301,12 +310,13 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 }
                 finally
                 {
+                    _policyChangeInProgress = null;
                     _policyChangeHandler.Release();
                 }
             }
             else
             {
-                _logger.LogWarning("Can't get the handler to start a profiling. Requested by {newSource}. Current Profiling by: {currentSource}", policy.Source, _currentProfilingPolicy?.Source);
+                _logger.LogWarning("Can't acquire the profiler policy-change gate within {timeoutMs}ms to start profiling requested by {newSource}. A policy change is already in progress: {inProgress}.", 500, policy.Source, DescribeInProgressPolicyChange());
             }
 
             _logger.LogTrace("Profiling is running by policy: {source}", _currentProfilingPolicy?.Source);
@@ -341,6 +351,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 _semaphoreTasks.TryAdd(waitSemaphoreTask, 0);
                 if (await waitSemaphoreTask.ConfigureAwait(false))
                 {
+                    _policyChangeInProgress = new PolicyChangeActivity("stop", policy.Source);
                     try
                     {
                         if (_currentProfilingPolicy == policy)
@@ -407,12 +418,13 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                     }
                     finally
                     {
+                        _policyChangeInProgress = null;
                         _policyChangeHandler.Release();
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Can't get the handler to stop a profiling. Requested by {newSource}. Current Profiling by: {currentSource}", policy.Source, _currentProfilingPolicy?.Source);
+                    _logger.LogWarning("Can't acquire the profiler policy-change gate within {timeoutSeconds}s to stop profiling requested by {newSource}. A policy change is already in progress: {inProgress}.", 30, policy.Source, DescribeInProgressPolicyChange());
                     result = false;
                 }
             }
@@ -460,6 +472,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
 
             if (acquired)
             {
+                _policyChangeInProgress = new PolicyChangeActivity("dispose", null);
                 leaseToRelease = _currentLease;
                 policyToStop = _currentProfilingPolicy;
                 _currentLease = null;
@@ -470,6 +483,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                 // it is never used via AvailableWaitHandle (so Dispose would free nothing), and disposing it
                 // while in-flight/queued callers may still call Release() in their finally blocks would throw
                 // ObjectDisposedException.
+                _policyChangeInProgress = null;
                 _policyChangeHandler.Release();
             }
 
@@ -574,6 +588,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
 
         try
         {
+            _policyChangeInProgress = new PolicyChangeActivity("cleanup", reason);
             SchedulingPolicy? policy = _currentProfilingPolicy;
             IAsyncDisposable? lease = _currentLease;
             if (policy is null && lease is null)
@@ -594,6 +609,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         }
         finally
         {
+            _policyChangeInProgress = null;
             _policyChangeHandler.Release();
         }
     }
@@ -609,5 +625,30 @@ internal abstract class OrchestratorEventPipe : Orchestrator
         }
 
         return activated;
+    }
+
+    /// <summary>
+    /// Describes the in-flight policy-change operation for a conflict log message. Falls back to a
+    /// clear phrase when no operation is recorded (the holder may have released between a failed
+    /// wait and this read).
+    /// </summary>
+    private string DescribeInProgressPolicyChange()
+        => _policyChangeInProgress?.ToString() ?? "unknown (a concurrent policy change just completed)";
+
+    /// <summary>
+    /// Identifies the policy-change operation currently holding <see cref="_policyChangeHandler"/>.
+    /// </summary>
+    private sealed class PolicyChangeActivity
+    {
+        private readonly string _kind;
+        private readonly string? _source;
+
+        public PolicyChangeActivity(string kind, string? source)
+        {
+            _kind = kind;
+            _source = source;
+        }
+
+        public override string ToString() => _source is null ? _kind : $"{_kind} by {_source}";
     }
 }
