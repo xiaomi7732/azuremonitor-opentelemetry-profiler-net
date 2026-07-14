@@ -67,6 +67,12 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IRoleInstanceDetector, OtelResourceRoleInstanceDetector>();
         services.AddSingleton<IRoleInstanceSource, AggregatedRoleInstanceSource>();
 
+        // Application version detectors and source: prefer the OTel Resource service.version, then
+        // fall back to the entry assembly version.
+        services.AddSingleton<IAppVersionDetector, OtelResourceAppVersionDetector>();
+        services.AddSingleton<IAppVersionDetector, AssemblyAppVersionDetector>();
+        services.AddSingleton<IAppVersionSource, AggregatedAppVersionSource>();
+
         services.AddSingleton<IFile, SystemFile>();
         services.AddSingleton<IEnvironment, SystemEnvironment>();
         services.AddSingleton<IZipFile, SystemZipFile>();

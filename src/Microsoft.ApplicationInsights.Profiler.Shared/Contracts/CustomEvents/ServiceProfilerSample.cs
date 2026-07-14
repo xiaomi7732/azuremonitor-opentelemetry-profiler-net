@@ -16,4 +16,6 @@ internal record ServiceProfilerSample
 
     public string? RoleName { get; init; }
     public string? RoleInstance { get; init; }
+
+    public string? AppVersion { get; init; }
 }

@@ -126,6 +126,11 @@ internal class CustomEventsSender : ICustomEventsSender
             eventTelemetry.Context.Cloud.RoleName = sample.RoleName;
         }
 
+        if (!string.IsNullOrEmpty(sample.AppVersion))
+        {
+            eventTelemetry.Context.Component.Version = sample.AppVersion;
+        }
+
         if (!string.IsNullOrEmpty(sample.OperationName))
         {
             eventTelemetry.Context.Operation.Name = sample.OperationName;
@@ -160,6 +165,11 @@ internal class CustomEventsSender : ICustomEventsSender
         eventTelemetry.Metrics["AverageCPUUsage"] = index.AverageCPUUsage;
         eventTelemetry.Metrics["AverageMemoryUsage"] = index.AverageMemoryUsage;
         eventTelemetry.Context.Cloud.RoleName ??= index.CloudRoleName;
+
+        if (!string.IsNullOrEmpty(index.AppVersion))
+        {
+            eventTelemetry.Context.Component.Version = index.AppVersion;
+        }
 
         telemetryClient.TrackEvent(eventTelemetry);
     }

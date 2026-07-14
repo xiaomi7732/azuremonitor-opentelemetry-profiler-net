@@ -142,6 +142,10 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IRoleInstanceDetector, ServiceProfilerContextRoleInstanceDetector>();
         services.AddSingleton<IRoleInstanceSource, AggregatedRoleInstanceSource>();
 
+        // Application version detectors and source
+        services.AddSingleton<IAppVersionDetector, AssemblyAppVersionDetector>();
+        services.AddSingleton<IAppVersionSource, AggregatedAppVersionSource>();
+
         // Profiler
         services.AddSingleton<SampleActivityContainerFactory>();
         services.AddSingleton<ITraceSessionListenerFactory, TraceSessionListenerFactory>();

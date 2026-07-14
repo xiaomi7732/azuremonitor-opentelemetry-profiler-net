@@ -20,20 +20,24 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
     private readonly IServiceProfilerContext _serviceProfilerContext;
     private readonly IRoleNameSource _roleNameSource;
     private readonly IRoleInstanceSource _roleInstanceSource;
+    private readonly IAppVersionSource _appVersionSource;
     private readonly ILogger _logger;
     private string? _roleNameCache;
     private string? _roleInstanceCache;
+    private string? _appVersionCache;
 
     public CustomEventsBuilder(
         IServiceProfilerContext serviceProfilerContext,
         IRoleNameSource roleNameSource,
         IRoleInstanceSource roleInstanceSource,
+        IAppVersionSource appVersionSource,
         ILogger<CustomEventsBuilder> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
         _roleNameSource = roleNameSource ?? throw new ArgumentNullException(nameof(roleNameSource));
         _roleInstanceSource = roleInstanceSource ?? throw new ArgumentNullException(nameof(roleInstanceSource));
+        _appVersionSource = appVersionSource ?? throw new ArgumentNullException(nameof(appVersionSource));
     }
 
     public ServiceProfilerIndex CreateServiceProfilerIndex(string stampId, DateTimeOffset sessionId, Guid appId, Guid artifactId, IProfilerSource profilerSource, float averageCPUUsage, float averageMemoryUsage)
@@ -52,7 +56,8 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             OperatingSystem = Environment.OSVersion.VersionString,
             AverageCPUUsage = averageCPUUsage,
             AverageMemoryUsage = averageMemoryUsage,
-            CloudRoleName = _roleNameCache ??= _roleNameSource.CloudRoleName
+            CloudRoleName = _roleNameCache ??= _roleNameSource.CloudRoleName,
+            AppVersion = _appVersionCache ??= _appVersionSource.AppVersion
         };
 
         _logger.LogDebug("Service Profiler Index content: {content}", result);
@@ -90,6 +95,7 @@ internal class CustomEventsBuilder : ICustomEventsBuilder
             RoleName = _roleNameCache ??= _roleNameSource.CloudRoleName,
             OperationId = sample.OperationId,
             OperationName = sample.OperationName,
+            AppVersion = _appVersionCache ??= _appVersionSource.AppVersion,
         };
     }
 }

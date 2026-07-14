@@ -79,6 +79,11 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             roleInstanceSourceMock.Setup(role => role.CloudRoleInstance).Returns("testCloudRoleInstance");
             serviceCollection.AddSingleton<IRoleInstanceSource>(_ => roleInstanceSourceMock.Object);
 
+            // Application version source
+            Mock<IAppVersionSource> appVersionSourceMock = new();
+            appVersionSourceMock.Setup(v => v.AppVersion).Returns("1.2.3");
+            serviceCollection.AddSingleton<IAppVersionSource>(_ => appVersionSourceMock.Object);
+
             var delaySourceMock = new Mock<IDelaySource>();
             delaySourceMock.Setup(delay => delay.Delay(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
             serviceCollection.AddTransient<IDelaySource>(p => delaySourceMock.Object);
