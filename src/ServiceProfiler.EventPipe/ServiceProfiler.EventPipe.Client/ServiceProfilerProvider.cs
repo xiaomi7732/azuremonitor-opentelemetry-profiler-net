@@ -208,30 +208,56 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
             try
             {
-                await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Fail to disable EventPipe profiling.");
+                    _appInsightsSinks.LogInformation(StopProfilerFailed);
+                    throw;
+                }
+
+                // The profiler has stopped successfully once the trace is disabled. This is
+                // independent of whether the trace is subsequently uploaded: uploading can be
+                // skipped by design (e.g. no samples collected / upload disabled), which must not
+                // be treated as a stop failure. Any unexpected upload failure is logged by the
+                // post-stop processor so it can be investigated.
+                profilerStopped = true;
+                _appInsightsSinks.LogInformation(StopProfilerSucceeded);
 
                 string currentTraceFilePath = _currentTraceFilePath ?? throw new InvalidOperationException("Current trace file path is not set. This should not happen. Please contact the project owner.");
 
-                profilerStopped = await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
-                    currentTraceFilePath,
-                    currentSessionId.Value,
-                    stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
-                    sampleActivities ?? Enumerable.Empty<SampleActivity>(),
-                    source,
-                    averageCPUUsage: cpuUsage,
-                    averageMemoryUsage: memoryUsage
-                    ), cancellationToken).ConfigureAwait(false);
-
-                _appInsightsSinks.LogInformation(profilerStopped ? StopProfilerSucceeded : StopProfilerFailed);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Fail to disable EventPipe profiling.");
-                _appInsightsSinks.LogInformation(StopProfilerFailed);
-                throw;
+                try
+                {
+                    await _postStopProcessorFactory.Create().PostStopProcessAsync(new PostStopOptions(
+                        currentTraceFilePath,
+                        currentSessionId.Value,
+                        stampFrontendHostUrl: _serviceProfilerContext.StampFrontendEndpointUrl,
+                        sampleActivities ?? Enumerable.Empty<SampleActivity>(),
+                        source,
+                        averageCPUUsage: cpuUsage,
+                        averageMemoryUsage: memoryUsage
+                        ), cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The profiler already stopped successfully (the trace was disabled above);
+                    // only the post-stop processing / trace upload failed. Surface the unexpected
+                    // failure so it can be investigated, but do not fault the stop itself.
+                    // Cancellation (OperationCanceledException) is excluded: it is a benign,
+                    // caller-requested outcome (e.g. host shutdown) and is allowed to propagate
+                    // rather than being logged as an error.
+                    _logger.LogError(ex, "Post-stop processing (trace upload) failed after the profiler was stopped.");
+                }
             }
             finally
             {
+                // The inner try guarantees this runs on every path that started post-stop
+                // processing, releasing the profiling semaphore exactly once. No additional
+                // release is performed elsewhere, so a concurrent StartServiceProfilerAsync
+                // cannot have its freshly acquired semaphore released by this stop.
                 ReleaseSemaphoreForProfiling();
             }
 
@@ -243,20 +269,6 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
         {
             _logger.LogDebug(ex, "Unexpected error happens on stopping service profiler tracing.");
             throw;
-        }
-        finally
-        {
-            try
-            {
-                if (profilerStopped)
-                {
-                    ReleaseSemaphoreForProfiling();
-                }
-            }
-            catch (SemaphoreFullException ex)
-            {
-                _logger.LogWarning(ex, "Additional releasing of semaphore upon stopping profiler. This should not happen very often. Please contact the project owner otherwise.");
-            }
         }
     }
 

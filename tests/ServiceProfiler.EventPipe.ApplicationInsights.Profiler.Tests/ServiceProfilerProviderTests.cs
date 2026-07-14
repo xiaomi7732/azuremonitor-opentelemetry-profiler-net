@@ -57,6 +57,67 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             }
         }
 
+        [Fact]
+        public async Task ShouldReportStopSucceededWhenNoSamplesCollected()
+        {
+            // Regression test for issue #166: when there is no traffic (no samples collected),
+            // the upload is skipped by design. That must NOT be reported as a stop failure -
+            // StopServiceProfilerAsync should still return true.
+            bool isUploaderCalled = false;
+            ServiceProvider testServiceProvider = CreateServiceProvider(TimeSpan.FromSeconds(5), TimeSpan.Zero,
+                uploaderExecuteCallback: () => { isUploaderCalled = true; });
+
+            try
+            {
+                using (ServiceProfilerProvider target = testServiceProvider.GetRequiredService<ServiceProfilerProvider>())
+                {
+                    SchedulingPolicy schedulingPolicy = testServiceProvider.GetRequiredService<SchedulingPolicy>();
+
+                    await target.StartServiceProfilerAsync(schedulingPolicy, default);
+
+                    // Intentionally do not add any sample activity: upload is skipped by design.
+                    bool stopResult = await target.StopServiceProfilerAsync(schedulingPolicy, default);
+
+                    Assert.True(stopResult);
+                    Assert.False(isUploaderCalled);
+                }
+            }
+            finally
+            {
+                await testServiceProvider.DisposeAsync();
+            }
+        }
+
+        [Fact]
+        public async Task ShouldReportStopSucceededWhenUploadFails()
+        {
+            // Even when the trace upload fails unexpectedly, stopping the profiler itself
+            // succeeded (the trace was disabled), so StopServiceProfilerAsync must still return
+            // true. The upload failure is surfaced via logging, not by faulting the stop.
+            ServiceProvider testServiceProvider = CreateServiceProvider(TimeSpan.FromSeconds(5), TimeSpan.Zero,
+                uploaderExecuteCallback: () => throw new InvalidOperationException("Simulated upload failure."));
+
+            try
+            {
+                using (ServiceProfilerProvider target = testServiceProvider.GetRequiredService<ServiceProfilerProvider>())
+                {
+                    SchedulingPolicy schedulingPolicy = testServiceProvider.GetRequiredService<SchedulingPolicy>();
+
+                    await target.StartServiceProfilerAsync(schedulingPolicy, default);
+                    while (target.SessionListener == null) await Task.Delay(50);
+                    ((TraceSessionListenerStub)target.SessionListener).AddSampleActivity();
+
+                    bool stopResult = await target.StopServiceProfilerAsync(schedulingPolicy, default);
+
+                    Assert.True(stopResult);
+                }
+            }
+            finally
+            {
+                await testServiceProvider.DisposeAsync();
+            }
+        }
+
         #region Private
         private ServiceProvider CreateServiceProvider(
             TimeSpan duration,
