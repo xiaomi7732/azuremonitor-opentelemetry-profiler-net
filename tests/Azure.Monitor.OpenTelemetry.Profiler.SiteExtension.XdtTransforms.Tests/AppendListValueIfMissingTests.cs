@@ -69,9 +69,12 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.Tests
         [Fact]
         public void Append_WhenValueAlreadyPresent_LeavesListUnchanged()
         {
+            // The value is already present in a multi-entry list, but in a different case. The transform
+            // must recognize it (OrdinalIgnoreCase) and leave the whole list untouched - no duplicate and
+            // the surrounding entries preserved in order.
             XmlTransformableDocument target = Load(
                 "<configuration><system.webServer><runtime><environmentVariables>" +
-                "<add name=\"DOTNET_STARTUP_HOOKS\" value=\"C:\\payload\\hook.dll\" />" +
+                "<add name=\"DOTNET_STARTUP_HOOKS\" value=\"C:\\a\\first.dll;C:\\PAYLOAD\\HOOK.DLL;C:\\b\\last.dll\" />" +
                 "</environmentVariables></runtime></system.webServer></configuration>");
 
             string transform = ImportHeader +
@@ -84,8 +87,8 @@ namespace Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.Tests
 
             Assert.True(result);
             XmlNode add = target.SelectSingleNode("//environmentVariables/add[@name='DOTNET_STARTUP_HOOKS']");
-            // No duplicate is added when the value is already one of the entries.
-            Assert.Equal("C:\\payload\\hook.dll", add.Attributes["value"].Value);
+            // Unchanged: the case-insensitive match prevents a duplicate append, and other entries survive.
+            Assert.Equal("C:\\a\\first.dll;C:\\PAYLOAD\\HOOK.DLL;C:\\b\\last.dll", add.Attributes["value"].Value);
         }
 
         private static XmlTransformableDocument Load(string xml)
