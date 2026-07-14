@@ -114,7 +114,12 @@ internal static class ServiceCollectionExtensions
         // Build the customer telemetry client from the full connection string (so the regional
         // IngestionEndpoint is honored) and the configured AAD token credential (so it works when
         // local auth is disabled). This is the same mechanism used by AgentStatusSender.
-        services.AddSingleton<IAppInsightsLogger>(CreateCustomerAppInsightsLogger);
+        // Register it once as a dedicated holder so the *same* instance can be (a) part of the
+        // IAppInsightsLogger fan-out used for notable Start/Stop traces, and (b) targeted directly
+        // (customer-only) when forwarding uploader logs - which must never go to Microsoft's
+        // anonymous-telemetry resource.
+        services.AddSingleton(sp => new CustomerAppInsightsLogger(CreateCustomerAppInsightsLogger(sp)));
+        services.AddSingleton<IAppInsightsLogger>(sp => sp.GetRequiredService<CustomerAppInsightsLogger>().Logger);
 
         // Heartbeats
         services.TryAddSingleton<IEventPipeTelemetryTracker, TelemetryTracker>();
@@ -314,6 +319,9 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
         services.AddSingleton<SubprocessLogForwarder>();
+        // Classic profiler: the ILogger pipeline is not wired to the customer's Application
+        // Insights, so forward uploader logs through the profiler's dedicated telemetry channel.
+        services.AddSingleton<IUploaderLogForwarderSink, UploaderLogForwarderSink>();
 
         services.AddTransient<ITraceUploader, TraceUploaderProxy>();
 

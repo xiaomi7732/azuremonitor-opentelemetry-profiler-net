@@ -226,6 +226,9 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton<IOutOfProcCallerFactory, OutOfProcCallerFactory>();
         services.AddSingleton<SubprocessLogForwarder>();
+        // The OpenTelemetry logging pipeline already forwards ILogger output (including the
+        // forwarded uploader logs) to Application Insights, so no additional forwarding is needed.
+        services.AddSingleton<IUploaderLogForwarderSink, NullUploaderLogForwarderSink>();
 
         services.AddTransient<ITraceUploader, TraceUploaderProxy>();
     }
