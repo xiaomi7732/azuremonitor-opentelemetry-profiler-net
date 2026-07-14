@@ -203,6 +203,8 @@ PublishScripts/
 *.nupkg
 # NuGet Symbol Packages
 *.snupkg
+# Codeless site-extension Linux payload build output (portable zip staged to /home on Linux App Service)
+Out/Linux/
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
 # except build/, which is used as an MSBuild target.

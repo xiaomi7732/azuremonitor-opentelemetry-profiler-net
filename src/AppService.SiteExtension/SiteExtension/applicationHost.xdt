@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!--
+  Azure App Service (Windows) applicationHost.xdt for the codeless Azure Monitor OpenTelemetry Profiler.
+  On install, Kudu applies this transform against applicationHost.config and replaces the platform
+  tokens (%XDT_EXTENSIONPATH% = this extension's install folder). It injects three environment variables
+  into the application's worker process:
+
+    * DOTNET_STARTUP_HOOKS               -> a tiny resolver hook (at the payload root) that makes the staged
+                                            profiler (built against the .NET 8 baseline) loadable.
+    * ASPNETCORE_HOSTINGSTARTUPASSEMBLIES -> the HostingStartup that detects the telemetry stack and
+                                            enables the matching profiler (resolved from the payload folder
+                                            per-TFM subfolder by the hook above).
+    * SP_UPLOADER_PATH                    -> the out-of-proc trace uploader shipped in the payload.
+
+  The two list-valued variables use the custom AppendListValueIfMissing transform so our value is
+  APPENDED (semicolon-separated) and de-duplicated, letting the extension coexist with other agents that
+  set the same variables (e.g. the Application Insights auto-instrumentation agent).
+
+  NOTE: these are set under the global system.webServer/runtime section (the same scope the canonical
+  Application Insights / DiagnosticServices extension uses), so they apply to every worker on the site -
+  including the SCM/Kudu pool. To keep upgrades from failing when the SCM worker has already loaded and
+  locked our StartupHook.dll, the payload lives under a VERSION-STAMPED subfolder
+  (payload\{{PAYLOAD_SUBDIR}}\...); a new version stages into a new folder, so Kudu never has to overwrite
+  a DLL that a running worker holds open. This mirrors how the AI agent versions its own StartupHook path
+  (...\ApplicationInsightsAgent\<version>\core\StartupHook\...). The {{PAYLOAD_SUBDIR}} token is replaced
+  with the package version by Build-SiteExtension.ps1 at pack time.
+
+  The versioned payload folder holds the resolver StartupHook.dll and the stack-agnostic HostingStartup
+  router at its root, each profiler stack's closure in its own subfolder (payload\<version>\otel\ and
+  \classic\, built against the .NET 8 baseline so it runs on .NET 8/9/10 via roll-forward), and a shared
+  Uploader\. Only DOTNET_STARTUP_HOOKS and SP_UPLOADER_PATH carry a path (both into that folder); the
+  HostingStartup is resolved by NAME from the same folder by the hook, so the XDT needs no per-framework or
+  per-stack branching (the hook picks the right stack subfolder at runtime).
+-->
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <xdt:Import path="%XDT_EXTENSIONPATH%\Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms.dll"
+              namespace="Azure.Monitor.OpenTelemetry.Profiler.SiteExtension.XdtTransforms" />
+
+  <!-- Ensure the environmentVariables container exists before the value transforms run. -->
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
+
+  <!-- Set / append the profiler environment variables. -->
+  <system.webServer xdt:Transform="InsertIfMissing">
+    <runtime xdt:Transform="InsertIfMissing">
+      <environmentVariables xdt:Transform="InsertIfMissing">
+
+        <add name="DOTNET_STARTUP_HOOKS"
+             value="%XDT_EXTENSIONPATH%\payload\{{PAYLOAD_SUBDIR}}\Azure.Monitor.OpenTelemetry.Profiler.StartupHook.dll"
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
+
+        <add name="ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"
+             value="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup"
+             xdt:Locator="Match(name)" xdt:Transform="AppendListValueIfMissing" />
+
+        <add name="SP_UPLOADER_PATH"
+             value="%XDT_EXTENSIONPATH%\payload\{{PAYLOAD_SUBDIR}}\Uploader\Microsoft.ApplicationInsights.Profiler.Uploader.dll"
+             xdt:Locator="Match(name)" xdt:Transform="InsertIfMissing" />
+
+      </environmentVariables>
+    </runtime>
+  </system.webServer>
+</configuration>

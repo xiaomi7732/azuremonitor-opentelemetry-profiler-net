@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <!--
+      Don't centrally pin transitive dependencies for this project. Microsoft.AspNetCore.Hosting pulls in a
+      transitive Microsoft.Extensions.* closure; with central transitive pinning on, the repo-root pins would
+      need to cover every one of those. Disabling it lets them resolve to what the graph requires, so this
+      folder needs no Directory.Packages.props of its own.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.Tests" Key="$(TestPublicKey)" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" Key="$(CastleCorePublicKey)" />
+  </ItemGroup>
+
+  <!--
+    The router is intentionally STACK-AGNOSTIC: it has no reference to either profiler stack, so publishing
+    it pulls neither closure. It only needs the ASP.NET Core hosting-startup contract plus IServiceCollection
+    (both shared with, and owned by, the target application at runtime). The per-stack activators
+    (Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.OpenTelemetryActivator /
+    Azure.Monitor.OpenTelemetry.Profiler.HostingStartup.ClassicActivator) are loaded reflectively at runtime
+    from their own payload subfolders - see ReflectionProfilerActivatorInvoker.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

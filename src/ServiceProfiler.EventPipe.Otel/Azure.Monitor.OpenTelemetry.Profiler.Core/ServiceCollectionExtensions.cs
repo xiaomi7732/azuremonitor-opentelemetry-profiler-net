@@ -165,11 +165,10 @@ internal static class ServiceCollectionExtensions
             }
         });
 
-        services.AddHostedService(p =>
-        {
-            BackgroundService? backgroundService = p.GetRequiredService<IProfilerSettingsService>() as BackgroundService;
-            return backgroundService ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service.");
-        });
+        services.AddSingleton<IHostedService>(p => new SafeProfilerHostedService(
+            () => p.GetRequiredService<IProfilerSettingsService>() as BackgroundService
+                  ?? throw new InvalidOperationException($"The {nameof(IProfilerSettingsService)} is required to be a background service."),
+            p.GetRequiredService<ILogger<SafeProfilerHostedService>>()));
 
         // Triggers
         services.AddSingleton(_ => SettingsParser.Instance);
@@ -252,7 +251,9 @@ internal static class ServiceCollectionExtensions
 
         services.AddSingleton(CreateFileScavenger);
 
-        services.AddHostedService<TraceScavengerService>();
+        services.AddSingleton<IHostedService>(p => new SafeProfilerHostedService(
+            () => ActivatorUtilities.CreateInstance<TraceScavengerService>(p),
+            p.GetRequiredService<ILogger<SafeProfilerHostedService>>()));
 
         return services;
     }

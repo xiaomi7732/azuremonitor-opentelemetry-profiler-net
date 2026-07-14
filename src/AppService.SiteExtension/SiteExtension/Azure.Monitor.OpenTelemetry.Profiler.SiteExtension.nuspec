@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Azure.Monitor.OpenTelemetry.Profiler.SiteExtension</id>
+    <version>$version$</version>
+    <title>Azure Monitor Profiler (Codeless)</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft,MicrosoftServiceProfiler</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/Azure/azuremonitor-opentelemetry-profiler-net</projectUrl>
+    <description>
+      Codeless Azure App Service (Windows) Site Extension that enables the Azure Monitor profiler without
+      any code change, NuGet reference, or recompile. It injects an ASP.NET Core HostingStartup that
+      detects whether the application uses OpenTelemetry or the classic Application Insights SDK and
+      enables the matching profiler. Targets .NET / ASP.NET Core apps only; it has no effect on Node.js,
+      Python, Java, or PHP App Service apps (a safe no-op there). Public beta.
+    </description>
+    <summary>Codeless Azure Monitor profiler enablement for .NET apps on Windows App Service (beta).</summary>
+    <license type="expression">MIT</license>
+    <icon>icon.png</icon>
+    <readme>docs\README.md</readme>
+    <tags>AzureSiteExtension Azure Monitor OpenTelemetry Profiler Performance ApplicationInsights AspNetCore</tags>
+  </metadata>
+  <files>
+    <!-- Everything under staging (applicationHost.xdt + payload) becomes the extension's content. -->
+    <file src="staging\**" target="content" exclude="**\*.pdb" />
+    <!-- Package-level metadata assets (icon + nuget.org readme). -->
+    <file src="..\..\ServiceProfiler.EventPipe\ReleaseResources\icon.png" target="icon.png" />
+    <file src="PackageReadme.md" target="docs\README.md" />
+  </files>
+</package>

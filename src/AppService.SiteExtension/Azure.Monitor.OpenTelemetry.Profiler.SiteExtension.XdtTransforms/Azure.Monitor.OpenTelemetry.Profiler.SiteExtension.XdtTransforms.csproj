@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <!-- Loaded by the App Service applicationHost.xdt engine (.NET Framework), so target net472. -->
+    <IsPackable>false</IsPackable>
+    <EnablePublicAPIAnalyzers>false</EnablePublicAPIAnalyzers>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Microsoft.Web.XmlTransform (XDT) base types. The App Service applicationHost.xdt transform host loads
+      its OWN copy of Microsoft.Web.XmlTransform (the one matching Microsoft.Web.Xdt 1.4.0). A custom
+      Transform is only recognized ("resolved as a type of Transform") when it derives from the SAME
+      Microsoft.Web.XmlTransform assembly identity the host loaded - binding redirects are NOT honored in
+      that sandbox. So we MUST pin to 1.4.0 to match; newer versions (e.g. 2.1.1) produce a different
+      assembly identity and the host rejects our transform with
+      "Could not resolve 'AppendListValueIfMissing' as a type of Transform".
+      This mirrors the shipping classic transform (ServiceProfiler/src/AppService.Extension pins 1.4.0 too).
+    -->
+    <PackageReference Include="Microsoft.Web.Xdt" VersionOverride="1.4.0" />
+  </ItemGroup>
+
+</Project>

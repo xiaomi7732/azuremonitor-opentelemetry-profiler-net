@@ -11,6 +11,16 @@
     <_SystemSecurityCryptographyProtectedDataVersion>10.0.0</_SystemSecurityCryptographyProtectedDataVersion>
     <_SystemTextEncodingsWebVersion>10.0.0</_SystemTextEncodingsWebVersion>
     <_SystemTextJsonVersion>10.0.0</_SystemTextJsonVersion>
+    <!--
+      Microsoft.Extensions.*.Abstractions get more servicing patches than their impls (which cap at 8.0.1),
+      and their transitive floors (e.g. System.ClientModel -> Logging.Abstractions 8.0.3 -> DI.Abstractions
+      8.0.2) exceed _MicrosoftExtensionsVersion. Decouple them so the codeless site-extension build can
+      down-level to an 8.0 baseline without a package-not-found error on the impls. Defaults follow
+      _MicrosoftExtensionsVersion, so normal builds are unchanged. These are BUILD-time floors only; at
+      runtime the app's 8.0.x shared framework satisfies any 8.0.x reference. See plan.md "A2c".
+    -->
+    <_MicrosoftExtensionsLoggingAbstractionsVersion Condition="'$(_MicrosoftExtensionsLoggingAbstractionsVersion)' == ''">$(_MicrosoftExtensionsVersion)</_MicrosoftExtensionsLoggingAbstractionsVersion>
+    <_MicrosoftExtensionsDependencyInjectionAbstractionsVersion Condition="'$(_MicrosoftExtensionsDependencyInjectionAbstractionsVersion)' == ''">$(_MicrosoftExtensionsVersion)</_MicrosoftExtensionsDependencyInjectionAbstractionsVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Update="System.Diagnostics.DiagnosticSource" Version="$(_SystemDiagnosticsDiagnosticSourceVersion)" />
@@ -19,5 +29,7 @@
     <PackageVersion Update="System.Security.Cryptography.ProtectedData" Version="$(_SystemSecurityCryptographyProtectedDataVersion)" />
     <PackageVersion Update="System.Text.Encodings.Web" Version="$(_SystemTextEncodingsWebVersion)" />
     <PackageVersion Update="System.Text.Json" Version="$(_SystemTextJsonVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="$(_MicrosoftExtensionsLoggingAbstractionsVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(_MicrosoftExtensionsDependencyInjectionAbstractionsVersion)" />
   </ItemGroup>
 </Project>

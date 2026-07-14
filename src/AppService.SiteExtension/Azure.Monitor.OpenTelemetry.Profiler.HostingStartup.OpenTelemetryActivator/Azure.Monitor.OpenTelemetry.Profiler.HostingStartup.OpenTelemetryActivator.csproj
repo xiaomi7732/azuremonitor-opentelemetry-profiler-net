@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Codeless-injection assembly loaded reflectively by the router; no public API surface (all internal). -->
+    <IsPackable>false</IsPackable>
+    <!--
+      Don't centrally pin transitive dependencies here. The OpenTelemetry profiler's transitive
+      Microsoft.Diagnostics.NETCore.Client is higher than the repo-root central pin; with transitive pinning
+      on that would be an NU1109 downgrade. Disabling it lets the graph resolve what it requires. This stack
+      is published into its OWN payload subfolder (otel\) so its dependency versions never unify with the
+      classic stack's.
+    -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler\Azure.Monitor.OpenTelemetry.Profiler.csproj" />
+    <ProjectReference Include="..\..\ServiceProfiler.EventPipe.Otel\Azure.Monitor.OpenTelemetry.Profiler.Core\Azure.Monitor.OpenTelemetry.Profiler.Core.csproj" />
+  </ItemGroup>
+
+</Project>
