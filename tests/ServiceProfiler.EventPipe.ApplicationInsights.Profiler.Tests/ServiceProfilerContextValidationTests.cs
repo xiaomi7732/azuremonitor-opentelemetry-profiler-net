@@ -37,6 +37,13 @@ public class ServiceProfilerContextValidationTests
     public void Validation_EmptyInstrumentationKey_ReturnsInvalidInstrumentationKey(string connectionStringValue)
         => Assert.Equal(ConnectionStringValidationResult.InvalidInstrumentationKey, Validate(connectionStringValue));
 
+    [Theory]
+    [InlineData("InstrumentationKey=not-a-guid")]
+    [InlineData("InstrumentationKey=123")]
+    [InlineData("IngestionEndpoint=https://example.com/;InstrumentationKey=not-a-guid")]
+    public void Validation_NonGuidInstrumentationKey_ReturnsInvalidInstrumentationKey(string connectionStringValue)
+        => Assert.Equal(ConnectionStringValidationResult.InvalidInstrumentationKey, Validate(connectionStringValue));
+
     private static ConnectionStringValidationResult Validate(string? connectionStringValue)
     {
         Mock<IEndpointProvider> endpointProviderMock = new();

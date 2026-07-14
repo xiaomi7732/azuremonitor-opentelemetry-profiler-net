@@ -60,9 +60,10 @@ internal class ServiceProfilerContext : IServiceProfilerContext
         // Connection string is present but could not be parsed.
         if (ConnectionString is null)
         {
-            // Distinguish an explicitly empty instrumentation key (e.g. "InstrumentationKey=")
-            // from an otherwise malformed connection string.
-            return ContainsEmptyInstrumentationKey(_connectionStringValue)
+            // Distinguish an invalid instrumentation key (an "InstrumentationKey" token that is
+            // empty/whitespace or not a GUID, e.g. "InstrumentationKey=" or "InstrumentationKey=not-a-guid")
+            // from an otherwise malformed connection string. The former yields a more actionable error.
+            return ContainsInvalidInstrumentationKey(_connectionStringValue)
                 ? ConnectionStringValidationResult.InvalidInstrumentationKey
                 : ConnectionStringValidationResult.Malformed;
         }
@@ -77,10 +78,10 @@ internal class ServiceProfilerContext : IServiceProfilerContext
     }
 
     /// <summary>
-    /// Determines whether the raw connection string declares any
-    /// <c>InstrumentationKey</c> token whose value is empty or whitespace.
+    /// Determines whether the raw connection string declares any <c>InstrumentationKey</c> token
+    /// whose value is invalid - that is, empty/whitespace or not a valid <see cref="Guid"/>.
     /// </summary>
-    private static bool ContainsEmptyInstrumentationKey(string connectionStringValue)
+    private static bool ContainsInvalidInstrumentationKey(string connectionStringValue)
     {
         foreach (string token in connectionStringValue.Split(';'))
         {
@@ -91,8 +92,13 @@ internal class ServiceProfilerContext : IServiceProfilerContext
             }
 
             string key = token.Substring(0, separatorIndex).Trim();
-            if (key.Equals("InstrumentationKey", StringComparison.OrdinalIgnoreCase)
-                && string.IsNullOrWhiteSpace(token.Substring(separatorIndex + 1)))
+            if (!key.Equals("InstrumentationKey", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string value = token.Substring(separatorIndex + 1);
+            if (string.IsNullOrWhiteSpace(value) || !Guid.TryParse(value.Trim(), out _))
             {
                 return true;
             }
