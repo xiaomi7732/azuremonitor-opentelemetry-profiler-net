@@ -136,7 +136,7 @@ versions its own StartupHook path (`…\ApplicationInsightsAgent\<version>\core\
 ## Building the package
 
 ```powershell
-pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta.1
+pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta01
 ```
 
 This publishes the stack-agnostic router + resolver hook into `staging/payload/<version>/`, each profiler
@@ -237,8 +237,8 @@ delivery differs.
 **Build the Linux payload zip** (produced by the same build):
 
 ```powershell
-pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta.1
-# -> <repo>/Out/Linux/AzureMonitorProfiler.1.0.0-beta.1.zip
+pwsh ./Build-SiteExtension.ps1 -Configuration Release -Version 1.0.0-beta01
+# -> <repo>/Out/Linux/AzureMonitorProfiler.1.0.0-beta01.zip
 ```
 
 **Enable** (pick either script — identical behavior; `pwsh` runs on Linux/macOS/Windows, so neither is

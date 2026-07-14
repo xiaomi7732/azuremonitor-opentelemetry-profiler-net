@@ -41,12 +41,12 @@
     Build configuration. Default: Release.
 
 .PARAMETER Version
-    Package version. Default: 1.0.0-beta.1.
+    Package version. Default: 1.0.0-beta01.
 #>
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "1.0.0-beta.1"
+    [string]$Version = "1.0.0-beta01"
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,31 +88,19 @@ $uploaderFramework = "net8.0"
 # Requirement this imposes on target apps: OpenTelemetry >= 1.8.1 and Azure.Core >= ~1.46 (documented).
 $baselineFramework = "net8.0"
 
-# Version-property overrides for the low baseline. Defaults are unchanged for the shipped profiler NuGet;
-# these only apply to this site-extension publish. The *.Abstractions packages need higher servicing patches
-# than their impls (capped at 8.0.1) due to transitive floors, so they are pinned independently (build-time
-# floors only; the app's 8.0.x framework satisfies them at runtime).
-$baselineOverrides = @{
-    "_AzureMonitorOpenTelemetryExporterVersion"                  = "1.3.0"
-    "_OpenTelemetryVersion"                                      = "1.8.1"
-    "_MicrosoftExtensionsVersion"                                = "8.0.0"
-    "_MicrosoftExtensionsOptionsVersion"                         = "8.0.2"
-    "_MicrosoftExtensionsLoggingAbstractionsVersion"             = "8.0.3"
-    "_MicrosoftExtensionsDependencyInjectionAbstractionsVersion" = "8.0.2"
-    "_SystemTextJsonVersion"                                     = "8.0.6"
-    "_SystemDiagnosticsDiagnosticSourceVersion"                  = "8.0.1"
-    "_SystemMemoryDataVersion"                                   = "8.0.1"
-    "_SystemSecurityCryptographyProtectedDataVersion"           = "8.0.0"
-    "_SystemTextEncodingsWebVersion"                             = "8.0.0"
-    "_SystemIOHashingVersion"                                    = "8.0.0"
-    # Azure.Core is a direct reference of the OpenTelemetry profiler; down-level it too so the payload's
-    # floor matches the documented minimum (>= 1.46.1). 1.46.1 is the lowest the graph allows - Azure.Identity
-    # 1.14.0 floors Azure.Core at 1.46.1. Without this the payload would ship the repo-default 1.50, silently
-    # raising the real floor above what the README documents and breaking apps on Azure.Core 1.46-1.49.
-    "_AzureCoreVersion"                                          = "1.46.1"
-}
+# Version-property overrides for the low baseline live in ONE place: the repo-root
+# SiteExtensionBaseline.props manifest. Parse it here and pass each entry as an explicit MSBuild global
+# override, so the version list is never duplicated between this script and the DevOps pipeline. Explicit
+# globals (rather than a single switch translated via an <Import>) are required because NuGet restore does
+# not apply an imported-props translation to project-to-project references. See SiteExtensionBaseline.props.
+$baselineManifest = Join-Path $repoRoot "SiteExtensionBaseline.props"
+if (-not (Test-Path $baselineManifest)) { throw "Baseline manifest not found at $baselineManifest." }
+[xml]$baselineXml = Get-Content -Raw -Path $baselineManifest
 $baselineArgs = @()
-foreach ($kvp in $baselineOverrides.GetEnumerator()) { $baselineArgs += "-p:$($kvp.Key)=$($kvp.Value)" }
+foreach ($node in $baselineXml.Project.PropertyGroup.ChildNodes) {
+    if ($node.NodeType -eq 'Element') { $baselineArgs += "-p:$($node.Name)=$($node.InnerText.Trim())" }
+}
+if ($baselineArgs.Count -eq 0) { throw "No baseline version properties parsed from $baselineManifest." }
 
 function Invoke-Checked([string]$description, [scriptblock]$action) {
     Write-Host "==> $description" -ForegroundColor Cyan
