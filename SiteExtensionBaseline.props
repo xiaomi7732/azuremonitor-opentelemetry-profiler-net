@@ -1,0 +1,43 @@
+<Project>
+
+  <!--
+    SINGLE SOURCE OF TRUTH for the codeless Site Extension's LOW-BASELINE package versions.
+
+    The codeless profiler is injected into a running app whose shared-framework Microsoft.Extensions.* (and,
+    for OTel apps, its own OpenTelemetry / Azure.Core) are already loaded BEFORE our HostingStartup runs. The
+    runtime can only roll an already-loaded assembly FORWARD, never backward. So the site-extension payload
+    must reference the LOWEST versions we support; those refs then roll forward to whatever the target app
+    loaded. See src/AppService.SiteExtension/SiteExtension/Build-SiteExtension.ps1 for the full rationale.
+
+    Both the local build script (Build-SiteExtension.ps1) and the DevOps pipeline
+    (.pipelines/.steps/Agent.EventPipe.Build.yml) PARSE the PropertyGroup below and pass each entry as an
+    explicit MSBuild global override, e.g.
+        dotnet publish ... -p:_OpenTelemetryVersion=1.8.1 -p:_AzureCoreVersion=1.46.1 ...
+    This is a data MANIFEST, not an imported build file. We pass explicit per-property globals (rather than a
+    single switch that flips these via an <Import>) because NuGet restore does not apply an imported-props
+    translation to project-to-project references, so a single boolean switch would only reach the entry
+    project and leave the referenced profiler projects on the repo defaults. Explicit global overrides
+    propagate to the whole restore graph. Keeping the versions here (and nowhere else) is what makes this the
+    single source of truth.
+
+    The *.Abstractions patches are pinned independently of _MicrosoftExtensionsVersion (transitive floors push
+    them above the 8.0.0 impls); Azure.Core is pinned to the documented minimum (>= 1.46.1). Values MUST be
+    literals (no $(...) references) so the script/pipeline parsers can read them.
+  -->
+  <PropertyGroup>
+    <_AzureMonitorOpenTelemetryExporterVersion>1.3.0</_AzureMonitorOpenTelemetryExporterVersion>
+    <_OpenTelemetryVersion>1.8.1</_OpenTelemetryVersion>
+    <_MicrosoftExtensionsVersion>8.0.0</_MicrosoftExtensionsVersion>
+    <_MicrosoftExtensionsOptionsVersion>8.0.2</_MicrosoftExtensionsOptionsVersion>
+    <_MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</_MicrosoftExtensionsLoggingAbstractionsVersion>
+    <_MicrosoftExtensionsDependencyInjectionAbstractionsVersion>8.0.2</_MicrosoftExtensionsDependencyInjectionAbstractionsVersion>
+    <_SystemTextJsonVersion>8.0.6</_SystemTextJsonVersion>
+    <_SystemDiagnosticsDiagnosticSourceVersion>8.0.1</_SystemDiagnosticsDiagnosticSourceVersion>
+    <_SystemMemoryDataVersion>8.0.1</_SystemMemoryDataVersion>
+    <_SystemSecurityCryptographyProtectedDataVersion>8.0.0</_SystemSecurityCryptographyProtectedDataVersion>
+    <_SystemTextEncodingsWebVersion>8.0.0</_SystemTextEncodingsWebVersion>
+    <_SystemIOHashingVersion>8.0.0</_SystemIOHashingVersion>
+    <_AzureCoreVersion>1.46.1</_AzureCoreVersion>
+  </PropertyGroup>
+
+</Project>

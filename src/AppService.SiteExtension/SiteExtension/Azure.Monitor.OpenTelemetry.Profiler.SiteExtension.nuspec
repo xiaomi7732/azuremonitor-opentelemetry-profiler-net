@@ -6,7 +6,8 @@
     <title>Azure Monitor Profiler (Codeless)</title>
     <authors>Microsoft</authors>
     <owners>Microsoft,MicrosoftServiceProfiler</owners>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <projectUrl>https://github.com/Azure/azuremonitor-opentelemetry-profiler-net</projectUrl>
     <description>
       Codeless Azure App Service (Windows) Site Extension that enables the Azure Monitor profiler without
