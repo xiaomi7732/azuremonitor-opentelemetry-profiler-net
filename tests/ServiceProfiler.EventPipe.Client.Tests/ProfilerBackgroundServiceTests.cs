@@ -7,9 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -17,6 +19,31 @@ namespace ServiceProfiler.EventPipe.Client.Tests;
 
 public class ProfilerBackgroundServiceTests
 {
+    private sealed class TestUserConfiguration : UserConfigurationBase
+    {
+    }
+
+    private static ProfilerBackgroundService CreateService(
+        CapturingLogger logger,
+        ConnectionStringValidationResult validation,
+        bool isDisabled = false,
+        bool throwOnValidation = false)
+    {
+        var bootstrap = new Mock<IServiceProfilerAgentBootstrap>();
+        var context = new Mock<IServiceProfilerContext>();
+        if (throwOnValidation)
+        {
+            context.SetupGet(c => c.ConnectionStringValidation).Throws(new InvalidOperationException("boom"));
+        }
+        else
+        {
+            context.SetupGet(c => c.ConnectionStringValidation).Returns(validation);
+        }
+
+        IOptions<UserConfigurationBase> options = Options.Create<UserConfigurationBase>(new TestUserConfiguration { IsDisabled = isDisabled });
+        return new ProfilerBackgroundService(bootstrap.Object, context.Object, options, logger);
+    }
+
     [Fact]
     public async Task InvalidConnectionString_LogsActionableErrorEarly()
     {
@@ -31,11 +58,7 @@ public class ProfilerBackgroundServiceTests
         foreach ((ConnectionStringValidationResult validation, string expectedFragment) in cases)
         {
             var logger = new CapturingLogger();
-            var bootstrap = new Mock<IServiceProfilerAgentBootstrap>();
-            var context = new Mock<IServiceProfilerContext>();
-            context.SetupGet(c => c.ConnectionStringValidation).Returns(validation);
-
-            var service = new ProfilerBackgroundService(bootstrap.Object, context.Object, logger);
+            ProfilerBackgroundService service = CreateService(logger, validation);
             await service.StartAsync(CancellationToken.None);
             await service.StopAsync(CancellationToken.None);
 
@@ -50,11 +73,20 @@ public class ProfilerBackgroundServiceTests
     public async Task ValidConnectionString_LogsNoError()
     {
         var logger = new CapturingLogger();
-        var bootstrap = new Mock<IServiceProfilerAgentBootstrap>();
-        var context = new Mock<IServiceProfilerContext>();
-        context.SetupGet(c => c.ConnectionStringValidation).Returns(ConnectionStringValidationResult.Valid);
+        ProfilerBackgroundService service = CreateService(logger, ConnectionStringValidationResult.Valid);
+        await service.StartAsync(CancellationToken.None);
+        await service.StopAsync(CancellationToken.None);
 
-        var service = new ProfilerBackgroundService(bootstrap.Object, context.Object, logger);
+        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task DisabledProfiler_LogsNoConnectionStringError()
+    {
+        // When the profiler is disabled by configuration, a missing connection string is irrelevant to
+        // the profiler and must not produce an error (which would be misleading and could trip alerts).
+        var logger = new CapturingLogger();
+        ProfilerBackgroundService service = CreateService(logger, ConnectionStringValidationResult.NotConfigured, isDisabled: true);
         await service.StartAsync(CancellationToken.None);
         await service.StopAsync(CancellationToken.None);
 
@@ -65,11 +97,7 @@ public class ProfilerBackgroundServiceTests
     public async Task ContextValidationThrows_DoesNotFaultStartup()
     {
         var logger = new CapturingLogger();
-        var bootstrap = new Mock<IServiceProfilerAgentBootstrap>();
-        var context = new Mock<IServiceProfilerContext>();
-        context.SetupGet(c => c.ConnectionStringValidation).Throws(new InvalidOperationException("boom"));
-
-        var service = new ProfilerBackgroundService(bootstrap.Object, context.Object, logger);
+        ProfilerBackgroundService service = CreateService(logger, ConnectionStringValidationResult.NotConfigured, throwOnValidation: true);
 
         // The early diagnostic must never fault host startup (the classic profiler has no
         // SafeProfilerHostedService wrapper).

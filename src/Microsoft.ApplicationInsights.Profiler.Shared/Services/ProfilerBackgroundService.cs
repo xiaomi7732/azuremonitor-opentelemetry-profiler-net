@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,15 +19,18 @@ internal class ProfilerBackgroundService : BackgroundService
 {
     private readonly IServiceProfilerAgentBootstrap _bootstrap;
     private readonly IServiceProfilerContext _serviceProfilerContext;
+    private readonly UserConfigurationBase _userConfiguration;
     private readonly ILogger<ProfilerBackgroundService> _logger;
 
     public ProfilerBackgroundService(
         IServiceProfilerAgentBootstrap bootstrap,
         IServiceProfilerContext serviceProfilerContext,
+        IOptions<UserConfigurationBase> userConfiguration,
         ILogger<ProfilerBackgroundService> logger)
     {
         _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
         _serviceProfilerContext = serviceProfilerContext ?? throw new ArgumentNullException(nameof(serviceProfilerContext));
+        _userConfiguration = userConfiguration?.Value ?? throw new ArgumentNullException(nameof(userConfiguration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -55,6 +60,14 @@ internal class ProfilerBackgroundService : BackgroundService
     {
         try
         {
+            // Only warn about the connection string when the profiler would otherwise start. When it is
+            // disabled by configuration, a missing connection string is irrelevant to the profiler, and
+            // an error here would be misleading (the profiler is off, not misconfigured).
+            if (_userConfiguration.IsDisabled)
+            {
+                return;
+            }
+
             string? error = ConnectionStringDiagnostics.GetConfigurationError(_serviceProfilerContext.ConnectionStringValidation);
             if (error is not null)
             {
