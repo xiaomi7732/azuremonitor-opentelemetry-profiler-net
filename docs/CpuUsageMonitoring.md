@@ -1,5 +1,10 @@
 # CPU Usage Monitoring
 
+> [!WARNING]
+> **This document has moved.** It is now maintained in the project wiki and this
+> copy is deprecated and no longer updated. See
+> [CPU Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/CPU-Usage-Monitoring).
+
 This document explains how the profiler monitors CPU usage to trigger profiling sessions when CPU exceeds a configured threshold.
 
 ## Overview

@@ -6,7 +6,7 @@
 
 The Azure Monitor OpenTelemetry Profiler captures detailed performance traces of your live .NET applications with minimal overhead. It helps you find slow code paths, high-CPU methods, and bottlenecks, then surfaces fixes through [Code Optimizations](https://learn.microsoft.com/azure/azure-monitor/insights/code-optimizations-profiler-overview#code-optimizations) in Application Insights. The profiler runs on a schedule (random sampling) and can also trigger on high CPU or memory.
 
-**Learn more:** [optix — Code Optimizations skills for Copilot](https://github.com/microsoft/code-optimizations-skills) · [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) · [CPU](./docs/CpuUsageMonitoring.md) & [Memory](./docs/MemoryUsageMonitoring.md) usage monitoring
+**Learn more:** [optix — Code Optimizations skills for Copilot](https://github.com/microsoft/code-optimizations-skills) · [Profiler Agent Selection Guide](./docs/ProfilerAgentSelectionGuide.md) · [CPU](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/CPU-Usage-Monitoring) & [Memory](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Memory-Usage-Monitoring) usage monitoring
 
 ## Get Started
 
@@ -21,6 +21,8 @@ You'll need:
 - Its connection string set as the `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable
 
 ### Step 1 — Add the profiler package
+
+> 🚀 **On Azure App Service (Windows)?** You can skip the package reference and code change entirely — see [Codeless enablement](#codeless-enablement-no-code-change--beta) below.
 
 ```sh
 dotnet add package Azure.Monitor.OpenTelemetry.Profiler --prerelease
@@ -51,6 +53,17 @@ Profiler traces appear in Application Insights after a few minutes. [How to view
 > See [Enable the Profiler with optix](./docs/AddAzureMonitorProfilerWithCoPilot.md).
 
 **Next:** once traces are flowing, [analyze them with optix](#analyze-performance-with-optix) to turn bottlenecks into concrete code fixes. Need more detail on enabling? Expand the walkthrough for your SDK below.
+
+---
+
+## Codeless enablement (no code change) — Beta
+
+Running on **Azure App Service**? You can enable the profiler **without changing your app's code, adding a NuGet package, or recompiling**. A Kudu/SCM **Site Extension** (Windows) injects an ASP.NET Core `IHostingStartup` at process start, detects your app's telemetry stack (OpenTelemetry or classic Application Insights), and enables the matching profiler automatically. Enablement is **fail-safe** — if anything is incompatible, the profiler disables itself and your app keeps running.
+
+All you need is an `APPLICATIONINSIGHTS_CONNECTION_STRING` app setting and a supported .NET telemetry stack.
+
+- 📖 [Enable the profiler codelessly (site extension)](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/How-to-enable-profiler-codelessly)
+- 🔍 [Diagnose codeless startup](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/How-to-diagnose-codeless-startup)
 
 ---
 
@@ -233,9 +246,10 @@ No profiler data yet? optix will guide you back to [enabling the profiler](#get-
 - [Enable the Profiler with optix (Copilot CLI)](./docs/AddAzureMonitorProfilerWithCoPilot.md)
 - [Profiling Azure Service Bus Applications](./docs/ServiceBusSetup.md)
 - [Setup the Role name](./docs/SetupCloudRoleName.md)
-- [Configuration Guide](./docs/Configurations.md)
-- [CPU Usage Monitoring](./docs/CpuUsageMonitoring.md)
-- [Memory Usage Monitoring](./docs/MemoryUsageMonitoring.md)
+- [Enable the Profiler codelessly (site extension)](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/How-to-enable-profiler-codelessly)
+- [Configuration Guide](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Configurations)
+- [CPU Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/CPU-Usage-Monitoring)
+- [Memory Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Memory-Usage-Monitoring)
 - [Read the examples](#examples)
 
 ## Troubleshooting
@@ -254,7 +268,7 @@ If profiles are not appearing in Application Insights:
     }
     ```
 2. **Verify connection string** — Ensure your Application Insights connection string is configured correctly.
-3. **Check triggers** — If using CPU or memory triggers, verify your thresholds are below observed usage levels. See [CPU Usage Monitoring](./docs/CpuUsageMonitoring.md) and [Memory Usage Monitoring](./docs/MemoryUsageMonitoring.md).
+3. **Check triggers** — If using CPU or memory triggers, verify your thresholds are below observed usage levels. See [CPU Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/CPU-Usage-Monitoring) and [Memory Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Memory-Usage-Monitoring).
 4. **Entra authentication** — If your Application Insights resource requires Entra (AAD) authentication, configure credentials accordingly. The profiler will log an error if authentication is missing.
 
 If you're still experiencing issues, please [open an issue](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/issues/new) with your environment details and relevant log output.
