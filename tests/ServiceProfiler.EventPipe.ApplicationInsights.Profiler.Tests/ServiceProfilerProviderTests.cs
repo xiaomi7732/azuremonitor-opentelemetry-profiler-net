@@ -118,6 +118,36 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             }
         }
 
+        [Fact]
+        public async Task ShouldNotThrowWhenSemaphoreDisposedDuringStop()
+        {
+            // Regression test for issue #177: the provider is a singleton IDisposable. During host
+            // shutdown its Dispose() (which disposes the profiling semaphore) can run concurrently with
+            // an in-flight best-effort stop. Releasing the semaphore must then be a graceful no-op
+            // instead of surfacing an ObjectDisposedException as an unexpected stop failure.
+            ServiceProvider testServiceProvider = CreateServiceProvider(TimeSpan.FromSeconds(5), TimeSpan.Zero);
+
+            try
+            {
+                ServiceProfilerProvider target = testServiceProvider.GetRequiredService<ServiceProfilerProvider>();
+                SchedulingPolicy schedulingPolicy = testServiceProvider.GetRequiredService<SchedulingPolicy>();
+
+                await target.StartServiceProfilerAsync(schedulingPolicy, default);
+
+                // Simulate the shutdown race by disposing the provider (disposing the semaphore) before
+                // the stop releases it.
+                target.Dispose();
+
+                bool stopResult = await target.StopServiceProfilerAsync(schedulingPolicy, default);
+
+                Assert.True(stopResult);
+            }
+            finally
+            {
+                await testServiceProvider.DisposeAsync();
+            }
+        }
+
         #region Private
         private ServiceProvider CreateServiceProvider(
             TimeSpan duration,
