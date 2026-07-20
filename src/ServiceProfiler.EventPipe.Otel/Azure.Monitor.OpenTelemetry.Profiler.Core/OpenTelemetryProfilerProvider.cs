@@ -32,6 +32,10 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     private TraceSessionListener? _listener;
 
+    // Set once Dispose() has run (e.g. during host shutdown). Used to short-circuit the
+    // semaphore release so a stop racing with disposal does not touch a disposed semaphore.
+    private volatile bool _disposed;
+
     /// <inheritdoc />
     public bool IsProfilerRunning => _singleProfilingSemaphore.CurrentCount == 0;
     public string Source => nameof(OpenTelemetryProfilerProvider);
@@ -179,6 +183,17 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
                 semaphoreReleased = true;
             }
 
+            // If the caller cancels the stop (e.g. the scheduling policy's token is cancelled during
+            // agent deactivation / shutdown), the EventPipe session is already disabled and the
+            // semaphore released - the profiler has stopped successfully. There is no value in
+            // uploading the trace at that point, so skip the post-stop processing and report success
+            // (the stop itself succeeded; only the upload was intentionally skipped).
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Stop requested cancellation (likely agent deactivation / host shutdown). EventPipe disabled; skipping post-stop trace upload.");
+                return true;
+            }
+
             // Only the post-stop processing resolves services from the (possibly disposed during
             // shutdown) root IServiceProvider, so scope the ObjectDisposedException handling to just
             // this call. An ObjectDisposedException from anywhere else (e.g. DisableAsync) must still
@@ -208,6 +223,15 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             return true;
         }
+        catch (OperationCanceledException ex)
+        {
+            // Cancellation is expected when the caller cancels the stop (e.g. agent deactivation or
+            // host shutdown cancels the scheduling policy's token). Log gracefully instead of as an
+            // unexpected error, but still rethrow so the caller can finish its own teardown (e.g.
+            // release the concurrency lease).
+            _logger.LogDebug(ex, "Stop profiler cancelled ({phase}).", profilerStopped ? "after EventPipe disabled" : "while disabling EventPipe");
+            throw;
+        }
         catch (Exception ex)
         {
             if (!profilerStopped)
@@ -231,15 +255,32 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     public void Dispose()
     {
+        _disposed = true;
         _singleProfilingSemaphore.Dispose();
         _listener?.Dispose();
     }
 
     private void ReleaseSemaphoreForProfiling()
     {
-        if (IsProfilerRunning)
+        // The provider is a singleton IDisposable. During host shutdown its Dispose() can run
+        // concurrently with an in-flight (best-effort) stop, disposing the semaphore before this
+        // release. Treat a disposed semaphore as a graceful no-op instead of surfacing a noisy
+        // "Unexpected error after EventPipe profiler disabled" ObjectDisposedException.
+        if (_disposed)
         {
-            _singleProfilingSemaphore.Release();
+            return;
+        }
+
+        try
+        {
+            if (IsProfilerRunning)
+            {
+                _singleProfilingSemaphore.Release();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            _logger.LogDebug("Profiling semaphore already disposed (likely during host shutdown); skipping release.");
         }
     }
 }

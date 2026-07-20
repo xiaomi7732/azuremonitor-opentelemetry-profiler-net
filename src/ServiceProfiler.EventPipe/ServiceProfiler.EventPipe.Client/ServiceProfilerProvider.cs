@@ -54,6 +54,10 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
     private SemaphoreSlim _singleProfilingSemaphore = new SemaphoreSlim(1, 1);
     public bool IsProfilerRunning => _singleProfilingSemaphore.CurrentCount == 0;
 
+    // Set once Dispose() has run (e.g. during host shutdown). Used to short-circuit the semaphore
+    // release so a stop racing with disposal does not touch a disposed semaphore.
+    private volatile bool _disposed;
+
     public ServiceProfilerProvider(
         IServiceProfilerContext serviceProfilerContext,
         ITraceControl traceControl,
@@ -274,9 +278,25 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
     private void ReleaseSemaphoreForProfiling()
     {
-        if (IsProfilerRunning)
+        // The provider is a singleton IDisposable. During host shutdown its Dispose() can run
+        // concurrently with an in-flight (best-effort) stop, disposing the semaphore before this
+        // release. Treat a disposed semaphore as a graceful no-op instead of surfacing a noisy
+        // "Unexpected error happens on stopping service profiler tracing." ObjectDisposedException.
+        if (_disposed)
         {
-            _singleProfilingSemaphore.Release();
+            return;
+        }
+
+        try
+        {
+            if (IsProfilerRunning)
+            {
+                _singleProfilingSemaphore.Release();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            _logger.LogDebug("Profiling semaphore already disposed (likely during host shutdown); skipping release.");
         }
     }
 
@@ -333,6 +353,7 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
     public void Dispose()
     {
+        _disposed = true;
         _singleProfilingSemaphore?.Dispose();
 
         _sessionListeners?.Dispose();
