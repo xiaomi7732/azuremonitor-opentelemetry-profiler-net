@@ -92,7 +92,7 @@ if ($Disable) {
 
 # Resolve the payload zip and version.
 if (-not $PayloadZip) {
-    $candidate = Join-Path $PSScriptRoot "..\..\..\Out\Linux"
+    $candidate = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, '..', '..', '..', 'Out', 'Linux'))
     $PayloadZip = (Get-ChildItem -Path $candidate -Filter "AzureMonitorProfiler.*.zip" -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName)
 }
