@@ -96,7 +96,7 @@ public class ServiceProfilerAgentBootstrapTests
         orchestratorMock.Verify(o => o.StartAsync(It.IsAny<CancellationToken>()), Times.Never);
 
         bool running = bootstrapState.IsProfilerRunning(CancellationToken.None);
-        return (logger.LastError, running);
+        return (logger.LastMessage, running);
     }
 
     private sealed class TestUserConfiguration : UserConfigurationBase
@@ -105,7 +105,11 @@ public class ServiceProfilerAgentBootstrapTests
 
     private sealed class TestLogger : ILogger<ServiceProfilerAgentBootstrap>
     {
-        public string? LastError { get; private set; }
+        // Captures the last logged message regardless of level. The connection-string reason is logged
+        // by the bootstrap at Debug (the authoritative Error-level diagnostic is emitted earlier by
+        // ProfilerBackgroundService); these tests verify the bootstrap still surfaces the reason and
+        // disables profiling for each validation result.
+        public string? LastMessage { get; private set; }
 
         public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
 
@@ -113,10 +117,7 @@ public class ServiceProfilerAgentBootstrapTests
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (logLevel == LogLevel.Error)
-            {
-                LastError = formatter(state, exception);
-            }
+            LastMessage = formatter(state, exception);
         }
 
         private sealed class NullScope : IDisposable
