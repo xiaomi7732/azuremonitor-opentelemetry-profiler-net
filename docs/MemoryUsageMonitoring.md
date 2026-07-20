@@ -1,5 +1,10 @@
 # Memory Usage Monitoring
 
+> [!WARNING]
+> **This document has moved.** It is now maintained in the project wiki and this
+> copy is deprecated and no longer updated. See
+> [Memory Usage Monitoring](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Memory-Usage-Monitoring).
+
 This document explains how the profiler monitors memory usage to trigger profiling sessions when memory exceeds a configured threshold.
 
 ## Overview

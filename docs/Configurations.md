@@ -1,5 +1,10 @@
 # Service Profiler Configuration Guide
 
+> [!WARNING]
+> **This document has moved.** It is now maintained in the project wiki and this
+> copy is deprecated and no longer updated. See
+> [Service Profiler Configuration Guide](https://github.com/Azure/azuremonitor-opentelemetry-profiler-net/wiki/Configurations).
+
 This document summarizes configuration options exposed via `UserConfigurationBase` (base for `ServiceProfilerOptions`). These are typically set when initializing the profiler in your application (e.g., through dependency injection or manual construction).
 
 ## Core Session Controls
