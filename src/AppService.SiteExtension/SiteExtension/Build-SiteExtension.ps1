@@ -170,7 +170,8 @@ $xdtGenerated = $xdtTemplate -replace '\{\{PAYLOAD_SUBDIR\}\}', $Version
 Set-Content -Path (Join-Path $staging "applicationHost.xdt") -Value $xdtGenerated -Encoding UTF8
 
 # 7. Pack the site extension.
-$nuget = (Get-Command nuget -ErrorAction SilentlyContinue)?.Source
+$nugetCmd = Get-Command nuget -ErrorAction SilentlyContinue
+$nuget = if ($nugetCmd) { $nugetCmd.Source } else { $null }
 if (-not $nuget) { $nuget = "C:\Program Files\NuGet\nuget.exe" }
 if (-not (Test-Path $nuget)) { throw "nuget.exe not found. Install NuGet CLI or add it to PATH." }
 
