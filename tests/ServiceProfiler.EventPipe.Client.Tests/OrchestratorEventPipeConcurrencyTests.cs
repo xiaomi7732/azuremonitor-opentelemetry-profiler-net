@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -236,46 +237,39 @@ public class OrchestratorEventPipeConcurrencyTests
         // Regression test for issue #190: the agent status is re-asserted as Active on every periodic
         // heartbeat (every two hours). Reconciling to an already-active state is an expected no-op and
         // must not emit warning-level noise.
-        //
-        // AgentStatus lives in Microsoft.ServiceProfiler.Contract.Agent.Profiler, which does not grant
-        // InternalsVisibleTo to this assembly, so the status value and the handler are reached by
-        // reflection rather than by direct reference.
-        Mock<IServiceProfilerProvider> provider = new();
-        Mock<IProfilerConcurrencyControlClient> concurrency = new();
-        CapturingLogger logger = new();
-        BlockingPolicy policy = new();
-
-        TestOrchestrator orchestrator = new(
-            provider.Object,
-            Options.Create<UserConfigurationBase>(new TestUserConfiguration()),
-            Mock.Of<IDelaySource>(),
-            Mock.Of<IAgentStatusService>(),
-            Mock.Of<IResourceUsageSource>(),
-            concurrency.Object,
-            logger,
-            new[] { policy });
-        policy.RegisterToOrchestrator(orchestrator);
-
-        MethodInfo onAgentStatusChanged = typeof(OrchestratorEventPipe).GetMethod(
-            "OnAgentStatusChanged", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(onAgentStatusChanged);
-
-        Type agentStatusType = onAgentStatusChanged.GetParameters()[0].ParameterType;
-        object active = Enum.Parse(agentStatusType, "Active");
+        using AgentStatusHarness harness = new();
 
         // The initial activation starts the schedules.
-        await (Task)onAgentStatusChanged.Invoke(orchestrator, new[] { active, "Initial activation" });
-        await policy.Started.Task; // The schedules task is now running and will not complete.
+        await harness.NotifyActiveAsync("Initial activation");
+        await harness.WaitForSchedulesStartedAsync();
 
         // The two-hour heartbeat re-asserts the unchanged Active status.
-        await (Task)onAgentStatusChanged.Invoke(orchestrator, new[] { active, "Refresh" });
+        await harness.NotifyActiveAsync("Refresh");
 
-        Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
+        Assert.DoesNotContain(harness.LogEntries, e => e.Level >= LogLevel.Warning);
         Assert.Contains(
-            logger.Entries,
+            harness.LogEntries,
             e => e.Level == LogLevel.Debug && e.Message.Contains("The schedules are already running."));
+    }
 
-        policy.Release();
+    [Fact]
+    public async Task OnAgentStatusChanged_WhenActivatingWhileSchedulesAreStopping_LogsWarning()
+    {
+        // The counterpart to issue #190: an activation that arrives while the previous schedules are
+        // still unwinding after a deactivation is genuinely dropped, so it must stay at warning level
+        // rather than being demoted along with the routine heartbeat re-assertion.
+        using AgentStatusHarness harness = new(unblockPolicyOnCancellation: false);
+
+        await harness.NotifyActiveAsync("Initial activation");
+        await harness.WaitForSchedulesStartedAsync();
+
+        // Deactivation cancels the schedules, but the blocked policy has not finished unwinding yet.
+        await harness.NotifyInactiveAsync("Deactivated");
+        await harness.NotifyActiveAsync("Reactivated");
+
+        Assert.Contains(
+            harness.LogEntries,
+            e => e.Level == LogLevel.Warning && e.Message.Contains("still stopping after a deactivation"));
     }
 
     private static TestOrchestrator CreateOrchestrator(
@@ -295,15 +289,98 @@ public class OrchestratorEventPipeConcurrencyTests
     }
 
     /// <summary>
+    /// Drives <c>OrchestratorEventPipe.OnAgentStatusChanged</c> directly with a policy that keeps the
+    /// orchestrator's schedules task running.
+    /// <para>
+    /// The <c>AgentStatus</c> enum lives in Microsoft.ServiceProfiler.Contract.Agent.Profiler, which does
+    /// not grant InternalsVisibleTo to this assembly. Because that enum appears in the signature of
+    /// <see cref="IAgentStatusService.StatusChanged"/>, a fake status service cannot even be declared
+    /// here, so the status values and the handler are reached by reflection instead.
+    /// </para>
+    /// </summary>
+    private sealed class AgentStatusHarness : IDisposable
+    {
+        private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
+
+        private readonly MethodInfo _onAgentStatusChanged;
+        private readonly object _active;
+        private readonly object _inactive;
+        private readonly BlockingPolicy _policy;
+        private readonly CapturingLogger _logger = new();
+        private readonly TestOrchestrator _orchestrator;
+
+        /// <param name="unblockPolicyOnCancellation">
+        /// When false, the policy keeps running after a deactivation cancels it, which models a schedules
+        /// task that is still unwinding when the next activation arrives.
+        /// </param>
+        public AgentStatusHarness(bool unblockPolicyOnCancellation = true)
+        {
+            _policy = new BlockingPolicy(unblockPolicyOnCancellation);
+
+            _onAgentStatusChanged = typeof(OrchestratorEventPipe).GetMethod(
+                "OnAgentStatusChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(_onAgentStatusChanged);
+
+            Type agentStatusType = _onAgentStatusChanged.GetParameters()[0].ParameterType;
+            _active = Enum.Parse(agentStatusType, "Active");
+            _inactive = Enum.Parse(agentStatusType, "Inactive");
+
+            _orchestrator = new TestOrchestrator(
+                Mock.Of<IServiceProfilerProvider>(),
+                Options.Create<UserConfigurationBase>(new TestUserConfiguration()),
+                Mock.Of<IDelaySource>(),
+                Mock.Of<IAgentStatusService>(),
+                Mock.Of<IResourceUsageSource>(),
+                Mock.Of<IProfilerConcurrencyControlClient>(),
+                _logger,
+                new[] { _policy });
+            _policy.RegisterToOrchestrator(_orchestrator);
+        }
+
+        /// <summary>
+        /// A snapshot of the entries logged so far, safe to enumerate while the schedules task runs.
+        /// </summary>
+        public IReadOnlyList<(LogLevel Level, string Message)> LogEntries => _logger.Snapshot();
+
+        public Task NotifyActiveAsync(string reason) => Notify(_active, reason);
+
+        public Task NotifyInactiveAsync(string reason) => Notify(_inactive, reason);
+
+        public async Task WaitForSchedulesStartedAsync()
+        {
+            Task completed = await Task.WhenAny(_policy.Started.Task, Task.Delay(WaitTimeout));
+            Assert.Same(_policy.Started.Task, completed);
+        }
+
+        public void Dispose()
+        {
+            // Order matters: cancel first so the policy loop observes cancellation, then release the
+            // blocked iterator. Releasing without cancelling would turn StartPolicyAsync into a spin
+            // loop, because its schedule would complete synchronously forever.
+            _orchestrator.Dispose();
+            _policy.Release();
+        }
+
+        private Task Notify(object status, string reason)
+            => (Task)_onAgentStatusChanged.Invoke(_orchestrator, new[] { status, reason });
+    }
+
+    /// <summary>
     /// A policy that blocks inside its schedule so the orchestrator's schedules task stays running.
     /// </summary>
     private sealed class BlockingPolicy : SchedulingPolicy
     {
         private readonly TaskCompletionSource<bool> _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly bool _unblockOnCancellation;
 
-        public BlockingPolicy()
+        /// <param name="unblockOnCancellation">
+        /// When false, the policy keeps blocking after its token is cancelled, which models a schedule
+        /// that is still unwinding after a deactivation.
+        /// </param>
+        public BlockingPolicy(bool unblockOnCancellation = true)
             : base(TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, Mock.Of<IDelaySource>(), Mock.Of<IExpirationPolicy>(), NullLogger<SchedulingPolicy>.Instance)
         {
+            _unblockOnCancellation = unblockOnCancellation;
         }
 
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -313,10 +390,26 @@ public class OrchestratorEventPipeConcurrencyTests
         public void Release() => _release.TrySetResult(true);
 
         public override async IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             Started.TrySetResult();
-            await _release.Task.ConfigureAwait(false);
+
+            // Park here so the orchestrator's schedules task stays incomplete for the duration of the
+            // test. The release is always awaited, so the policy loop in SchedulingPolicy.StartPolicyAsync
+            // keeps a suspension point and can never spin.
+            TaskCompletionSource<bool> cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (cancellationToken.Register(() => cancelled.TrySetResult(true)))
+            {
+                if (_unblockOnCancellation)
+                {
+                    await Task.WhenAny(_release.Task, cancelled.Task).ConfigureAwait(false);
+                }
+                else
+                {
+                    await _release.Task.ConfigureAwait(false);
+                }
+            }
+
             yield break;
         }
     }
@@ -329,6 +422,18 @@ public class OrchestratorEventPipeConcurrencyTests
         public IDisposable BeginScope<TState>(TState state) => null;
 
         public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <summary>
+        /// Returns a copy of the entries logged so far. Required when the orchestrator may still be
+        /// logging from its schedules task while a test inspects the output.
+        /// </summary>
+        public IReadOnlyList<(LogLevel Level, string Message)> Snapshot()
+        {
+            lock (_gate)
+            {
+                return Entries.ToList();
+            }
+        }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
