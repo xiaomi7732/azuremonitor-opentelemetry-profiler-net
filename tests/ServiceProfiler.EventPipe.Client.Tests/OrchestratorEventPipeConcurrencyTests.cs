@@ -357,8 +357,14 @@ public class OrchestratorEventPipeConcurrencyTests
             // Order matters: cancel first so the policy loop observes cancellation, then release the
             // blocked iterator. Releasing without cancelling would turn StartPolicyAsync into a spin
             // loop, because its schedule would complete synchronously forever.
-            _orchestrator.Dispose();
-            _policy.Release();
+            try
+            {
+                _orchestrator.Dispose();
+            }
+            finally
+            {
+                _policy.Release();
+            }
         }
 
         private Task Notify(object status, string reason)
