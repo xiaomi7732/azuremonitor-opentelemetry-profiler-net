@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
@@ -13,6 +14,7 @@ using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.ServiceProfiler.Contract.Agent.Profiler;
 using Microsoft.ServiceProfiler.Orchestration;
 using Moq;
 using Xunit;
@@ -228,6 +230,54 @@ public class OrchestratorEventPipeConcurrencyTests
         Assert.DoesNotContain("(null)", warning);
     }
 
+    [Fact]
+    public async Task OnAgentStatusChanged_WhenActiveIsReasserted_DoesNotLogWarning()
+    {
+        // Regression test for issue #190: the agent status is re-asserted as Active on every periodic
+        // heartbeat (every two hours). Reconciling to an already-active state is an expected no-op and
+        // must not emit warning-level noise.
+        //
+        // AgentStatus lives in Microsoft.ServiceProfiler.Contract.Agent.Profiler, which does not grant
+        // InternalsVisibleTo to this assembly, so the status value and the handler are reached by
+        // reflection rather than by direct reference.
+        Mock<IServiceProfilerProvider> provider = new();
+        Mock<IProfilerConcurrencyControlClient> concurrency = new();
+        CapturingLogger logger = new();
+        BlockingPolicy policy = new();
+
+        TestOrchestrator orchestrator = new(
+            provider.Object,
+            Options.Create<UserConfigurationBase>(new TestUserConfiguration()),
+            Mock.Of<IDelaySource>(),
+            Mock.Of<IAgentStatusService>(),
+            Mock.Of<IResourceUsageSource>(),
+            concurrency.Object,
+            logger,
+            new[] { policy });
+        policy.RegisterToOrchestrator(orchestrator);
+
+        MethodInfo onAgentStatusChanged = typeof(OrchestratorEventPipe).GetMethod(
+            "OnAgentStatusChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(onAgentStatusChanged);
+
+        Type agentStatusType = onAgentStatusChanged.GetParameters()[0].ParameterType;
+        object active = Enum.Parse(agentStatusType, "Active");
+
+        // The initial activation starts the schedules.
+        await (Task)onAgentStatusChanged.Invoke(orchestrator, new[] { active, "Initial activation" });
+        await policy.Started.Task; // The schedules task is now running and will not complete.
+
+        // The two-hour heartbeat re-asserts the unchanged Active status.
+        await (Task)onAgentStatusChanged.Invoke(orchestrator, new[] { active, "Refresh" });
+
+        Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
+        Assert.Contains(
+            logger.Entries,
+            e => e.Level == LogLevel.Debug && e.Message.Contains("The schedules are already running."));
+
+        policy.Release();
+    }
+
     private static TestOrchestrator CreateOrchestrator(
         Mock<IServiceProfilerProvider> provider,
         Mock<IProfilerConcurrencyControlClient> concurrency,
@@ -242,6 +292,33 @@ public class OrchestratorEventPipeConcurrencyTests
             Mock.Of<IResourceUsageSource>(),
             concurrency.Object,
             logger ?? NullLogger<OrchestratorEventPipe>.Instance);
+    }
+
+    /// <summary>
+    /// A policy that blocks inside its schedule so the orchestrator's schedules task stays running.
+    /// </summary>
+    private sealed class BlockingPolicy : SchedulingPolicy
+    {
+        private readonly TaskCompletionSource<bool> _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public BlockingPolicy()
+            : base(TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, Mock.Of<IDelaySource>(), Mock.Of<IExpirationPolicy>(), NullLogger<SchedulingPolicy>.Instance)
+        {
+        }
+
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override string Source => nameof(BlockingPolicy);
+
+        public void Release() => _release.TrySetResult(true);
+
+        public override async IAsyncEnumerable<(TimeSpan duration, ProfilerAction action)> GetScheduleAsync(
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            await _release.Task.ConfigureAwait(false);
+            yield break;
+        }
     }
 
     private sealed class CapturingLogger : ILogger<OrchestratorEventPipe>
@@ -275,11 +352,12 @@ public class OrchestratorEventPipeConcurrencyTests
             IAgentStatusService agentStatusService,
             IResourceUsageSource resourceUsageSource,
             IProfilerConcurrencyControlClient concurrencyControlClient,
-            ILogger<OrchestratorEventPipe> logger)
+            ILogger<OrchestratorEventPipe> logger,
+            IEnumerable<SchedulingPolicy> policies = null)
             : base(
                 profilerProvider,
                 config,
-                Array.Empty<SchedulingPolicy>(),
+                policies ?? Array.Empty<SchedulingPolicy>(),
                 delaySource,
                 agentStatusService,
                 resourceUsageSource,

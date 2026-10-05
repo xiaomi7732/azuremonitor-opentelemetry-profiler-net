@@ -146,7 +146,10 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         var current = Volatile.Read(ref _runningSchedules);
                         if (current != null && !current.IsCompleted)
                         {
-                            _logger.LogWarning("The schedules are already running.");
+                            // Reconciling to an already-active state is an expected no-op. The agent status is
+                            // re-asserted on every periodic heartbeat, so this path is hit routinely and must
+                            // not be reported as a warning.
+                            _logger.LogDebug("The schedules are already running.");
                             break;
                         }
 
