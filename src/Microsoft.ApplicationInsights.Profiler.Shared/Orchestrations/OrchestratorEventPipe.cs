@@ -146,7 +146,20 @@ internal abstract class OrchestratorEventPipe : Orchestrator
                         var current = Volatile.Read(ref _runningSchedules);
                         if (current != null && !current.IsCompleted)
                         {
-                            _logger.LogWarning("The schedules are already running.");
+                            // Reconciling to an already-active state is an expected no-op: the agent status
+                            // is re-asserted on every periodic heartbeat, so this path is hit routinely and
+                            // must not be reported as a warning. The exception is a schedules task that is
+                            // still unwinding after a deactivation - that activation request is genuinely
+                            // being dropped, so it stays at warning level.
+                            if (_cancellationTokenSource.IsCancellationRequested)
+                            {
+                                _logger.LogWarning(
+                                    "The schedules are still stopping after a deactivation. This activation is skipped and will be retried on the next agent status refresh.");
+                            }
+                            else
+                            {
+                                _logger.LogDebug("The schedules are already running.");
+                            }
                             break;
                         }
 
