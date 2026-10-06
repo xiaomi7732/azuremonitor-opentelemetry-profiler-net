@@ -26,6 +26,15 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
         private Task<bool>? _traceFileWritingTask;
         private const string TimeoutMessage = "Timed out waiting for semaphore.";
 
+        // How long disposal waits for the session to stop and the writer to drain. Short, because
+        // disposal runs on the shutdown path.
+        private static readonly TimeSpan DisposeDrainTimeout = TimeSpan.FromSeconds(5);
+
+        // Teardown state for the current session. Scoped per session rather than per instance: this
+        // control is a singleton reused for every scheduled session, so a latched instance flag would
+        // permanently suppress the unexpected-teardown diagnostics for every later session.
+        private SessionTeardown? _teardown;
+
         public DiagnosticsClientTraceControl(
             DiagnosticsClientProvider diagnosticsClientProvider,
             DiagnosticsClientTraceConfiguration configuration,
@@ -50,14 +59,17 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
 
             try
             {
+                _teardown?.Request();
+                // Snapshot the field: a concurrent Dispose() can null it while this stop is in flight.
+                Task<bool>? writingTask = _traceFileWritingTask;
                 await StopProfilerSessionAsync(disposeEventSessionImmediately: false, cancellationToken).ConfigureAwait(false);
 
-                if (_traceFileWritingTask is not null)
+                if (writingTask is not null)
                 {
                     // The writer reports whether the copy actually finished. It swallows a closed
                     // stream when the diagnostic endpoint is gone, so completing is not the same as
                     // having written a usable trace.
-                    return await _traceFileWritingTask.ConfigureAwait(false);
+                    return await writingTask.ConfigureAwait(false);
                 }
                 else
                 {
@@ -102,7 +114,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                         circularBufferMB: _configuration.CircularBufferMB);
 
                     _logger.LogTrace("Triggering writing to trace file");
-                    _traceFileWritingTask = StartWriteAsync(traceFilePath, _currentSession.EventStream);
+                    SessionTeardown teardown = new();
+                    _teardown = teardown;
+                    _traceFileWritingTask = StartWriteAsync(traceFilePath, _currentSession.EventStream, teardown);
                     _logger.LogTrace("{name} enabled.", _typeName);
                 }
                 finally
@@ -166,7 +180,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
         }
 
-        private async Task<bool> StartWriteAsync(string traceFilePath, Stream readFrom, CancellationToken cancellationToken = default)
+        private async Task<bool> StartWriteAsync(string traceFilePath, Stream readFrom, SessionTeardown teardown, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -179,6 +193,15 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
             catch (ObjectDisposedException ex)
             {
+                if (teardown.IsRequested)
+                {
+                    // We closed the stream ourselves while stopping or disposing the session. The
+                    // trace is incomplete, but this is a lifecycle outcome rather than an
+                    // application fault, so it must not be reported as an error.
+                    _logger.LogWarning(ex, "The EventPipe stream was closed while the profiler was stopping. The trace file is incomplete and will not be processed.");
+                    return false;
+                }
+
                 _ = CurrentProcessUtilities.TryGetId(out int? pid);
 
                 string? eventPipeIPCFullPath = null;
@@ -228,15 +251,97 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             _logger.LogTrace("[{typeName}] Disposing eventpipe session.", _typeName);
             _currentSession?.Dispose();
             _currentSession = null;
-            // Clear the writer alongside the session, so a later DisableAsync cannot re-await the
-            // previous session's completed task and report its result as the current one.
+            // Clear the writer and its teardown state alongside the session, so a later DisableAsync
+            // cannot re-await the previous session's completed task or observe its teardown flag.
             _traceFileWritingTask = null;
+            _teardown = null;
             _logger.LogTrace("[{typeName}] Eventpipe session disposed.", _typeName);
         }
 
         public void Dispose()
         {
-            DisposeEventPipeSession();
+            // Disposing closes the EventPipe stream. Coordinate with the writer first, exactly as
+            // DisableAsync does, so disposal cannot truncate the trace and surface a closed pipe as
+            // an application error (issue #191).
+            _teardown?.Request();
+
+            // Take the session handle so teardown cannot interleave with an in-flight stop. Bounded:
+            // if a stop already owns the session it will do the coordinated teardown itself, and
+            // blocking shutdown on it indefinitely would be worse than disposing underneath it.
+            bool acquired = false;
+            try
+            {
+                acquired = _singleTraceSessionHandle.Wait(DisposeDrainTimeout);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            try
+            {
+                EventPipeSession? session = _currentSession;
+                if (session is not null)
+                {
+                    // Stop so the stream can reach EOF; without it the drain below could never
+                    // finish. Bounded and on a dedicated thread: this is a blocking IPC call on the
+                    // shutdown path, where the thread pool may be saturated.
+                    RunBounded(session.Stop, DisposeDrainTimeout, "stop the EventPipe session");
+
+                    _traceFileWritingTask?.Wait(DisposeDrainTimeout);
+                }
+
+                DisposeEventPipeSession();
+            }
+            finally
+            {
+                if (acquired)
+                {
+                    _singleTraceSessionHandle.Release();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs a blocking operation on a dedicated background thread and waits for it for at most
+        /// <paramref name="timeout"/>. A dedicated thread is used because the thread pool can be
+        /// saturated during shutdown, which would leave a queued operation unstarted.
+        /// </summary>
+        private void RunBounded(Action operation, TimeSpan timeout, string description)
+        {
+            Thread thread = new(() =>
+            {
+                try
+                {
+                    operation();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Failed to {description} during teardown.", description);
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "EventPipe teardown",
+            };
+
+            thread.Start();
+            if (!thread.Join(timeout))
+            {
+                _logger.LogDebug("Timed out trying to {description} during teardown.", description);
+            }
+        }
+
+        /// <summary>
+        /// Teardown state for a single profiling session. Held per session so that an abandoned
+        /// writer keeps its own state and a later session cannot observe or reset it.
+        /// </summary>
+        private sealed class SessionTeardown
+        {
+            private volatile bool _requested;
+
+            public bool IsRequested => _requested;
+
+            public void Request() => _requested = true;
         }
     }
 }

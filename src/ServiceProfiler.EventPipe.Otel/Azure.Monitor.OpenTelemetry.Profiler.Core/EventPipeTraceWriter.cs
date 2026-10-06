@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.Monitor.OpenTelemetry.Profiler.Core;
@@ -86,6 +87,25 @@ internal sealed class EventPipeTraceWriter
         return await completion.ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Whether the exception is one that closing the EventPipe stream produces.
+    /// <para>
+    /// The Windows transport is a named pipe, which reports a local close as
+    /// <see cref="ObjectDisposedException"/>. The Unix transport is a socket, where a close under a
+    /// pending read can instead surface as an <see cref="IOException"/> wrapping a
+    /// <see cref="SocketException"/>. A plain <see cref="IOException"/> is deliberately not matched:
+    /// the copy also writes the destination file, and a storage failure there is actionable and must
+    /// stay visible as an error.
+    /// </para>
+    /// </summary>
+    private static bool IsStreamTornDown(Exception ex) => ex switch
+    {
+        ObjectDisposedException => true,
+        OperationCanceledException => true,
+        IOException { InnerException: SocketException } => true,
+        _ => false,
+    };
+
     private async Task<bool> WriteAsync(string traceFilePath, Stream stream)
     {
         _logger.LogInformation("Start writing trace file {traceFilePath}...", traceFilePath);
@@ -98,13 +118,12 @@ internal sealed class EventPipeTraceWriter
             _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
             return true;
         }
-        catch (Exception ex) when (_stopRequested && ex is ObjectDisposedException or IOException or OperationCanceledException)
+        catch (Exception ex) when (_stopRequested && IsStreamTornDown(ex))
         {
             // The EventPipe stream was torn down while this session was being stopped or disposed -
-            // for example the host disposed the DI container mid-session. On Windows that surfaces
-            // as a closed pipe; on Unix a severed socket can surface as an IOException instead. The
-            // trace is incomplete, but this is a lifecycle outcome rather than an application fault,
-            // so it is not an error.
+            // for example the host disposed the DI container mid-session. The trace is incomplete,
+            // but this is a lifecycle outcome rather than an application fault, so it is not an
+            // error.
             _logger.LogWarning(
                 ex,
                 "The EventPipe stream was closed while the profiler was stopping, so trace file {traceFilePath} is incomplete. It will not be processed.",

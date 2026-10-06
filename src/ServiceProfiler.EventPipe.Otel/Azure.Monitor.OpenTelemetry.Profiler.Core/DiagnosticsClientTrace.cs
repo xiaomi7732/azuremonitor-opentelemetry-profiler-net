@@ -111,25 +111,30 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
 
         // Stop before draining. Without a stop the session keeps streaming, the writer never sees
         // EOF, and the drain below would be a pointless delay that still ends in a truncated trace -
-        // which is exactly the shutdown case reported in issue #191. The stop is bounded too: it is
-        // a blocking IPC call and this runs on the shutdown path.
-        try
+        // which is exactly the shutdown case reported in issue #191. The stop is a blocking IPC call
+        // that the client library warns can hang on an unresponsive runtime, so it is bounded and
+        // runs on a dedicated thread: the thread pool can be saturated during shutdown, which would
+        // leave a queued stop unstarted.
+        Thread stopThread = new(() =>
         {
-            Task stopTask = Task.Run(session.Session.Stop);
-            if (!stopTask.Wait(drainTimeout))
+            try
             {
-                // Observe any later failure so it cannot surface as an unobserved task exception.
-                _ = stopTask.ContinueWith(
-                    static t => _ = t.Exception,
-                    CancellationToken.None,
-                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-                _logger.LogDebug("Timed out stopping the EventPipe session during teardown.");
+                session.Session.Stop();
             }
-        }
-        catch (Exception ex)
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to stop the EventPipe session during teardown.");
+            }
+        })
         {
-            _logger.LogDebug(ex, "Failed to stop the EventPipe session during teardown.");
+            IsBackground = true,
+            Name = "EventPipe teardown",
+        };
+
+        stopThread.Start();
+        if (!stopThread.Join(drainTimeout))
+        {
+            _logger.LogDebug("Timed out stopping the EventPipe session during teardown.");
         }
 
         // Bounded: teardown must not block on a stuck pipe.
