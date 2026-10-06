@@ -44,7 +44,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
 
         public DateTime? SessionStartUTC { get; private set; }
 
-        public async Task DisableAsync(CancellationToken cancellationToken)
+        public async Task<bool> DisableAsync(CancellationToken cancellationToken)
         {
             _logger.LogTrace("[{typeName}] Entering {methodName}()...", _typeName, nameof(DisableAsync));
 
@@ -55,10 +55,12 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 if (_traceFileWritingTask is not null)
                 {
                     await _traceFileWritingTask.ConfigureAwait(false);
+                    return true;
                 }
                 else
                 {
                     _logger.LogError("Trace file writing task is null upon disabling tracing. This should not happen.");
+                    return false;
                 }
             }
             finally

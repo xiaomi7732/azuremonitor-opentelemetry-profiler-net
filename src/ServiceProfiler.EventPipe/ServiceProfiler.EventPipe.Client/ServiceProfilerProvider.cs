@@ -212,9 +212,10 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
 
             try
             {
+                bool traceComplete;
                 try
                 {
-                    await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+                    traceComplete = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -232,6 +233,16 @@ internal sealed class ServiceProfilerProvider : IServiceProfilerProvider, IDispo
                 _appInsightsSinks.LogInformation(StopProfilerSucceeded);
 
                 string currentTraceFilePath = _currentTraceFilePath ?? throw new InvalidOperationException("Current trace file path is not set. This should not happen. Please contact the project owner.");
+
+                // An incomplete trace file would be uploaded as if it were valid, producing a corrupt
+                // or empty profile. The stop itself succeeded, so only the upload is skipped.
+                if (!traceComplete)
+                {
+                    _logger.LogWarning(
+                        "The trace file was not written completely, so it will not be uploaded. Partial trace: {traceFilePath}",
+                        currentTraceFilePath);
+                    return profilerStopped;
+                }
 
                 try
                 {

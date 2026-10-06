@@ -271,6 +271,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
                 serviceCollection.AddTransient<AppInsightsProfileFetcher>(provider => CreateTestAppInsightsProfileFetcher());
 
                 var traceControlMock = new Mock<ITraceControl>();
+                traceControlMock.Setup(c => c.DisableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
                 if (traceControlEnableCallback != null)
                 {
                     traceControlMock.Setup(c => c.EnableAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).Callback(traceControlEnableCallback);
@@ -278,7 +279,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
                 if (traceControlDisableCallback != null)
                 {
-                    traceControlMock.Setup(c => c.DisableAsync(It.IsAny<CancellationToken>())).Callback(traceControlDisableCallback);
+                    traceControlMock.Setup(c => c.DisableAsync(It.IsAny<CancellationToken>())).Callback(traceControlDisableCallback).ReturnsAsync(true);
                 }
 
                 serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);

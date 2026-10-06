@@ -166,8 +166,9 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             List<SampleActivity>? sampleActivities = _listener?.SampleActivities?.GetActivities()?.ToList();
             _listener?.Dispose();
 
-            // Disable the EventPipe.
-            await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            // Disable the EventPipe. The trace file is only complete once the writer has drained the
+            // EventPipe stream; an incomplete trace must not be handed to the uploader.
+            bool traceComplete = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
             profilerStopped = true;
             // Release the semaphore as soon as the trace is disabled so a new session can start
             // while the (potentially long) post-stop processing/upload runs. Mark it as released in
@@ -191,6 +192,17 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             if (cancellationToken.IsCancellationRequested)
             {
                 _logger.LogDebug("Stop requested cancellation (likely agent deactivation / host shutdown). EventPipe disabled; skipping post-stop trace upload.");
+                return true;
+            }
+
+            // An incomplete trace file would be uploaded as if it were valid, producing a corrupt or
+            // empty profile. The profiler itself stopped successfully, so report success, but skip
+            // the upload. The partial file is left for the trace scavenger to clean up.
+            if (!traceComplete)
+            {
+                _logger.LogWarning(
+                    "The trace file was not written completely, so it will not be uploaded. Partial trace: {traceFilePath}",
+                    currentTraceFilePath);
                 return true;
             }
 

@@ -165,6 +165,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
 
             var traceControlMock = new Mock<ITraceControl>();
             traceControlMock.Setup(tc => tc.SessionStartUTC).Returns(_testSessionId.UtcDateTime);
+            traceControlMock.Setup(tc => tc.DisableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
             serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);
 
             serviceCollection.AddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
