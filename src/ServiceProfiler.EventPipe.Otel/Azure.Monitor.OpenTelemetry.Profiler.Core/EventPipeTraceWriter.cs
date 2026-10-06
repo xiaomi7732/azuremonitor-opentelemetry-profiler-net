@@ -20,7 +20,7 @@ internal sealed class EventPipeTraceWriter
 {
     private readonly ILogger _logger;
     private volatile bool _stopRequested;
-    private Task<bool>? _completion;
+    private volatile Task<bool>? _completion;
 
     public EventPipeTraceWriter(ILogger logger)
         => _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -98,11 +98,13 @@ internal sealed class EventPipeTraceWriter
             _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
             return true;
         }
-        catch (ObjectDisposedException ex) when (_stopRequested)
+        catch (Exception ex) when (_stopRequested && ex is ObjectDisposedException or IOException or OperationCanceledException)
         {
-            // The EventPipe stream was closed while this session was being stopped or disposed - for
-            // example the host tore down the DI container mid-session. The trace is incomplete, but
-            // this is a lifecycle outcome rather than an application fault, so it is not an error.
+            // The EventPipe stream was torn down while this session was being stopped or disposed -
+            // for example the host disposed the DI container mid-session. On Windows that surfaces
+            // as a closed pipe; on Unix a severed socket can surface as an IOException instead. The
+            // trace is incomplete, but this is a lifecycle outcome rather than an application fault,
+            // so it is not an error.
             _logger.LogWarning(
                 ex,
                 "The EventPipe stream was closed while the profiler was stopping, so trace file {traceFilePath} is incomplete. It will not be processed.",

@@ -23,7 +23,7 @@ public class DiagnosticsClientTraceTests : IDisposable
     private readonly string _traceFilePath = Path.Combine(
         Path.GetTempPath(), $"{Guid.NewGuid()}.nettrace");
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task EnableThenDisable_WritesACompleteTraceFileBeforeReportingSuccess()
     {
         // The regression: DisableAsync used to return while the writer was still draining, so the
@@ -31,8 +31,8 @@ public class DiagnosticsClientTraceTests : IDisposable
         CapturingLogger logger = new();
         using DiagnosticsClientTrace target = CreateTarget(logger);
 
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
-        Assert.True(await target.DisableAsync(CancellationToken.None));
+        await target.EnableAsync(_traceFilePath, Bounded);
+        Assert.True(await target.DisableAsync(Bounded));
 
         // The file must already be complete and closed by the time DisableAsync returns.
         byte[] content = await File.ReadAllBytesAsync(_traceFilePath);
@@ -41,7 +41,7 @@ public class DiagnosticsClientTraceTests : IDisposable
         Assert.DoesNotContain(logger.Snapshot(), e => e.Level >= LogLevel.Error);
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task Dispose_WithALiveSession_StopsTheSessionWithoutLoggingAnError()
     {
         // The reported crash: the DI container disposed the singleton mid-session, closing the pipe
@@ -50,7 +50,7 @@ public class DiagnosticsClientTraceTests : IDisposable
         CapturingLogger logger = new();
         DiagnosticsClientTrace target = CreateTarget(logger);
 
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
+        await target.EnableAsync(_traceFilePath, Bounded);
         target.Dispose();
 
         Assert.DoesNotContain(logger.Snapshot(), e => e.Level >= LogLevel.Error);
@@ -60,58 +60,58 @@ public class DiagnosticsClientTraceTests : IDisposable
         Assert.DoesNotContain(logger.Snapshot(), e => e.Message.Contains("Timed out"));
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task EnableAsync_WhenASessionIsAlreadyRunning_Throws()
     {
         // Previously this silently overwrote the session field, leaking the old EventPipe session
         // and its pipe handle.
         using DiagnosticsClientTrace target = CreateTarget();
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
+        await target.EnableAsync(_traceFilePath, Bounded);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => target.EnableAsync(_traceFilePath, CancellationToken.None));
+            () => target.EnableAsync(_traceFilePath, Bounded));
 
-        await target.DisableAsync(CancellationToken.None);
+        await target.DisableAsync(Bounded);
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task EnableAsync_AfterDisable_StartsAFreshSession()
     {
         using DiagnosticsClientTrace target = CreateTarget();
 
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
-        Assert.True(await target.DisableAsync(CancellationToken.None));
+        await target.EnableAsync(_traceFilePath, Bounded);
+        Assert.True(await target.DisableAsync(Bounded));
 
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
-        Assert.True(await target.DisableAsync(CancellationToken.None));
+        await target.EnableAsync(_traceFilePath, Bounded);
+        Assert.True(await target.DisableAsync(Bounded));
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task EnableAsync_AfterDispose_Throws()
     {
         DiagnosticsClientTrace target = CreateTarget();
         target.Dispose();
 
         await Assert.ThrowsAsync<ObjectDisposedException>(
-            () => target.EnableAsync(_traceFilePath, CancellationToken.None));
+            () => target.EnableAsync(_traceFilePath, Bounded));
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task DisableAsync_WhenNoSessionExists_ReportsIncomplete()
     {
         using DiagnosticsClientTrace target = CreateTarget();
 
-        Assert.False(await target.DisableAsync(CancellationToken.None));
+        Assert.False(await target.DisableAsync(Bounded));
     }
 
-    [Fact]
+    [DiagnosticsEnabledFact]
     public async Task DisableAsync_Twice_ReportsIncompleteTheSecondTime()
     {
         using DiagnosticsClientTrace target = CreateTarget();
-        await target.EnableAsync(_traceFilePath, CancellationToken.None);
+        await target.EnableAsync(_traceFilePath, Bounded);
 
-        Assert.True(await target.DisableAsync(CancellationToken.None));
-        Assert.False(await target.DisableAsync(CancellationToken.None));
+        Assert.True(await target.DisableAsync(Bounded));
+        Assert.False(await target.DisableAsync(Bounded));
     }
 
     public void Dispose()
@@ -123,6 +123,26 @@ public class DiagnosticsClientTraceTests : IDisposable
         }
         catch (IOException)
         {
+        }
+    }
+
+    /// <summary>
+    /// A token that turns a hung EventPipe operation into a test failure instead of a stalled run.
+    /// </summary>
+    private static CancellationToken Bounded => new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+
+    /// <summary>
+    /// Skips when the runtime diagnostics endpoint is unavailable (for example a CI container that
+    /// sets DOTNET_EnableDiagnostics=0), where no EventPipe session can be started at all.
+    /// </summary>
+    private sealed class DiagnosticsEnabledFactAttribute : FactAttribute
+    {
+        public DiagnosticsEnabledFactAttribute()
+        {
+            if (Environment.GetEnvironmentVariable("DOTNET_EnableDiagnostics") == "0")
+            {
+                Skip = "Runtime diagnostics (EventPipe IPC) are disabled in this environment.";
+            }
         }
     }
 

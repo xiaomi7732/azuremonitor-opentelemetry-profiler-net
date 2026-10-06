@@ -95,27 +95,45 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
             _current = null;
         }
 
-        if (session is null)
+        if (session is not null)
         {
-            return;
+            StopAndDispose(session, DisposeDrainTimeout);
         }
+    }
 
+    /// <summary>
+    /// Best-effort teardown of a session that no caller is going to stop normally: stop it so the
+    /// stream can reach EOF, give the writer a bounded chance to drain, then close it.
+    /// </summary>
+    private void StopAndDispose(TraceSession session, TimeSpan drainTimeout)
+    {
         session.RequestStop();
 
-        // Ask the runtime to stop before draining. Without a stop the session keeps streaming, the
-        // writer never sees EOF, and the wait below would be a pointless delay that still ends in a
-        // truncated trace - which is exactly the shutdown case reported in issue #191.
+        // Stop before draining. Without a stop the session keeps streaming, the writer never sees
+        // EOF, and the drain below would be a pointless delay that still ends in a truncated trace -
+        // which is exactly the shutdown case reported in issue #191. The stop is bounded too: it is
+        // a blocking IPC call and this runs on the shutdown path.
         try
         {
-            session.Session.Stop();
+            Task stopTask = Task.Run(session.Session.Stop);
+            if (!stopTask.Wait(drainTimeout))
+            {
+                // Observe any later failure so it cannot surface as an unobserved task exception.
+                _ = stopTask.ContinueWith(
+                    static t => _ = t.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+                _logger.LogDebug("Timed out stopping the EventPipe session during teardown.");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to stop the EventPipe session during disposal.");
+            _logger.LogDebug(ex, "Failed to stop the EventPipe session during teardown.");
         }
 
-        // Bounded: disposal runs on the shutdown path and must not block on a stuck pipe.
-        session.Writer.WaitAsync(DisposeDrainTimeout).GetAwaiter().GetResult();
+        // Bounded: teardown must not block on a stuck pipe.
+        session.Writer.WaitAsync(drainTimeout).GetAwaiter().GetResult();
         session.Session.Dispose();
     }
 
@@ -158,20 +176,29 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
 
             TraceSession session = new(eventPipeSession, new EventPipeTraceWriter(_logger));
 
+            // Start the writer before publishing the session, so a concurrent stop or disposal that
+            // takes ownership always finds a writer to drain rather than closing the stream against
+            // one that has not started yet.
+            session.Writer.Start(traceFilePath, eventPipeSession.EventStream);
+
+            bool disposed;
             lock (_sessionGate)
             {
-                if (_disposed)
+                disposed = _disposed;
+                if (!disposed)
                 {
-                    // Disposal ran while the session was starting. Tear the new session down here
-                    // rather than leaving it live with nobody to stop it.
-                    eventPipeSession.Dispose();
-                    throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
+                    _current = session;
                 }
-
-                _current = session;
             }
 
-            session.Writer.Start(traceFilePath, eventPipeSession.EventStream);
+            if (disposed)
+            {
+                // Disposal ran while the session was starting. Tear the new session down here rather
+                // than leaving it live with nobody to stop it. Stop before disposing: disposing only
+                // closes the stream and would leave the runtime still tracing.
+                StopAndDispose(session, DisposeDrainTimeout);
+                throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
+            }
         }
         finally
         {

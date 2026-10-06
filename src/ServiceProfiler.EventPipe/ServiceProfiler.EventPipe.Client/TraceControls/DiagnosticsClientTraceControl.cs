@@ -54,8 +54,10 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
 
                 if (_traceFileWritingTask is not null)
                 {
-                    await _traceFileWritingTask.ConfigureAwait(false);
-                    return true;
+                    // The writer reports whether the copy actually finished. It swallows a closed
+                    // stream when the diagnostic endpoint is gone, so completing is not the same as
+                    // having written a usable trace.
+                    return await _traceFileWritingTask.ConfigureAwait(false);
                 }
                 else
                 {
@@ -226,6 +228,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             _logger.LogTrace("[{typeName}] Disposing eventpipe session.", _typeName);
             _currentSession?.Dispose();
             _currentSession = null;
+            // Clear the writer alongside the session, so a later DisableAsync cannot re-await the
+            // previous session's completed task and report its result as the current one.
+            _traceFileWritingTask = null;
             _logger.LogTrace("[{typeName}] Eventpipe session disposed.", _typeName);
         }
 

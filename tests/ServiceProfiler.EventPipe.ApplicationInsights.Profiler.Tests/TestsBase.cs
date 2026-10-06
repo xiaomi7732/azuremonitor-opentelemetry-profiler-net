@@ -166,6 +166,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             var traceControlMock = new Mock<ITraceControl>();
             traceControlMock.Setup(tc => tc.SessionStartUTC).Returns(_testSessionId.UtcDateTime);
             traceControlMock.Setup(tc => tc.DisableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+            _traceControlMock = traceControlMock;
             serviceCollection.AddTransient<ITraceControl>(provider => traceControlMock.Object);
 
             serviceCollection.AddSingleton<IVersionProvider>(p => new VersionProvider(RuntimeInformation.FrameworkDescription, p.GetRequiredService<ILogger<IVersionProvider>>()));
@@ -291,7 +292,7 @@ namespace ServiceProfiler.EventPipe.Client.Tests
         protected const string _testTraceFilePath = "/mnt/d/temp/trace.etl.zip";
 
         internal Mock<IProfilerClient>? _stampFrontendClientMock;
-        internal Mock<IPrioritizedUploaderLocator>? _uploaderLocatorMock;
+        internal Mock<ITraceControl>? _traceControlMock;        internal Mock<IPrioritizedUploaderLocator>? _uploaderLocatorMock;
         internal Mock<ITraceUploader>? _traceUploaderMock;
 
         private IServiceCollection BuildServiceCollection()
