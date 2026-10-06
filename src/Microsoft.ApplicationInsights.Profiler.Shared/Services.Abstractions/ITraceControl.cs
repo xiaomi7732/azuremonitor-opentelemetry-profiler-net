@@ -17,6 +17,12 @@ internal interface ITraceControl
     /// True when the trace file was written completely and is safe to process; false when the write
     /// did not finish (for example it timed out or failed), in which case the trace file is
     /// incomplete and must not be uploaded.
+    /// <para>
+    /// How thoroughly completeness is established is up to the implementation: the OTel control
+    /// verifies that the stream ended after the session was asked to stop and that the file carries
+    /// the nettrace end-of-stream marker, while the classic control only reports whether the copy
+    /// ran without error.
+    /// </para>
     /// </returns>
     /// <exception cref="System.TimeoutException">Throws when timed out fetching the semaphore of the operation.</exception>
     Task<bool> DisableAsync(CancellationToken cancellationToken);

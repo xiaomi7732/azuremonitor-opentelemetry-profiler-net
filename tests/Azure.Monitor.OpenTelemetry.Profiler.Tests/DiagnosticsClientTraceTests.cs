@@ -130,9 +130,16 @@ public class DiagnosticsClientTraceTests : IDisposable
     }
 
     /// <summary>
+    /// The budget these tests give each EventPipe operation. Generous enough that a loaded agent
+    /// does not trip it, short enough that a genuinely hung operation fails the run rather than
+    /// stalling it for the production budget.
+    /// </summary>
+    private static readonly TimeSpan TestBudget = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     /// A token that turns a hung EventPipe operation into a test failure instead of a stalled run.
     /// </summary>
-    private static CancellationToken Bounded => new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+    private static CancellationToken Bounded => new CancellationTokenSource(TestBudget).Token;
 
     /// <summary>
     /// Skips when the runtime diagnostics endpoint is unavailable (for example a CI container that
@@ -151,13 +158,21 @@ public class DiagnosticsClientTraceTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Builds the trace control with explicit, generous timeouts, so these tests assert on ordering
+    /// and outcomes rather than on the production wall-clock budgets - a real stop plus rundown of
+    /// the test host can be slow on a loaded agent.
+    /// </summary>
     private static DiagnosticsClientTrace CreateTarget(ILogger<DiagnosticsClientTrace>? logger = null)
         => new(
             DiagnosticsClientProvider.Instance,
             new DiagnosticsClientTraceConfiguration(
                 Options.Create<UserConfigurationBase>(new TestUserConfiguration()),
                 NullLogger<DiagnosticsClientTraceConfigurationBase>.Instance),
-            logger ?? NullLogger<DiagnosticsClientTrace>.Instance);
+            logger ?? NullLogger<DiagnosticsClientTrace>.Instance,
+            traceWriteDrainTimeout: TestBudget,
+            disposeTeardownTimeout: TestBudget,
+            stopCommandTimeout: TestBudget);
 
     private sealed class TestUserConfiguration : UserConfigurationBase
     {

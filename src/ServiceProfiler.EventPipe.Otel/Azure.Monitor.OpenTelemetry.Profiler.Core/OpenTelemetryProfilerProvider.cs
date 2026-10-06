@@ -168,7 +168,22 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             // Disable the EventPipe. The trace file is only complete once the writer has drained the
             // EventPipe stream; an incomplete trace must not be handed to the uploader.
-            bool traceComplete = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            //
+            // The trace control tears the EventPipe session down on every path, including when this
+            // throws, so the semaphore must be released even then - otherwise a failed stop would
+            // leave it held and permanently prevent any further profiling.
+            bool traceComplete;
+            try
+            {
+                traceComplete = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                ReleaseSemaphoreForProfiling();
+                semaphoreReleased = true;
+                throw;
+            }
+
             profilerStopped = true;
             // Release the semaphore as soon as the trace is disabled so a new session can start
             // while the (potentially long) post-stop processing/upload runs. Mark it as released in

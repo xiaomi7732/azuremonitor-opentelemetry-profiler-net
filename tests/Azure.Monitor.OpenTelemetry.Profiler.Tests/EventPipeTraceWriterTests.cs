@@ -18,6 +18,9 @@ public class EventPipeTraceWriterTests : IDisposable
 {
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(30);
 
+    // The nettrace stream terminator; a complete trace ends with it.
+    private const byte NetTraceEndOfStreamTag = 1;
+
     private readonly string _traceFilePath = Path.Combine(
         Path.GetTempPath(), $"{Guid.NewGuid()}.nettrace");
 
@@ -68,7 +71,9 @@ public class EventPipeTraceWriterTests : IDisposable
 
         Assert.False(await target.WaitAsync(TimeSpan.FromMilliseconds(50)));
 
+        // Let the writer finish before the file is cleaned up, so it is not still holding it open.
         stream.ReleaseRemainder();
+        await target.WaitAsync(TestTimeout);
     }
 
     [Fact]
@@ -186,8 +191,22 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
-    public void Start_WhenAlreadyStarted_Throws()
+    public async Task Writer_WhenTheTraceIsMissingItsEndOfStreamMarker_ReportsIncomplete()
     {
+        // A runtime that disconnects during rundown still produces a clean end-of-stream after the
+        // stop was requested, so only the nettrace terminator distinguishes it from a full trace.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(CreateTruncatedPayload(4096)));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
+    public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
         target.Start(_traceFilePath, new MemoryStream(CreatePayload(16)));
 
@@ -212,10 +231,29 @@ public class EventPipeTraceWriterTests : IDisposable
         await task;
     }
 
+    /// <summary>
+    /// A payload that ends with the nettrace end-of-stream marker, as a fully delivered trace does.
+    /// </summary>
     private static byte[] CreatePayload(int length)
     {
         byte[] payload = new byte[length];
         new Random(Seed: length).NextBytes(payload);
+        if (length > 0)
+        {
+            payload[length - 1] = NetTraceEndOfStreamTag;
+        }
+
+        return payload;
+    }
+
+    /// <summary>
+    /// A payload that stops short, as a trace cut off mid-stream does.
+    /// </summary>
+    private static byte[] CreateTruncatedPayload(int length)
+    {
+        byte[] payload = new byte[length];
+        new Random(Seed: length).NextBytes(payload);
+        payload[length - 1] = 0xFF;
         return payload;
     }
 

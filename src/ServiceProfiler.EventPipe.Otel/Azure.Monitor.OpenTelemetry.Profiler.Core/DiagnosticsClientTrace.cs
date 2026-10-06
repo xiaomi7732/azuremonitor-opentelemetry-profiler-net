@@ -109,28 +109,47 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
             await session.Session.StopAsync(stopCancellation.Token).ConfigureAwait(false);
             stopSent = true;
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Our own stop bound expired, not the caller's cancellation. The session is still torn
+            // down below, so this is an incomplete trace rather than a failed stop - faulting here
+            // would leave the caller believing the profiler never stopped.
+            _logger.LogWarning(
+                "Timed out after {timeout} sending the EventPipe stop command. The trace is incomplete and will not be processed.",
+                _stopCommandTimeout);
+        }
         finally
         {
-            // Always drain before closing the stream, including when the stop was cancelled or
-            // failed: disposing underneath the writer is what truncates the trace and raises the
-            // closed-pipe error.
-            if (stopSent)
+            try
             {
-                traceComplete = await session.Writer.WaitAsync(_traceWriteDrainTimeout).ConfigureAwait(false);
+                // Always drain before closing the stream: disposing underneath the writer is what
+                // truncates the trace and raises the closed-pipe error.
+                //
+                // The drain budget differs by path. When the stop went out, the stream will reach
+                // EOF once the runtime has flushed rundown, so wait generously. When it did not,
+                // the stop cannot be retried - EventPipeSession marks itself stopped on the first
+                // attempt, so a second Stop() sends nothing - and the stream will only end when we
+                // close it. Wait briefly in case the endpoint had already gone (which ends the
+                // stream on its own), then close.
+                traceComplete = await session.Writer
+                    .WaitAsync(stopSent ? _traceWriteDrainTimeout : _disposeTeardownTimeout, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!stopSent)
+                {
+                    traceComplete = false;
+                }
+
                 session.Session.Dispose();
             }
-            else
+            finally
             {
-                // The stop never went out, so the stream will not reach EOF on its own. Fall back to
-                // the bounded best-effort teardown, which retries the stop before closing - without
-                // it the runtime could keep tracing against a disposed session.
-                StopAndDispose(session, _disposeTeardownTimeout);
-                traceComplete = false;
-            }
-
-            lock (_sessionGate)
-            {
-                _stopping = false;
+                // Nested so the session cannot stay marked as stopping if the teardown above throws,
+                // which would permanently reject every later EnableAsync.
+                lock (_sessionGate)
+                {
+                    _stopping = false;
+                }
             }
         }
 
