@@ -99,27 +99,42 @@ internal sealed class EventPipeTraceWriter
     }
 
     /// <summary>
-    /// The trailer of a complete nettrace stream: the final object is closed with an EndObject tag
-    /// and the stream is then terminated with a NullReference tag. A trace that was cut short - the
-    /// runtime going away mid-session or mid-rundown - ends without it.
+    /// The trailer of a complete nettrace stream in the FastSerialization framing used by format
+    /// versions 4 and 5: the final object is closed with an EndObject tag and the stream is then
+    /// terminated with a NullReference tag.
     /// </summary>
-    private static readonly byte[] NetTraceTrailer = [6 /* EndObject */, 1 /* NullReference */];
+    private static readonly byte[] NetTraceV5Trailer = [6 /* EndObject */, 1 /* NullReference */];
 
     /// <summary>
-    /// Whether the written file ends with the nettrace stream trailer.
+    /// The trailer of a complete nettrace stream in format version 6, which drops the
+    /// FastSerialization framing for a sequence of blocks terminated by an empty EndOfStream block
+    /// (a 4-byte header of 24-bit size 0 and block kind 0).
+    /// </summary>
+    private static readonly byte[] NetTraceV6Trailer = [0, 0, 0, 0 /* EndOfStream block */];
+
+    /// <summary>
+    /// Whether the written file ends with a nettrace stream terminator.
+    /// <para>
+    /// Both known framings are accepted. This gate decides whether the trace is uploaded at all, so
+    /// failing closed against a format the runtime starts emitting later would silently stop every
+    /// upload while the profiler still looked healthy.
+    /// </para>
     /// </summary>
     private static bool EndsWithNetTraceTrailer(FileStream fileStream)
+        => EndsWith(fileStream, NetTraceV5Trailer) || EndsWith(fileStream, NetTraceV6Trailer);
+
+    private static bool EndsWith(FileStream fileStream, byte[] trailer)
     {
-        if (fileStream.Length < NetTraceTrailer.Length)
+        if (fileStream.Length < trailer.Length)
         {
             return false;
         }
 
-        fileStream.Seek(-NetTraceTrailer.Length, SeekOrigin.End);
+        fileStream.Seek(-trailer.Length, SeekOrigin.End);
 
-        for (int i = 0; i < NetTraceTrailer.Length; i++)
+        foreach (byte expected in trailer)
         {
-            if (fileStream.ReadByte() != NetTraceTrailer[i])
+            if (fileStream.ReadByte() != expected)
             {
                 return false;
             }

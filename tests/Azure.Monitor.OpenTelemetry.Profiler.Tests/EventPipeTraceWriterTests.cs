@@ -18,8 +18,11 @@ public class EventPipeTraceWriterTests : IDisposable
 {
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(30);
 
-    // The trailer of a complete nettrace stream: EndObject then NullReference.
+    // The trailer of a complete nettrace stream (format v4/v5): EndObject then NullReference.
     private static readonly byte[] NetTraceTrailer = [6, 1];
+
+    // The format v6 terminator: an empty EndOfStream block header.
+    private static readonly byte[] NetTraceV6Trailer = [0, 0, 0, 0];
 
     private readonly string _traceFilePath = Path.Combine(
         Path.GetTempPath(), $"{Guid.NewGuid()}.nettrace");
@@ -203,6 +206,23 @@ public class EventPipeTraceWriterTests : IDisposable
 
         Assert.False(await target.WaitAsync(TestTimeout));
         Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
+    public async Task Writer_WhenTheTraceUsesTheNewerFormatTerminator_ReportsComplete()
+    {
+        // The gate decides whether a trace is uploaded at all, so it must not fail closed against
+        // the format version 6 terminator - that would silently stop every upload while the
+        // profiler still looked healthy.
+        EventPipeTraceWriter target = new(NullLogger.Instance);
+        byte[] payload = new byte[4096];
+        new Random(Seed: 7).NextBytes(payload);
+        NetTraceV6Trailer.CopyTo(payload, payload.Length - NetTraceV6Trailer.Length);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(payload));
+
+        Assert.True(await target.WaitAsync(TestTimeout));
     }
 
     [Fact]

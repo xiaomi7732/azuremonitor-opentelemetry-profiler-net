@@ -106,9 +106,23 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             profilerStarted = true;
         }
+        catch (ObjectDisposedException ex)
+        {
+            // The trace control was disposed, which happens when the host tears the container down
+            // while a start is in flight. Nothing started, so release the semaphore - otherwise it
+            // stays held and no later session can ever begin - and report it as a shutdown-time
+            // outcome rather than an application fault.
+            _logger.LogWarning(ex, "Profiler was disposed (likely during host shutdown) before the session could start.");
+            ReleaseSemaphoreForProfiling();
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start eventpipe profiling.");
+
+            // The start failed, so nothing holds the session. Releasing here keeps a failed start
+            // from permanently pinning the semaphore and blocking every later session.
+            ReleaseSemaphoreForProfiling();
             throw;
         }
 
