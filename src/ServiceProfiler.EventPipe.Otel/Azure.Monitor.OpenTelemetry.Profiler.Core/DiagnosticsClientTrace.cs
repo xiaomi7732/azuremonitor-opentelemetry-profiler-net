@@ -24,16 +24,15 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
     private static readonly TimeSpan DisposeDrainTimeout = TimeSpan.FromSeconds(5);
 
     public DateTime? SessionStartUTC { get; private set; }
-    private EventPipeSession? _session;
 
-    // The in-flight trace writer, retained so stopping and disposal can coordinate with it. Disposing
-    // the session closes the EventPipe stream, so letting that race the writer both truncates the
-    // trace file and surfaces a closed-pipe ObjectDisposedException.
-    private Task<bool>? _traceWriteTask;
+    // Guards _current / _starting / _disposed so that enable, disable and dispose cannot each end up
+    // owning the same EventPipe session.
+    private readonly object _sessionGate = new();
 
-    // Set before the EventPipe session is stopped or disposed, so the writer can tell an expected
-    // lifecycle-induced closed pipe from a genuine failure.
-    private volatile bool _stopRequested;
+    // The session currently owned by this instance, together with its in-flight trace writer.
+    private TraceSession? _current;
+    private bool _starting;
+    private bool _disposed;
 
     private readonly DiagnosticsClientProvider _clientProvider;
     private readonly DiagnosticsClientTraceConfiguration _configuration;
@@ -54,151 +53,164 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
     /// <inheritdoc />
     public async Task<bool> DisableAsync(CancellationToken cancellationToken = default)
     {
-        EventPipeSession? session = _session;
+        TraceSession? session = TakeCurrentSession();
         if (session is null)
         {
             _logger.LogWarning("{name} is called when the session doesn't exist.", nameof(DisableAsync));
             return false;
         }
 
-        RequestStop();
+        // From here on this call owns the session, so nothing else can dispose it underneath us.
+        session.RequestStop();
 
+        bool stopSent = false;
+        bool traceComplete;
         try
         {
             // Stopping only sends the stop command; it does not close the EventPipe stream. The
             // writer keeps draining what the runtime has already buffered, so the trace file is only
             // complete once that writer finishes.
-            await session.StopAsync(cancellationToken).ConfigureAwait(false);
-            return await WaitForTraceWriteAsync(TraceWriteDrainTimeout).ConfigureAwait(false);
+            await session.Session.StopAsync(cancellationToken).ConfigureAwait(false);
+            stopSent = true;
         }
         finally
         {
-            // Dispose only after the writer has settled: disposing closes the stream out from under it.
-            session.Dispose();
-            _session = null;
-            _traceWriteTask = null;
-            _stopRequested = false;
+            // Always drain before closing the stream, including when the stop was cancelled or
+            // failed: disposing underneath the writer is what truncates the trace and raises the
+            // closed-pipe error. Without a stop the stream never reaches EOF, so only wait briefly.
+            traceComplete = await session.Writer.WaitAsync(stopSent ? TraceWriteDrainTimeout : DisposeDrainTimeout).ConfigureAwait(false);
+            session.Session.Dispose();
         }
+
+        return traceComplete;
     }
 
     public void Dispose()
     {
-        // Disposal closes the EventPipe stream. Give an in-flight writer a brief chance to finish so
-        // it does not fail with a closed pipe, but never block shutdown on it.
-        RequestStop();
-        WaitForTraceWriteAsync(DisposeDrainTimeout).GetAwaiter().GetResult();
+        TraceSession? session;
+        lock (_sessionGate)
+        {
+            _disposed = true;
+            session = _current;
+            _current = null;
+        }
 
-        _session?.Dispose();
-        _session = null;
-        _traceWriteTask = null;
+        if (session is null)
+        {
+            return;
+        }
+
+        session.RequestStop();
+
+        // Ask the runtime to stop before draining. Without a stop the session keeps streaming, the
+        // writer never sees EOF, and the wait below would be a pointless delay that still ends in a
+        // truncated trace - which is exactly the shutdown case reported in issue #191.
+        try
+        {
+            session.Session.Stop();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to stop the EventPipe session during disposal.");
+        }
+
+        // Bounded: disposal runs on the shutdown path and must not block on a stuck pipe.
+        session.Writer.WaitAsync(DisposeDrainTimeout).GetAwaiter().GetResult();
+        session.Session.Dispose();
     }
-
-    /// <summary>
-    /// Marks the session as stopping, so a closed EventPipe stream is treated as an expected
-    /// lifecycle outcome by the trace writer rather than as a failure.
-    /// </summary>
-    internal void RequestStop() => _stopRequested = true;
 
     /// <summary>
     /// Enables a profiler session.
     /// </summary>
     /// <param name="traceFilePath">The trace file path. Default to 'default.nettrace'.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns></returns>
     public async Task EnableAsync(string traceFilePath = $"default{OpenTelemetryProfilerProvider.TraceFileExtension}" /* ==> default.nettrace*/, CancellationToken cancellationToken = default)
     {
-        if (_session is not null)
+        // Claim the right to start before awaiting, so two concurrent calls cannot both start a
+        // session and leak one of them along with its pipe handle.
+        lock (_sessionGate)
         {
-            throw new InvalidOperationException("Only 1 session at a time is supported. Disable the current session before enabling a new one.");
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
+            }
+
+            if (_current is not null || _starting)
+            {
+                throw new InvalidOperationException("Only 1 session at a time is supported. Disable the current session before enabling a new one.");
+            }
+
+            _starting = true;
         }
 
-        SessionStartUTC = DateTime.UtcNow;
-
-        using Process currentProcess = Process.GetCurrentProcess();
-        int pid = currentProcess.Id;
-
-        EventPipeSession session = await _clientProvider.GetDiagnosticsClient(pid).StartEventPipeSessionAsync(
-            providers: _configuration.BuildEventPipeProviders(),
-            requestRundown: _configuration.RequestRundown,
-            circularBufferMB: _configuration.CircularBufferMB,
-            token: cancellationToken).ConfigureAwait(false);
-
-        _session = session;
-        BeginTraceWrite(traceFilePath, session.EventStream);
-    }
-
-    /// <summary>
-    /// Starts copying the EventPipe stream to the trace file and retains the resulting task so that
-    /// stopping and disposal can wait for it.
-    /// </summary>
-    internal void BeginTraceWrite(string traceFilePath, Stream stream)
-    {
-        _stopRequested = false;
-        _traceWriteTask = WriteTraceAsync(traceFilePath, stream);
-    }
-
-    /// <summary>
-    /// Waits for the in-flight trace writer to finish within <paramref name="timeout"/>.
-    /// </summary>
-    /// <returns>True when the trace file was written completely; otherwise false.</returns>
-    internal async Task<bool> WaitForTraceWriteAsync(TimeSpan timeout)
-    {
-        Task<bool>? traceWriteTask = _traceWriteTask;
-        if (traceWriteTask is null)
-        {
-            return false;
-        }
-
-        // Cancel the timeout once the writer wins, so the pending delay does not keep a timer alive
-        // for the full timeout on every stop.
-        using CancellationTokenSource timeoutCancellation = new();
-        Task delayTask = Task.Delay(timeout, timeoutCancellation.Token);
-        Task completed = await Task.WhenAny(traceWriteTask, delayTask).ConfigureAwait(false);
-        timeoutCancellation.Cancel();
-
-        if (completed == traceWriteTask)
-        {
-            // WriteTraceAsync never faults, so the result can be observed directly.
-            return await traceWriteTask.ConfigureAwait(false);
-        }
-
-        _logger.LogWarning(
-            "Timed out after {timeout} waiting for the trace file to finish writing. The trace is incomplete and will not be processed.",
-            timeout);
-        return false;
-    }
-
-    /// <summary>
-    /// Copies the EventPipe stream to the trace file.
-    /// </summary>
-    /// <returns>True when the whole stream was copied; otherwise false.</returns>
-    private async Task<bool> WriteTraceAsync(string traceFilePath, Stream stream)
-    {
-        _logger.LogInformation("Start writing trace file {traceFilePath}...", traceFilePath);
         try
         {
-            // FileMode.Create rather than File.OpenWrite (which is FileMode.OpenOrCreate), so a
-            // pre-existing file is truncated instead of leaving a tail of stale bytes behind.
-            using FileStream fileStream = new(traceFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await stream.CopyToAsync(fileStream).ConfigureAwait(false);
-            _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
-            return true;
+            SessionStartUTC = DateTime.UtcNow;
+
+            using Process currentProcess = Process.GetCurrentProcess();
+            int pid = currentProcess.Id;
+
+            EventPipeSession eventPipeSession = await _clientProvider.GetDiagnosticsClient(pid).StartEventPipeSessionAsync(
+                providers: _configuration.BuildEventPipeProviders(),
+                requestRundown: _configuration.RequestRundown,
+                circularBufferMB: _configuration.CircularBufferMB,
+                token: cancellationToken).ConfigureAwait(false);
+
+            TraceSession session = new(eventPipeSession, new EventPipeTraceWriter(_logger));
+
+            lock (_sessionGate)
+            {
+                if (_disposed)
+                {
+                    // Disposal ran while the session was starting. Tear the new session down here
+                    // rather than leaving it live with nobody to stop it.
+                    eventPipeSession.Dispose();
+                    throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
+                }
+
+                _current = session;
+            }
+
+            session.Writer.Start(traceFilePath, eventPipeSession.EventStream);
         }
-        catch (ObjectDisposedException ex) when (_stopRequested)
+        finally
         {
-            // The EventPipe stream was closed while the session was being stopped or disposed - for
-            // example the host tore down the DI container mid-session. The trace is incomplete, but
-            // this is a lifecycle outcome rather than an application fault, so it is not an error.
-            _logger.LogWarning(
-                ex,
-                "The EventPipe stream was closed while the profiler was stopping, so trace file {traceFilePath} is incomplete. It will not be processed.",
-                traceFilePath);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error writing trace file at: {filePath}", traceFilePath);
-            return false;
+            lock (_sessionGate)
+            {
+                _starting = false;
+            }
         }
     }
+
+    /// <summary>
+    /// Takes ownership of the current session, so only one caller can stop and dispose it.
+    /// </summary>
+    private TraceSession? TakeCurrentSession()
+    {
+        lock (_sessionGate)
+        {
+            TraceSession? session = _current;
+            _current = null;
+            return session;
+        }
+    }
+
+    /// <summary>
+    /// An EventPipe session together with the writer draining it.
+    /// </summary>
+    private sealed class TraceSession
+    {
+        internal TraceSession(EventPipeSession session, EventPipeTraceWriter writer)
+        {
+            Session = session;
+            Writer = writer;
+        }
+
+        public EventPipeSession Session { get; }
+
+        public EventPipeTraceWriter Writer { get; }
+
+        public void RequestStop() => Writer.RequestStop();
+    }
 }
+

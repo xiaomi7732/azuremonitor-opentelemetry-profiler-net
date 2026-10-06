@@ -23,7 +23,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
         private readonly UserConfiguration _userConfiguration;
         private readonly ILogger _logger;
         private EventPipeSession? _currentSession;
-        private Task? _traceFileWritingTask;
+        private Task<bool>? _traceFileWritingTask;
         private const string TimeoutMessage = "Timed out waiting for semaphore.";
 
         public DiagnosticsClientTraceControl(
@@ -164,7 +164,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
         }
 
-        private async Task StartWriteAsync(string traceFilePath, Stream readFrom, CancellationToken cancellationToken = default)
+        private async Task<bool> StartWriteAsync(string traceFilePath, Stream readFrom, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -173,6 +173,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 _logger.LogTrace("Start writing file ...");
                 await readFrom.CopyToAsync(writeTo, bufferSize: 81920, cancellationToken: cancellationToken).ConfigureAwait(false);
                 _logger.LogTrace("Finish writing file.");
+                return true;
             }
             catch (ObjectDisposedException ex)
             {
@@ -202,7 +203,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 if (string.IsNullOrEmpty(eventPipeIPCFullPath) || !File.Exists(eventPipeIPCFullPath))
                 {
                     // The IPC file doesn't exist, there isn't too much to be done. Log a warning for scenario analysis.
-                    _logger.LogWarning(ex, "Profiler service is closed. This happens when application is shutting down.");
+                    // The copy did not finish, so the trace file is incomplete and must not be uploaded.
+                    _logger.LogWarning(ex, "Profiler service is closed. This happens when application is shutting down. The trace file is incomplete and will not be processed.");
+                    return false;
                 }
                 else
                 {
