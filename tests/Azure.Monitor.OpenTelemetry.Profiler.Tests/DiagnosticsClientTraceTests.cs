@@ -100,6 +100,26 @@ public class DiagnosticsClientTraceTests : IDisposable
     }
 
     [DiagnosticsEnabledFact]
+    public async Task DisableAsync_WhenTheCallersCancellationSourceWasAlreadyDisposed_StillTearsTheSessionDown()
+    {
+        // Host shutdown racing an in-flight stop disposes the token source the stop is using. The
+        // teardown must survive that: leaking the session would leave the runtime tracing into a
+        // session nobody owns while the provider releases its semaphore and lets a new one start.
+        using DiagnosticsClientTrace target = CreateTarget();
+
+        CancellationTokenSource cancellation = new();
+        CancellationToken token = cancellation.Token;
+        await target.EnableAsync(_traceFilePath, Bounded);
+        cancellation.Dispose();
+
+        await target.DisableAsync(token);
+
+        // The session was released, so a new one can be started.
+        await target.EnableAsync(_traceFilePath, Bounded);
+        await target.DisableAsync(Bounded);
+    }
+
+    [DiagnosticsEnabledFact]
     public async Task DisableAsync_WhenNoSessionExists_ReportsIncomplete()
     {
         using DiagnosticsClientTrace target = CreateTarget();

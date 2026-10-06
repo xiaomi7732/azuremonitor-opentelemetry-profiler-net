@@ -99,23 +99,33 @@ internal sealed class EventPipeTraceWriter
     }
 
     /// <summary>
-    /// The nettrace stream is terminated by a NullReference tag. A trace that was cut short - the
+    /// The trailer of a complete nettrace stream: the final object is closed with an EndObject tag
+    /// and the stream is then terminated with a NullReference tag. A trace that was cut short - the
     /// runtime going away mid-session or mid-rundown - ends without it.
     /// </summary>
-    private const byte NetTraceEndOfStreamTag = 1;
+    private static readonly byte[] NetTraceTrailer = [6 /* EndObject */, 1 /* NullReference */];
 
     /// <summary>
-    /// Whether the written file carries the nettrace end-of-stream marker.
+    /// Whether the written file ends with the nettrace stream trailer.
     /// </summary>
-    private static bool EndsWithEndOfStreamTag(FileStream fileStream)
+    private static bool EndsWithNetTraceTrailer(FileStream fileStream)
     {
-        if (fileStream.Length == 0)
+        if (fileStream.Length < NetTraceTrailer.Length)
         {
             return false;
         }
 
-        fileStream.Seek(-1, SeekOrigin.End);
-        return fileStream.ReadByte() == NetTraceEndOfStreamTag;
+        fileStream.Seek(-NetTraceTrailer.Length, SeekOrigin.End);
+
+        for (int i = 0; i < NetTraceTrailer.Length; i++)
+        {
+            if (fileStream.ReadByte() != NetTraceTrailer[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -152,8 +162,8 @@ internal sealed class EventPipeTraceWriter
             // closing the diagnostics pipe is a clean end-of-stream, not an exception, so a runtime
             // that goes away mid-session produces a short file and no error at all. Two things have
             // to hold: the stream must have ended after we asked the session to stop, and the file
-            // must carry the nettrace end-of-stream marker, which only a fully delivered trace
-            // (including rundown) has.
+            // must carry the nettrace trailer, which only a fully delivered trace (including
+            // rundown) has.
             if (!_stopRequested)
             {
                 _logger.LogWarning(
@@ -162,7 +172,7 @@ internal sealed class EventPipeTraceWriter
                 return false;
             }
 
-            if (!EndsWithEndOfStreamTag(fileStream))
+            if (!EndsWithNetTraceTrailer(fileStream))
             {
                 _logger.LogWarning(
                     "Trace file {traceFilePath} does not end with the nettrace end-of-stream marker, so it is incomplete. It will not be processed.",

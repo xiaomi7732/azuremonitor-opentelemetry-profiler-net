@@ -96,15 +96,14 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         session.RequestStop();
 
         bool stopSent = false;
-        bool traceComplete;
+        bool traceComplete = false;
         try
         {
             // Stopping only sends the stop command; it does not close the EventPipe stream. The
             // writer keeps draining what the runtime has already buffered, so the trace file is only
             // complete once that writer finishes. Bound the command itself: it is a quick IPC
             // round-trip normally, but can hang on an unresponsive runtime.
-            using CancellationTokenSource stopCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            stopCancellation.CancelAfter(_stopCommandTimeout);
+            using CancellationTokenSource stopCancellation = CreateTimeoutSource(cancellationToken, _stopCommandTimeout);
 
             await session.Session.StopAsync(stopCancellation.Token).ConfigureAwait(false);
             stopSent = true;
@@ -122,25 +121,34 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         {
             try
             {
-                // Always drain before closing the stream: disposing underneath the writer is what
-                // truncates the trace and raises the closed-pipe error.
-                //
-                // The drain budget differs by path. When the stop went out, the stream will reach
-                // EOF once the runtime has flushed rundown, so wait generously. When it did not,
-                // the stop cannot be retried - EventPipeSession marks itself stopped on the first
-                // attempt, so a second Stop() sends nothing - and the stream will only end when we
-                // close it. Wait briefly in case the endpoint had already gone (which ends the
-                // stream on its own), then close.
-                traceComplete = await session.Writer
-                    .WaitAsync(stopSent ? _traceWriteDrainTimeout : _disposeTeardownTimeout, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (!stopSent)
+                try
                 {
-                    traceComplete = false;
-                }
+                    // Always drain before closing the stream: disposing underneath the writer is
+                    // what truncates the trace and raises the closed-pipe error.
+                    //
+                    // The drain budget differs by path. When the stop went out, the stream will
+                    // reach EOF once the runtime has flushed rundown, so wait generously. When it
+                    // did not, the stop cannot be retried - EventPipeSession marks itself stopped on
+                    // the first attempt, so a second Stop() sends nothing - and the stream will only
+                    // end when we close it. Wait briefly in case the endpoint had already gone
+                    // (which ends the stream on its own), then close.
+                    traceComplete = await session.Writer
+                        .WaitAsync(stopSent ? _traceWriteDrainTimeout : _disposeTeardownTimeout, cancellationToken)
+                        .ConfigureAwait(false);
 
-                session.Session.Dispose();
+                    if (!stopSent)
+                    {
+                        traceComplete = false;
+                    }
+                }
+                finally
+                {
+                    // The session must be disposed however the drain ends. Leaking it would leave
+                    // the runtime tracing into a session nobody owns, hold the trace file open, and
+                    // break the invariant the provider relies on to release its profiling
+                    // semaphore - letting a new session start alongside the abandoned one.
+                    session.Session.Dispose();
+                }
             }
             finally
             {
@@ -170,6 +178,17 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         {
             StopAndDispose(session, _disposeTeardownTimeout);
         }
+    }
+
+    /// <summary>
+    /// Creates a source that cancels after <paramref name="timeout"/>, following
+    /// <paramref name="cancellationToken"/> as well.
+    /// </summary>
+    private static CancellationTokenSource CreateTimeoutSource(CancellationToken cancellationToken, TimeSpan timeout)
+    {
+        CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        source.CancelAfter(timeout);
+        return source;
     }
 
     /// <summary>
@@ -212,12 +231,19 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         }
 
         TimeSpan remaining = teardownBudget - elapsed.Elapsed;
-        if (remaining > TimeSpan.Zero)
+        try
         {
-            session.Writer.WaitAsync(remaining).GetAwaiter().GetResult();
+            if (remaining > TimeSpan.Zero)
+            {
+                session.Writer.WaitAsync(remaining).GetAwaiter().GetResult();
+            }
         }
-
-        session.Session.Dispose();
+        finally
+        {
+            // The session must be closed however the drain ends; leaking it would leave the runtime
+            // tracing into a session nobody owns.
+            session.Session.Dispose();
+        }
     }
 
     /// <summary>
