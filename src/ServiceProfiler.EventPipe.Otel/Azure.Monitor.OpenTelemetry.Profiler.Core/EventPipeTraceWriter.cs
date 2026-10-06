@@ -180,8 +180,10 @@ internal sealed class EventPipeTraceWriter
     {
         const int reservedOffset = 8;
 
+        // Require the complete header - reserved, major and minor version - so a file that ends
+        // inside it cannot be waved through as an unverifiable future format.
         majorVersion = 0;
-        if (fileStream.Length < reservedOffset + (2 * sizeof(uint)))
+        if (fileStream.Length < reservedOffset + (3 * sizeof(uint)))
         {
             return false;
         }

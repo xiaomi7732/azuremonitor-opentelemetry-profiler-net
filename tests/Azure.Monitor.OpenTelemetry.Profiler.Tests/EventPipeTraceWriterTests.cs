@@ -309,6 +309,29 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_WhenAFutureVersionTraceIsTruncatedInsideItsHeader_ReportsIncomplete()
+    {
+        // The permissive fallback is for traces this profiler cannot verify, not for files that end
+        // inside the very header it would read to make that decision.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        // Magic, reserved, a future major version, then a stray byte: a header cut off before the
+        // minor version, with a tail that matches no terminator.
+        byte[] truncated = new byte[19];
+        NetTraceMagic.CopyTo(truncated, 0);
+        BitConverter.GetBytes(0u).CopyTo(truncated, 8);
+        BitConverter.GetBytes(99u).CopyTo(truncated, 12);
+        truncated[^1] = 0xFF;
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(truncated));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
     public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
         target.Start(_traceFilePath, new MemoryStream(CreatePayload(64)));
