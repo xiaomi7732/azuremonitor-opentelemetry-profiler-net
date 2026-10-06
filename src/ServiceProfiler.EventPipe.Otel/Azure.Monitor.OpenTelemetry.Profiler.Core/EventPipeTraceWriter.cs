@@ -167,22 +167,39 @@ internal sealed class EventPipeTraceWriter
 
     /// <summary>
     /// Reads the major version from a post-FastSerialization nettrace header: the magic, a reserved
-    /// field, then the version.
+    /// field that is zero, then the version.
+    /// <para>
+    /// The reserved field is what distinguishes this header from the FastSerialization one, where
+    /// the same offset holds a non-zero signature length. Checking it matters because a version 4/5
+    /// file truncated before its full signature would otherwise reach here and have the first bytes
+    /// of "!FastSerialization.1" read as an enormous version number, which would wrongly disable
+    /// the trailer check for exactly the truncated file it is meant to reject.
+    /// </para>
     /// </summary>
     private static bool TryReadMajorVersion(FileStream fileStream, out uint majorVersion)
     {
-        const int majorVersionOffset = 8 + 4;
+        const int reservedOffset = 8;
 
         majorVersion = 0;
-        if (fileStream.Length < majorVersionOffset + sizeof(uint))
+        if (fileStream.Length < reservedOffset + (2 * sizeof(uint)))
         {
             return false;
         }
 
-        fileStream.Seek(majorVersionOffset, SeekOrigin.Begin);
+        fileStream.Seek(reservedOffset, SeekOrigin.Begin);
 
-        byte[] value = new byte[sizeof(uint)];
-        for (int i = 0; i < value.Length; i++)
+        if (!TryReadLittleEndianUInt32(fileStream, out uint reserved) || reserved != 0)
+        {
+            return false;
+        }
+
+        return TryReadLittleEndianUInt32(fileStream, out majorVersion);
+    }
+
+    private static bool TryReadLittleEndianUInt32(FileStream fileStream, out uint value)
+    {
+        value = 0;
+        for (int i = 0; i < sizeof(uint); i++)
         {
             int read = fileStream.ReadByte();
             if (read < 0)
@@ -190,10 +207,9 @@ internal sealed class EventPipeTraceWriter
                 return false;
             }
 
-            value[i] = (byte)read;
+            value |= (uint)read << (8 * i);
         }
 
-        majorVersion = BitConverter.ToUInt32(value, 0);
         return true;
     }
 

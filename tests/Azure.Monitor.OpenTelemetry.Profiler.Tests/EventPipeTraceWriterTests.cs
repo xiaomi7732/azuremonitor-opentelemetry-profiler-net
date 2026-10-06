@@ -290,6 +290,25 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_WhenAFastSerializationTraceIsTruncatedInsideItsHeader_ReportsIncomplete()
+    {
+        // A version 4/5 file cut off before its full signature is too short for the framing probe.
+        // It must not then have the first bytes of "!FastSerialization.1" read as a version number
+        // and be waved through as an unverifiable future format.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        byte[] header = CreatePayload(4096);
+        byte[] truncated = header.Take(20).ToArray();
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(truncated));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
     public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
         target.Start(_traceFilePath, new MemoryStream(CreatePayload(64)));
