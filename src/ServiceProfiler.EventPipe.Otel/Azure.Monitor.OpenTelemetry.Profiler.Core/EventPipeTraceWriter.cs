@@ -115,6 +115,28 @@ internal sealed class EventPipeTraceWriter
             // pre-existing file is truncated instead of leaving a tail of stale bytes behind.
             using FileStream fileStream = new(traceFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
             await stream.CopyToAsync(fileStream).ConfigureAwait(false);
+
+            // Reaching the end of the stream is not by itself proof of a complete trace. The peer
+            // closing the diagnostics pipe is a clean end-of-stream, not an exception, so a runtime
+            // that goes away mid-session produces a short file and no error at all. Only a stream
+            // that ended after we asked the session to stop has actually delivered everything,
+            // including rundown.
+            if (!_stopRequested)
+            {
+                _logger.LogWarning(
+                    "The EventPipe stream ended before the profiler asked the session to stop, so trace file {traceFilePath} is incomplete. It will not be processed.",
+                    traceFilePath);
+                return false;
+            }
+
+            if (fileStream.Length == 0)
+            {
+                _logger.LogWarning(
+                    "No trace data was written to {traceFilePath}. It will not be processed.",
+                    traceFilePath);
+                return false;
+            }
+
             _logger.LogInformation("Finished writing trace file {traceFilePath}.", traceFilePath);
             return true;
         }

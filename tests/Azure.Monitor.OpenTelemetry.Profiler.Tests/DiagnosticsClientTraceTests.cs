@@ -142,7 +142,9 @@ public class DiagnosticsClientTraceTests : IDisposable
     {
         public DiagnosticsEnabledFactAttribute()
         {
-            if (Environment.GetEnvironmentVariable("DOTNET_EnableDiagnostics") == "0")
+            if (Environment.GetEnvironmentVariable("DOTNET_EnableDiagnostics") == "0" ||
+                Environment.GetEnvironmentVariable("COMPlus_EnableDiagnostics") == "0" ||
+                Environment.GetEnvironmentVariable("DOTNET_EnableDiagnostics_IPC") == "0")
             {
                 Skip = "Runtime diagnostics (EventPipe IPC) are disabled in this environment.";
             }

@@ -200,9 +200,13 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             // the upload. The partial file is left for the trace scavenger to clean up.
             if (!traceComplete)
             {
+                // The stop itself succeeded, so report it as such - only the upload is skipped.
+                // Emitting StopProfilerSucceeded here keeps the triggered/succeeded pairing intact
+                // for health monitoring, and matches the classic provider.
                 _logger.LogWarning(
                     "The trace file was not written completely, so it will not be uploaded. Partial trace: {traceFilePath}",
                     currentTraceFilePath);
+                _logger.LogInformation(StopProfilerSucceeded);
                 return true;
             }
 

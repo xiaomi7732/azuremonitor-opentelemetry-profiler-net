@@ -27,6 +27,8 @@ public class EventPipeTraceWriterTests : IDisposable
         EventPipeTraceWriter target = new(NullLogger.Instance);
         byte[] payload = CreatePayload(64 * 1024);
 
+        // A stop must already be in flight for an end-of-stream to mean "complete".
+        target.RequestStop();
         target.Start(_traceFilePath, new MemoryStream(payload));
 
         Assert.True(await target.WaitAsync(TestTimeout));
@@ -44,6 +46,7 @@ public class EventPipeTraceWriterTests : IDisposable
 
         target.Start(_traceFilePath, stream);
         await WithTimeout(stream.FirstReadStarted);
+        target.RequestStop();
 
         Task<bool> waitTask = target.WaitAsync(TestTimeout);
         Assert.False(waitTask.IsCompleted);
@@ -149,10 +152,37 @@ public class EventPipeTraceWriterTests : IDisposable
         EventPipeTraceWriter target = new(NullLogger.Instance);
         byte[] payload = CreatePayload(1024);
 
+        target.RequestStop();
         target.Start(_traceFilePath, new MemoryStream(payload));
 
         Assert.True(await target.WaitAsync(TestTimeout));
         Assert.Equal(payload, await File.ReadAllBytesAsync(_traceFilePath));
+    }
+
+    [Fact]
+    public async Task Writer_WhenTheStreamEndsBeforeAStopWasRequested_ReportsIncomplete()
+    {
+        // The peer closing the diagnostics pipe is a clean end-of-stream, not an exception. A
+        // runtime that goes away mid-session therefore yields a short file and no error at all, so
+        // reaching EOF cannot by itself mean the trace is complete.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        target.Start(_traceFilePath, new MemoryStream(CreatePayload(4096)));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("ended before"));
+    }
+
+    [Fact]
+    public async Task Writer_WhenNoDataWasWritten_ReportsIncomplete()
+    {
+        EventPipeTraceWriter target = new(NullLogger.Instance);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(Array.Empty<byte>()));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
     }
 
     [Fact]

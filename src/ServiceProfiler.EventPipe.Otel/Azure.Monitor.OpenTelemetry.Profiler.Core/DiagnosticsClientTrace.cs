@@ -13,26 +13,40 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
 {
     /// <summary>
     /// How long <see cref="DisableAsync"/> waits for the trace writer to drain the EventPipe stream
-    /// after the session has been told to stop. Bounded so a stuck pipe cannot wedge the stop path.
+    /// after the session has been told to stop. Bounded so a stuck pipe cannot wedge the stop path,
+    /// but generous: the post-stop drain is when EventPipe emits rundown, which for a large,
+    /// long-running application can take a while. Timing out here drops the profile, so the bound
+    /// exists to break a genuinely stuck pipe rather than to cap normal rundown.
     /// </summary>
-    private static readonly TimeSpan TraceWriteDrainTimeout = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan DefaultTraceWriteDrainTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// How long <see cref="Dispose"/> waits for the trace writer before closing the EventPipe stream
-    /// underneath it. Short, because disposal runs on the shutdown path.
+    /// How long <see cref="Dispose"/> spends tearing the session down. Short, because disposal runs
+    /// on the shutdown path. This is the budget for the whole teardown, not per step.
     /// </summary>
-    private static readonly TimeSpan DisposeDrainTimeout = TimeSpan.FromSeconds(5);
+    internal static readonly TimeSpan DefaultDisposeTeardownTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// How long to wait for the stop command itself. It is a quick IPC round-trip in the normal
+    /// case, but can hang on an unresponsive runtime.
+    /// </summary>
+    internal static readonly TimeSpan DefaultStopCommandTimeout = TimeSpan.FromSeconds(60);
 
     public DateTime? SessionStartUTC { get; private set; }
 
-    // Guards _current / _starting / _disposed so that enable, disable and dispose cannot each end up
-    // owning the same EventPipe session.
+    // Guards _current / _starting / _stopping / _disposed so that enable, disable and dispose cannot
+    // each end up owning the same EventPipe session.
     private readonly object _sessionGate = new();
 
     // The session currently owned by this instance, together with its in-flight trace writer.
     private TraceSession? _current;
     private bool _starting;
+    private bool _stopping;
     private bool _disposed;
+
+    private readonly TimeSpan _traceWriteDrainTimeout;
+    private readonly TimeSpan _disposeTeardownTimeout;
+    private readonly TimeSpan _stopCommandTimeout;
 
     private readonly DiagnosticsClientProvider _clientProvider;
     private readonly DiagnosticsClientTraceConfiguration _configuration;
@@ -43,11 +57,29 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         DiagnosticsClientProvider clientProvider,
         DiagnosticsClientTraceConfiguration configuration,
         ILogger<DiagnosticsClientTrace> logger)
+        : this(clientProvider, configuration, logger, DefaultTraceWriteDrainTimeout, DefaultDisposeTeardownTimeout, DefaultStopCommandTimeout)
+    {
+    }
+
+    /// <summary>
+    /// Overload that allows the timeouts to be supplied, so tests are not coupled to the production
+    /// wall-clock budgets.
+    /// </summary>
+    internal DiagnosticsClientTrace(
+        DiagnosticsClientProvider clientProvider,
+        DiagnosticsClientTraceConfiguration configuration,
+        ILogger<DiagnosticsClientTrace> logger,
+        TimeSpan traceWriteDrainTimeout,
+        TimeSpan disposeTeardownTimeout,
+        TimeSpan stopCommandTimeout)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _clientProvider = clientProvider ?? throw new ArgumentNullException(nameof(clientProvider));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _traceWriteDrainTimeout = traceWriteDrainTimeout;
+        _disposeTeardownTimeout = disposeTeardownTimeout;
+        _stopCommandTimeout = stopCommandTimeout;
     }
 
     /// <inheritdoc />
@@ -69,17 +101,37 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         {
             // Stopping only sends the stop command; it does not close the EventPipe stream. The
             // writer keeps draining what the runtime has already buffered, so the trace file is only
-            // complete once that writer finishes.
-            await session.Session.StopAsync(cancellationToken).ConfigureAwait(false);
+            // complete once that writer finishes. Bound the command itself: it is a quick IPC
+            // round-trip normally, but can hang on an unresponsive runtime.
+            using CancellationTokenSource stopCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            stopCancellation.CancelAfter(_stopCommandTimeout);
+
+            await session.Session.StopAsync(stopCancellation.Token).ConfigureAwait(false);
             stopSent = true;
         }
         finally
         {
             // Always drain before closing the stream, including when the stop was cancelled or
             // failed: disposing underneath the writer is what truncates the trace and raises the
-            // closed-pipe error. Without a stop the stream never reaches EOF, so only wait briefly.
-            traceComplete = await session.Writer.WaitAsync(stopSent ? TraceWriteDrainTimeout : DisposeDrainTimeout).ConfigureAwait(false);
-            session.Session.Dispose();
+            // closed-pipe error.
+            if (stopSent)
+            {
+                traceComplete = await session.Writer.WaitAsync(_traceWriteDrainTimeout).ConfigureAwait(false);
+                session.Session.Dispose();
+            }
+            else
+            {
+                // The stop never went out, so the stream will not reach EOF on its own. Fall back to
+                // the bounded best-effort teardown, which retries the stop before closing - without
+                // it the runtime could keep tracing against a disposed session.
+                StopAndDispose(session, _disposeTeardownTimeout);
+                traceComplete = false;
+            }
+
+            lock (_sessionGate)
+            {
+                _stopping = false;
+            }
         }
 
         return traceComplete;
@@ -97,17 +149,20 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
 
         if (session is not null)
         {
-            StopAndDispose(session, DisposeDrainTimeout);
+            StopAndDispose(session, _disposeTeardownTimeout);
         }
     }
 
     /// <summary>
     /// Best-effort teardown of a session that no caller is going to stop normally: stop it so the
-    /// stream can reach EOF, give the writer a bounded chance to drain, then close it.
+    /// stream can reach EOF, give the writer a chance to drain, then close it. The whole teardown
+    /// shares <paramref name="teardownBudget"/>, so a slow stop does not double the time spent here.
     /// </summary>
-    private void StopAndDispose(TraceSession session, TimeSpan drainTimeout)
+    private void StopAndDispose(TraceSession session, TimeSpan teardownBudget)
     {
         session.RequestStop();
+
+        Stopwatch elapsed = Stopwatch.StartNew();
 
         // Stop before draining. Without a stop the session keeps streaming, the writer never sees
         // EOF, and the drain below would be a pointless delay that still ends in a truncated trace -
@@ -132,13 +187,17 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         };
 
         stopThread.Start();
-        if (!stopThread.Join(drainTimeout))
+        if (!stopThread.Join(teardownBudget))
         {
             _logger.LogDebug("Timed out stopping the EventPipe session during teardown.");
         }
 
-        // Bounded: teardown must not block on a stuck pipe.
-        session.Writer.WaitAsync(drainTimeout).GetAwaiter().GetResult();
+        TimeSpan remaining = teardownBudget - elapsed.Elapsed;
+        if (remaining > TimeSpan.Zero)
+        {
+            session.Writer.WaitAsync(remaining).GetAwaiter().GetResult();
+        }
+
         session.Session.Dispose();
     }
 
@@ -158,7 +217,7 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
                 throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
             }
 
-            if (_current is not null || _starting)
+            if (_current is not null || _starting || _stopping)
             {
                 throw new InvalidOperationException("Only 1 session at a time is supported. Disable the current session before enabling a new one.");
             }
@@ -201,7 +260,7 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
                 // Disposal ran while the session was starting. Tear the new session down here rather
                 // than leaving it live with nobody to stop it. Stop before disposing: disposing only
                 // closes the stream and would leave the runtime still tracing.
-                StopAndDispose(session, DisposeDrainTimeout);
+                StopAndDispose(session, _disposeTeardownTimeout);
                 throw new ObjectDisposedException(nameof(DiagnosticsClientTrace));
             }
         }
@@ -215,7 +274,9 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
     }
 
     /// <summary>
-    /// Takes ownership of the current session, so only one caller can stop and dispose it.
+    /// Takes ownership of the current session, so only one caller can stop and dispose it. The
+    /// session stays marked as stopping until the caller finishes tearing it down, so a new one
+    /// cannot be started against a session that is still unwinding.
     /// </summary>
     private TraceSession? TakeCurrentSession()
     {
@@ -223,6 +284,11 @@ internal sealed class DiagnosticsClientTrace : ITraceControl, IDisposable
         {
             TraceSession? session = _current;
             _current = null;
+            if (session is not null)
+            {
+                _stopping = true;
+            }
+
             return session;
         }
     }
