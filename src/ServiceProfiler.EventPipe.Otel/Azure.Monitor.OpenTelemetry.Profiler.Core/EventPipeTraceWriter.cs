@@ -120,16 +120,26 @@ internal sealed class EventPipeTraceWriter
     private static readonly byte[] NetTraceV6Trailer = [0, 0, 0, 0 /* EndOfStream block */];
 
     /// <summary>
+    /// The highest nettrace format version whose terminator this profiler knows how to verify.
+    /// </summary>
+    private const uint HighestVerifiableMajorVersion = 6;
+
+    /// <summary>
     /// Whether the written file ends with the nettrace stream terminator for its own framing.
     /// <para>
-    /// The framing is taken from the header rather than accepting either terminator, so a version
-    /// 4/5 trace cut short on four zero bytes is still rejected. Recognising both framings matters
-    /// because this gate decides whether a trace is uploaded at all: failing closed against a format
-    /// the runtime starts emitting later would silently stop every upload while the profiler still
-    /// looked healthy.
+    /// The framing is taken from the header rather than accepting any terminator, so a version 4/5
+    /// trace cut short on four zero bytes is still rejected.
+    /// </para>
+    /// <para>
+    /// A version this profiler does not know is allowed through instead of being rejected. This
+    /// gate decides whether a trace is uploaded at all, so the two failure directions are not
+    /// symmetric: wrongly accepting means occasionally uploading a short trace, which is what
+    /// happened before this check existed, whereas wrongly rejecting means silently uploading
+    /// nothing at all, for every session, while the profiler still reports healthy stops. Unknown
+    /// formats therefore fall back to the stop-ordering check alone.
     /// </para>
     /// </summary>
-    private static bool EndsWithNetTraceTrailer(FileStream fileStream)
+    private bool EndsWithNetTraceTrailer(FileStream fileStream, string traceFilePath)
     {
         // Anything that is not a nettrace stream at all cannot be a complete one - this also rules
         // out a file so short that the framing probe below would have nothing to read.
@@ -138,9 +148,53 @@ internal sealed class EventPipeTraceWriter
             return false;
         }
 
-        return UsesFastSerializationFraming(fileStream)
-            ? EndsWith(fileStream, NetTraceV5Trailer)
-            : EndsWith(fileStream, NetTraceV6Trailer);
+        if (UsesFastSerializationFraming(fileStream))
+        {
+            return EndsWith(fileStream, NetTraceV5Trailer);
+        }
+
+        if (TryReadMajorVersion(fileStream, out uint majorVersion) && majorVersion > HighestVerifiableMajorVersion)
+        {
+            _logger.LogDebug(
+                "Trace file {traceFilePath} uses nettrace format version {majorVersion}, whose terminator this profiler cannot verify. Skipping the trailer check rather than discarding the trace.",
+                traceFilePath,
+                majorVersion);
+            return true;
+        }
+
+        return EndsWith(fileStream, NetTraceV6Trailer);
+    }
+
+    /// <summary>
+    /// Reads the major version from a post-FastSerialization nettrace header: the magic, a reserved
+    /// field, then the version.
+    /// </summary>
+    private static bool TryReadMajorVersion(FileStream fileStream, out uint majorVersion)
+    {
+        const int majorVersionOffset = 8 + 4;
+
+        majorVersion = 0;
+        if (fileStream.Length < majorVersionOffset + sizeof(uint))
+        {
+            return false;
+        }
+
+        fileStream.Seek(majorVersionOffset, SeekOrigin.Begin);
+
+        byte[] value = new byte[sizeof(uint)];
+        for (int i = 0; i < value.Length; i++)
+        {
+            int read = fileStream.ReadByte();
+            if (read < 0)
+            {
+                return false;
+            }
+
+            value[i] = (byte)read;
+        }
+
+        majorVersion = BitConverter.ToUInt32(value, 0);
+        return true;
     }
 
     private static bool UsesFastSerializationFraming(FileStream fileStream)
@@ -236,7 +290,7 @@ internal sealed class EventPipeTraceWriter
                 return false;
             }
 
-            if (!EndsWithNetTraceTrailer(fileStream))
+            if (!EndsWithNetTraceTrailer(fileStream, traceFilePath))
             {
                 _logger.LogWarning(
                     "Trace file {traceFilePath} does not end with the nettrace end-of-stream marker, so it is incomplete. It will not be processed.",

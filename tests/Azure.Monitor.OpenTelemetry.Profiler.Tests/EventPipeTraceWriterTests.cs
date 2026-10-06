@@ -258,6 +258,38 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_WhenTheTraceUsesAFormatVersionItCannotVerify_ReportsComplete()
+    {
+        // The gate must degrade to permissive on a format it does not know. Rejecting would mean
+        // uploading nothing at all, silently, for every session - far worse than occasionally
+        // accepting a short trace, which is simply what happened before this check existed.
+        EventPipeTraceWriter target = new(NullLogger.Instance);
+        byte[] payload = CreateFutureVersionPayload(4096);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(payload));
+
+        Assert.True(await target.WaitAsync(TestTimeout));
+    }
+
+    [Fact]
+    public async Task Writer_WhenAKnownFormatVersionIsTruncated_StillReportsIncomplete()
+    {
+        // Degrading on unknown versions must not weaken the check for the versions it does know.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        byte[] payload = CreateV6Payload(4096);
+        payload[^1] = 0xFF;
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(payload));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
     public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
         target.Start(_traceFilePath, new MemoryStream(CreatePayload(64)));
@@ -297,16 +329,40 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     /// <summary>
-    /// A payload shaped like a complete nettrace in format v6: no FastSerialization signature, and
-    /// terminated by an empty EndOfStream block.
+    /// A payload shaped like a complete nettrace in format v6: no FastSerialization signature, a
+    /// version header, and an empty EndOfStream block at the end.
     /// </summary>
     private static byte[] CreateV6Payload(int length)
     {
         byte[] payload = new byte[length];
         new Random(Seed: length).NextBytes(payload);
-        NetTraceMagic.CopyTo(payload, 0);
+        WriteVersionHeader(payload, majorVersion: 6);
         NetTraceV6Trailer.CopyTo(payload, length - NetTraceV6Trailer.Length);
         return payload;
+    }
+
+    /// <summary>
+    /// A payload declaring a format version newer than anything this profiler knows how to verify,
+    /// with a tail that matches no known terminator.
+    /// </summary>
+    private static byte[] CreateFutureVersionPayload(int length)
+    {
+        byte[] payload = new byte[length];
+        new Random(Seed: length).NextBytes(payload);
+        WriteVersionHeader(payload, majorVersion: 99);
+        payload[^1] = 0xFF;
+        return payload;
+    }
+
+    /// <summary>
+    /// Writes the post-FastSerialization header: magic, reserved, major version, minor version.
+    /// </summary>
+    private static void WriteVersionHeader(byte[] payload, uint majorVersion)
+    {
+        NetTraceMagic.CopyTo(payload, 0);
+        BitConverter.GetBytes(0u).CopyTo(payload, 8);
+        BitConverter.GetBytes(majorVersion).CopyTo(payload, 12);
+        BitConverter.GetBytes(0u).CopyTo(payload, 16);
     }
 
     /// <summary>
