@@ -56,8 +56,11 @@ public class DiagnosticsClientTraceTests : IDisposable
         Assert.DoesNotContain(logger.Snapshot(), e => e.Level >= LogLevel.Error);
 
         // Without stopping the session first, the stream never reaches EOF, so the drain would run
-        // out its full budget and report a timeout before truncating the trace anyway.
-        Assert.DoesNotContain(logger.Snapshot(), e => e.Message.Contains("Timed out"));
+        // out its full budget and report a timeout before truncating the trace anyway. Matching the
+        // drain message specifically keeps this from also tripping on the separate stop budget.
+        Assert.DoesNotContain(
+            logger.Snapshot(),
+            e => e.Message.Contains("waiting for the trace file to finish writing"));
     }
 
     [DiagnosticsEnabledFact]
