@@ -99,6 +99,13 @@ internal sealed class EventPipeTraceWriter
     }
 
     /// <summary>
+    /// The "Nettrace" magic every trace file starts with, followed by a length-prefixed serializer
+    /// signature when the FastSerialization framing (format versions 4 and 5) is in use.
+    /// </summary>
+    private static readonly byte[] NetTraceMagic = "Nettrace"u8.ToArray();
+    private static readonly byte[] FastSerializationSignature = "!FastSerialization.1"u8.ToArray();
+
+    /// <summary>
     /// The trailer of a complete nettrace stream in the FastSerialization framing used by format
     /// versions 4 and 5: the final object is closed with an EndObject tag and the stream is then
     /// terminated with a NullReference tag.
@@ -113,15 +120,42 @@ internal sealed class EventPipeTraceWriter
     private static readonly byte[] NetTraceV6Trailer = [0, 0, 0, 0 /* EndOfStream block */];
 
     /// <summary>
-    /// Whether the written file ends with a nettrace stream terminator.
+    /// Whether the written file ends with the nettrace stream terminator for its own framing.
     /// <para>
-    /// Both known framings are accepted. This gate decides whether the trace is uploaded at all, so
-    /// failing closed against a format the runtime starts emitting later would silently stop every
-    /// upload while the profiler still looked healthy.
+    /// The framing is detected from the header rather than accepting either terminator, so a
+    /// version 4/5 trace cut short on four zero bytes is still rejected. Recognising both framings
+    /// matters because this gate decides whether a trace is uploaded at all: failing closed against
+    /// a format the runtime starts emitting later would silently stop every upload while the
+    /// profiler still looked healthy.
     /// </para>
     /// </summary>
     private static bool EndsWithNetTraceTrailer(FileStream fileStream)
-        => EndsWith(fileStream, NetTraceV5Trailer) || EndsWith(fileStream, NetTraceV6Trailer);
+        => UsesFastSerializationFraming(fileStream)
+            ? EndsWith(fileStream, NetTraceV5Trailer)
+            : EndsWith(fileStream, NetTraceV6Trailer);
+
+    private static bool UsesFastSerializationFraming(FileStream fileStream)
+    {
+        // "Nettrace", then a 4-byte length, then the serializer signature.
+        const int signatureOffset = 8 + 4;
+
+        if (fileStream.Length < signatureOffset + FastSerializationSignature.Length)
+        {
+            return false;
+        }
+
+        fileStream.Seek(signatureOffset, SeekOrigin.Begin);
+
+        foreach (byte expected in FastSerializationSignature)
+        {
+            if (fileStream.ReadByte() != expected)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool EndsWith(FileStream fileStream, byte[] trailer)
     {

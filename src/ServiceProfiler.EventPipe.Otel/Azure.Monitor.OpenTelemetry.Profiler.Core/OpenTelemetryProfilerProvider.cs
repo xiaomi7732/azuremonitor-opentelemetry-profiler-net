@@ -89,6 +89,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), TraceFileExtension);
         _logger.LogDebug("Trace File Path: {traceFilePath}", _currentTraceFilePath);
 
+        bool traceEnabled = false;
         try
         {
             // Capture resource usage at the beginning of the profiling session, before trace collection starts.
@@ -98,6 +99,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             _logger.LogDebug("Call TraceControl.Enable().");
             await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
+            traceEnabled = true;
 
             // Dispose any previous trace session listener
             _listener?.Dispose();
@@ -108,21 +110,17 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         }
         catch (ObjectDisposedException ex)
         {
-            // The trace control was disposed, which happens when the host tears the container down
-            // while a start is in flight. Nothing started, so release the semaphore - otherwise it
-            // stays held and no later session can ever begin - and report it as a shutdown-time
-            // outcome rather than an application fault.
+            // The trace control or the container was disposed, which happens when the host tears
+            // things down while a start is in flight. Report it as a shutdown-time outcome rather
+            // than an application fault.
             _logger.LogWarning(ex, "Profiler was disposed (likely during host shutdown) before the session could start.");
-            ReleaseSemaphoreForProfiling();
+            await AbandonStartAsync(traceEnabled).ConfigureAwait(false);
             throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start eventpipe profiling.");
-
-            // The start failed, so nothing holds the session. Releasing here keeps a failed start
-            // from permanently pinning the semaphore and blocking every later session.
-            ReleaseSemaphoreForProfiling();
+            await AbandonStartAsync(traceEnabled).ConfigureAwait(false);
             throw;
         }
 
@@ -305,8 +303,30 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         _listener?.Dispose();
     }
 
-    private void ReleaseSemaphoreForProfiling()
+    /// <summary>
+    /// Unwinds a start that failed partway. If the EventPipe session was already enabled it must be
+    /// disabled here: releasing the semaphore makes <see cref="IsProfilerRunning"/> false, so the
+    /// normal stop path would return without touching it and the session would keep tracing with
+    /// nobody left to stop it.
+    /// </summary>
+    private async Task AbandonStartAsync(bool traceEnabled)
     {
+        if (traceEnabled)
+        {
+            try
+            {
+                await _traceControl.DisableAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to disable the EventPipe session while unwinding a failed start.");
+            }
+        }
+
+        ReleaseSemaphoreForProfiling();
+    }
+
+    private void ReleaseSemaphoreForProfiling()    {
         // The provider is a singleton IDisposable. During host shutdown its Dispose() can run
         // concurrently with an in-flight (best-effort) stop, disposing the semaphore before this
         // release. Treat a disposed semaphore as a graceful no-op instead of surfacing a noisy

@@ -24,6 +24,9 @@ public class EventPipeTraceWriterTests : IDisposable
     // The format v6 terminator: an empty EndOfStream block header.
     private static readonly byte[] NetTraceV6Trailer = [0, 0, 0, 0];
 
+    private static readonly byte[] NetTraceMagic = "Nettrace"u8.ToArray();
+    private static readonly byte[] FastSerializationSignature = "!FastSerialization.1"u8.ToArray();
+
     private readonly string _traceFilePath = Path.Combine(
         Path.GetTempPath(), $"{Guid.NewGuid()}.nettrace");
 
@@ -215,9 +218,7 @@ public class EventPipeTraceWriterTests : IDisposable
         // the format version 6 terminator - that would silently stop every upload while the
         // profiler still looked healthy.
         EventPipeTraceWriter target = new(NullLogger.Instance);
-        byte[] payload = new byte[4096];
-        new Random(Seed: 7).NextBytes(payload);
-        NetTraceV6Trailer.CopyTo(payload, payload.Length - NetTraceV6Trailer.Length);
+        byte[] payload = CreateV6Payload(4096);
 
         target.RequestStop();
         target.Start(_traceFilePath, new MemoryStream(payload));
@@ -226,9 +227,27 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_WhenAFastSerializationTraceEndsInTheNewerTerminator_ReportsIncomplete()
+    {
+        // Accepting either terminator regardless of framing would let a version 4/5 trace that was
+        // cut off on four zero bytes pass as complete. The framing is taken from the header.
+        CapturingLogger logger = new();
+        EventPipeTraceWriter target = new(logger);
+
+        byte[] payload = CreatePayload(4096);
+        Array.Clear(payload, payload.Length - 4, 4);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(payload));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+        Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Warning && e.Message.Contains("end-of-stream marker"));
+    }
+
+    [Fact]
     public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
-        target.Start(_traceFilePath, new MemoryStream(CreatePayload(16)));
+        target.Start(_traceFilePath, new MemoryStream(CreatePayload(64)));
 
         Assert.Throws<InvalidOperationException>(() => target.Start(_traceFilePath, new MemoryStream()));
     }
@@ -252,13 +271,28 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     /// <summary>
-    /// A payload that ends with the nettrace stream trailer, as a fully delivered trace does.
+    /// A payload shaped like a complete nettrace in the FastSerialization framing (format v4/v5):
+    /// the "Nettrace" magic and serializer signature up front, the stream trailer at the end.
     /// </summary>
     private static byte[] CreatePayload(int length)
     {
         byte[] payload = new byte[length];
         new Random(Seed: length).NextBytes(payload);
+        WriteFastSerializationHeader(payload);
         NetTraceTrailer.CopyTo(payload, length - NetTraceTrailer.Length);
+        return payload;
+    }
+
+    /// <summary>
+    /// A payload shaped like a complete nettrace in format v6: no FastSerialization signature, and
+    /// terminated by an empty EndOfStream block.
+    /// </summary>
+    private static byte[] CreateV6Payload(int length)
+    {
+        byte[] payload = new byte[length];
+        new Random(Seed: length).NextBytes(payload);
+        NetTraceMagic.CopyTo(payload, 0);
+        NetTraceV6Trailer.CopyTo(payload, length - NetTraceV6Trailer.Length);
         return payload;
     }
 
@@ -270,9 +304,17 @@ public class EventPipeTraceWriterTests : IDisposable
     {
         byte[] payload = new byte[length];
         new Random(Seed: length).NextBytes(payload);
+        WriteFastSerializationHeader(payload);
         payload[length - 2] = 0xFF;
         payload[length - 1] = NetTraceTrailer[^1];
         return payload;
+    }
+
+    private static void WriteFastSerializationHeader(byte[] payload)
+    {
+        NetTraceMagic.CopyTo(payload, 0);
+        BitConverter.GetBytes(FastSerializationSignature.Length).CopyTo(payload, NetTraceMagic.Length);
+        FastSerializationSignature.CopyTo(payload, NetTraceMagic.Length + 4);
     }
 
     /// <summary>
