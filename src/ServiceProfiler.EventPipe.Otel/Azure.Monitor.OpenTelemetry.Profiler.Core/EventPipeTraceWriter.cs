@@ -122,17 +122,26 @@ internal sealed class EventPipeTraceWriter
     /// <summary>
     /// Whether the written file ends with the nettrace stream terminator for its own framing.
     /// <para>
-    /// The framing is detected from the header rather than accepting either terminator, so a
-    /// version 4/5 trace cut short on four zero bytes is still rejected. Recognising both framings
-    /// matters because this gate decides whether a trace is uploaded at all: failing closed against
-    /// a format the runtime starts emitting later would silently stop every upload while the
-    /// profiler still looked healthy.
+    /// The framing is taken from the header rather than accepting either terminator, so a version
+    /// 4/5 trace cut short on four zero bytes is still rejected. Recognising both framings matters
+    /// because this gate decides whether a trace is uploaded at all: failing closed against a format
+    /// the runtime starts emitting later would silently stop every upload while the profiler still
+    /// looked healthy.
     /// </para>
     /// </summary>
     private static bool EndsWithNetTraceTrailer(FileStream fileStream)
-        => UsesFastSerializationFraming(fileStream)
+    {
+        // Anything that is not a nettrace stream at all cannot be a complete one - this also rules
+        // out a file so short that the framing probe below would have nothing to read.
+        if (!StartsWith(fileStream, NetTraceMagic))
+        {
+            return false;
+        }
+
+        return UsesFastSerializationFraming(fileStream)
             ? EndsWith(fileStream, NetTraceV5Trailer)
             : EndsWith(fileStream, NetTraceV6Trailer);
+    }
 
     private static bool UsesFastSerializationFraming(FileStream fileStream)
     {
@@ -145,16 +154,18 @@ internal sealed class EventPipeTraceWriter
         }
 
         fileStream.Seek(signatureOffset, SeekOrigin.Begin);
+        return Matches(fileStream, FastSerializationSignature);
+    }
 
-        foreach (byte expected in FastSerializationSignature)
+    private static bool StartsWith(FileStream fileStream, byte[] prefix)
+    {
+        if (fileStream.Length < prefix.Length)
         {
-            if (fileStream.ReadByte() != expected)
-            {
-                return false;
-            }
+            return false;
         }
 
-        return true;
+        fileStream.Seek(0, SeekOrigin.Begin);
+        return Matches(fileStream, prefix);
     }
 
     private static bool EndsWith(FileStream fileStream, byte[] trailer)
@@ -165,10 +176,14 @@ internal sealed class EventPipeTraceWriter
         }
 
         fileStream.Seek(-trailer.Length, SeekOrigin.End);
+        return Matches(fileStream, trailer);
+    }
 
-        foreach (byte expected in trailer)
+    private static bool Matches(FileStream fileStream, byte[] expected)
+    {
+        foreach (byte b in expected)
         {
-            if (fileStream.ReadByte() != expected)
+            if (fileStream.ReadByte() != b)
             {
                 return false;
             }

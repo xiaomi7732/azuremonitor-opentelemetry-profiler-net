@@ -17,6 +17,12 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private float _sessionCPUUsage;
     private float _sessionMemoryUsage;
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
+
+    /// <summary>
+    /// How long to spend tearing down the EventPipe session of a start that failed partway. Short:
+    /// the trace is discarded, so there is nothing to wait for beyond releasing the session.
+    /// </summary>
+    private static readonly TimeSpan AbandonedStartTeardownTimeout = TimeSpan.FromSeconds(10);
     private readonly ITraceControl _traceControl;
     private readonly IUserCacheManager _userCacheManager;
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
@@ -305,9 +311,9 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
     /// <summary>
     /// Unwinds a start that failed partway. If the EventPipe session was already enabled it must be
-    /// disabled here: releasing the semaphore makes <see cref="IsProfilerRunning"/> false, so the
-    /// normal stop path would return without touching it and the session would keep tracing with
-    /// nobody left to stop it.
+    /// disabled here: releasing the semaphore makes <see cref="IsProfilerRunning"/> false, so
+    /// neither the stop path nor the orchestrator's cleanup would touch it and the session would
+    /// keep tracing with nobody left to stop it.
     /// </summary>
     private async Task AbandonStartAsync(bool traceEnabled)
     {
@@ -315,10 +321,15 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         {
             try
             {
-                await _traceControl.DisableAsync(CancellationToken.None).ConfigureAwait(false);
+                // Bounded tightly: the trace is being discarded, so there is no reason to wait out
+                // the generous drain the upload path allows. The trace control tears the session
+                // down even when the stop is cancelled.
+                using CancellationTokenSource teardown = new(AbandonedStartTeardownTimeout);
+                await _traceControl.DisableAsync(teardown.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
+                // Never mask the failure that actually caused the start to be abandoned.
                 _logger.LogWarning(ex, "Failed to disable the EventPipe session while unwinding a failed start.");
             }
         }

@@ -245,6 +245,19 @@ public class EventPipeTraceWriterTests : IDisposable
     }
 
     [Fact]
+    public async Task Writer_WhenTheFileIsNotANetTraceStream_ReportsIncomplete()
+    {
+        // Without requiring the magic, anything that merely ended in four zero bytes - including a
+        // four-byte file of zeros - would be treated as a complete v6 trace.
+        EventPipeTraceWriter target = new(NullLogger.Instance);
+
+        target.RequestStop();
+        target.Start(_traceFilePath, new MemoryStream(new byte[4]));
+
+        Assert.False(await target.WaitAsync(TestTimeout));
+    }
+
+    [Fact]
     public void Start_WhenAlreadyStarted_Throws()    {
         EventPipeTraceWriter target = new(NullLogger.Instance);
         target.Start(_traceFilePath, new MemoryStream(CreatePayload(64)));
