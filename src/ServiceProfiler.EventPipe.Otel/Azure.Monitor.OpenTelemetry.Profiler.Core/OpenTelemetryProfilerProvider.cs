@@ -19,10 +19,17 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
 
     /// <summary>
-    /// How long to spend tearing down the EventPipe session of a start that failed partway. Short:
-    /// the trace is discarded, so there is nothing to wait for beyond releasing the session.
+    /// How long to spend tearing down the EventPipe session of a start that failed partway.
+    /// <para>
+    /// This bounds the drain, whose output is discarded, so it does not need to be generous. It is
+    /// nevertheless set far above any realistic stop-command round trip - that IPC is sub-
+    /// millisecond against the local runtime - because cancelling the stop before it is delivered
+    /// would be unrecoverable: EventPipeSession marks itself stopped before sending, never retries,
+    /// and disposing it does not stop the runtime-side session. A bounded delay recovers by itself;
+    /// a runtime left tracing does not.
+    /// </para>
     /// </summary>
-    private static readonly TimeSpan AbandonedStartTeardownTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan AbandonedStartTeardownTimeout = TimeSpan.FromSeconds(30);
     private readonly ITraceControl _traceControl;
     private readonly IUserCacheManager _userCacheManager;
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
@@ -321,9 +328,12 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         {
             try
             {
-                // Bounded tightly: the trace is being discarded, so there is no reason to wait out
-                // the generous drain the upload path allows. The trace control tears the session
-                // down even when the stop is cancelled.
+                // Bounded: the trace is being discarded, so there is no reason to wait out the
+                // generous drain the upload path allows. The trace control disposes the session
+                // from a finally on every path, including cancellation, so bounding the wait
+                // cannot leak the managed session. The budget is still well above any realistic
+                // stop-command round trip, because cancelling that IPC before delivery would leave
+                // the runtime tracing with no way to retry.
                 using CancellationTokenSource teardown = new(AbandonedStartTeardownTimeout);
                 await _traceControl.DisableAsync(teardown.Token).ConfigureAwait(false);
             }
