@@ -17,6 +17,19 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
     private float _sessionCPUUsage;
     private float _sessionMemoryUsage;
     private readonly SemaphoreSlim _singleProfilingSemaphore = new(1, 1);
+
+    /// <summary>
+    /// How long to spend tearing down the EventPipe session of a start that failed partway.
+    /// <para>
+    /// This bounds the drain, whose output is discarded, so it does not need to be generous. It is
+    /// nevertheless set far above any realistic stop-command round trip - that IPC is sub-
+    /// millisecond against the local runtime - because cancelling the stop before it is delivered
+    /// would be unrecoverable: EventPipeSession marks itself stopped before sending, never retries,
+    /// and disposing it does not stop the runtime-side session. A bounded delay recovers by itself;
+    /// a runtime left tracing does not.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan AbandonedStartTeardownTimeout = TimeSpan.FromSeconds(30);
     private readonly ITraceControl _traceControl;
     private readonly IUserCacheManager _userCacheManager;
     private readonly TraceSessionListenerFactory _traceSessionListenerFactory;
@@ -89,6 +102,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         _currentTraceFilePath = Path.ChangeExtension(Path.Combine(localCacheFolder, Guid.NewGuid().ToString()), TraceFileExtension);
         _logger.LogDebug("Trace File Path: {traceFilePath}", _currentTraceFilePath);
 
+        bool traceEnabled = false;
         try
         {
             // Capture resource usage at the beginning of the profiling session, before trace collection starts.
@@ -98,6 +112,7 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             _logger.LogDebug("Call TraceControl.Enable().");
             await _traceControl.EnableAsync(_currentTraceFilePath, cancellationToken).ConfigureAwait(false);
+            traceEnabled = true;
 
             // Dispose any previous trace session listener
             _listener?.Dispose();
@@ -106,9 +121,19 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
 
             profilerStarted = true;
         }
+        catch (ObjectDisposedException ex)
+        {
+            // The trace control or the container was disposed, which happens when the host tears
+            // things down while a start is in flight. Report it as a shutdown-time outcome rather
+            // than an application fault.
+            _logger.LogWarning(ex, "Profiler was disposed (likely during host shutdown) before the session could start.");
+            await AbandonStartAsync(traceEnabled).ConfigureAwait(false);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start eventpipe profiling.");
+            await AbandonStartAsync(traceEnabled).ConfigureAwait(false);
             throw;
         }
 
@@ -166,8 +191,24 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             List<SampleActivity>? sampleActivities = _listener?.SampleActivities?.GetActivities()?.ToList();
             _listener?.Dispose();
 
-            // Disable the EventPipe.
-            await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            // Disable the EventPipe. The trace file is only complete once the writer has drained the
+            // EventPipe stream; an incomplete trace must not be handed to the uploader.
+            //
+            // The trace control tears the EventPipe session down on every path, including when this
+            // throws, so the semaphore must be released even then - otherwise a failed stop would
+            // leave it held and permanently prevent any further profiling.
+            bool traceComplete;
+            try
+            {
+                traceComplete = await _traceControl.DisableAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                ReleaseSemaphoreForProfiling();
+                semaphoreReleased = true;
+                throw;
+            }
+
             profilerStopped = true;
             // Release the semaphore as soon as the trace is disabled so a new session can start
             // while the (potentially long) post-stop processing/upload runs. Mark it as released in
@@ -191,6 +232,21 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
             if (cancellationToken.IsCancellationRequested)
             {
                 _logger.LogDebug("Stop requested cancellation (likely agent deactivation / host shutdown). EventPipe disabled; skipping post-stop trace upload.");
+                return true;
+            }
+
+            // An incomplete trace file would be uploaded as if it were valid, producing a corrupt or
+            // empty profile. The profiler itself stopped successfully, so report success, but skip
+            // the upload. The partial file is left for the trace scavenger to clean up.
+            if (!traceComplete)
+            {
+                // The stop itself succeeded, so report it as such - only the upload is skipped.
+                // Emitting StopProfilerSucceeded here keeps the triggered/succeeded pairing intact
+                // for health monitoring, and matches the classic provider.
+                _logger.LogWarning(
+                    "The trace file was not written completely, so it will not be uploaded. Partial trace: {traceFilePath}",
+                    currentTraceFilePath);
+                _logger.LogInformation(StopProfilerSucceeded);
                 return true;
             }
 
@@ -260,8 +316,38 @@ internal sealed class OpenTelemetryProfilerProvider : IServiceProfilerProvider, 
         _listener?.Dispose();
     }
 
-    private void ReleaseSemaphoreForProfiling()
+    /// <summary>
+    /// Unwinds a start that failed partway. If the EventPipe session was already enabled it must be
+    /// disabled here: releasing the semaphore makes <see cref="IsProfilerRunning"/> false, so
+    /// neither the stop path nor the orchestrator's cleanup would touch it and the session would
+    /// keep tracing with nobody left to stop it.
+    /// </summary>
+    private async Task AbandonStartAsync(bool traceEnabled)
     {
+        if (traceEnabled)
+        {
+            try
+            {
+                // Bounded: the trace is being discarded, so there is no reason to wait out the
+                // generous drain the upload path allows. The trace control disposes the session
+                // from a finally on every path, including cancellation, so bounding the wait
+                // cannot leak the managed session. The budget is still well above any realistic
+                // stop-command round trip, because cancelling that IPC before delivery would leave
+                // the runtime tracing with no way to retry.
+                using CancellationTokenSource teardown = new(AbandonedStartTeardownTimeout);
+                await _traceControl.DisableAsync(teardown.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // Never mask the failure that actually caused the start to be abandoned.
+                _logger.LogWarning(ex, "Failed to disable the EventPipe session while unwinding a failed start.");
+            }
+        }
+
+        ReleaseSemaphoreForProfiling();
+    }
+
+    private void ReleaseSemaphoreForProfiling()    {
         // The provider is a singleton IDisposable. During host shutdown its Dispose() can run
         // concurrently with an in-flight (best-effort) stop, disposing the semaphore before this
         // release. Treat a disposed semaphore as a graceful no-op instead of surfacing a noisy

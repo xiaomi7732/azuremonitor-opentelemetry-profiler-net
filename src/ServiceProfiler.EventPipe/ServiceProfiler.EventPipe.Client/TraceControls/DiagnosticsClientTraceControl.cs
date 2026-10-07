@@ -23,7 +23,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
         private readonly UserConfiguration _userConfiguration;
         private readonly ILogger _logger;
         private EventPipeSession? _currentSession;
-        private Task? _traceFileWritingTask;
+        private Task<bool>? _traceFileWritingTask;
         private const string TimeoutMessage = "Timed out waiting for semaphore.";
 
         public DiagnosticsClientTraceControl(
@@ -44,21 +44,27 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
 
         public DateTime? SessionStartUTC { get; private set; }
 
-        public async Task DisableAsync(CancellationToken cancellationToken)
+        public async Task<bool> DisableAsync(CancellationToken cancellationToken)
         {
             _logger.LogTrace("[{typeName}] Entering {methodName}()...", _typeName, nameof(DisableAsync));
 
             try
             {
+                // Snapshot the field: a concurrent Dispose() can null it while this stop is in flight.
+                Task<bool>? writingTask = _traceFileWritingTask;
                 await StopProfilerSessionAsync(disposeEventSessionImmediately: false, cancellationToken).ConfigureAwait(false);
 
-                if (_traceFileWritingTask is not null)
+                if (writingTask is not null)
                 {
-                    await _traceFileWritingTask.ConfigureAwait(false);
+                    // The writer reports whether the copy actually finished. It swallows a closed
+                    // stream when the diagnostic endpoint is gone, so completing is not the same as
+                    // having written a usable trace.
+                    return await writingTask.ConfigureAwait(false);
                 }
                 else
                 {
                     _logger.LogError("Trace file writing task is null upon disabling tracing. This should not happen.");
+                    return false;
                 }
             }
             finally
@@ -162,7 +168,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             }
         }
 
-        private async Task StartWriteAsync(string traceFilePath, Stream readFrom, CancellationToken cancellationToken = default)
+        private async Task<bool> StartWriteAsync(string traceFilePath, Stream readFrom, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -171,6 +177,7 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 _logger.LogTrace("Start writing file ...");
                 await readFrom.CopyToAsync(writeTo, bufferSize: 81920, cancellationToken: cancellationToken).ConfigureAwait(false);
                 _logger.LogTrace("Finish writing file.");
+                return true;
             }
             catch (ObjectDisposedException ex)
             {
@@ -200,7 +207,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
                 if (string.IsNullOrEmpty(eventPipeIPCFullPath) || !File.Exists(eventPipeIPCFullPath))
                 {
                     // The IPC file doesn't exist, there isn't too much to be done. Log a warning for scenario analysis.
-                    _logger.LogWarning(ex, "Profiler service is closed. This happens when application is shutting down.");
+                    // The copy did not finish, so the trace file is incomplete and must not be uploaded.
+                    _logger.LogWarning(ex, "Profiler service is closed. This happens when application is shutting down. The trace file is incomplete and will not be processed.");
+                    return false;
                 }
                 else
                 {
@@ -221,6 +230,9 @@ namespace Microsoft.ApplicationInsights.Profiler.Core.TraceControls
             _logger.LogTrace("[{typeName}] Disposing eventpipe session.", _typeName);
             _currentSession?.Dispose();
             _currentSession = null;
+            // Clear the writer alongside the session, so a later DisableAsync cannot re-await the
+            // previous session's completed task and report its result as the current one.
+            _traceFileWritingTask = null;
             _logger.LogTrace("[{typeName}] Eventpipe session disposed.", _typeName);
         }
 

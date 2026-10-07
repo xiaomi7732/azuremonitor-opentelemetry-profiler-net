@@ -148,6 +148,38 @@ namespace ServiceProfiler.EventPipe.Client.Tests
             }
         }
 
+        [Fact]
+        public async Task ShouldNotUploadWhenTheTraceFileIsIncomplete()
+        {
+            // Regression test for issue #191: the trace writer can be cut short (for example the
+            // EventPipe stream is closed during host shutdown). PostStopProcessor performs no size
+            // or format validation, so an incomplete trace would otherwise be uploaded as if valid.
+            bool isUploaderCalled = false;
+            ServiceProvider testServiceProvider = CreateServiceProvider(TimeSpan.FromSeconds(5), TimeSpan.Zero,
+                uploaderExecuteCallback: () => isUploaderCalled = true);
+
+            try
+            {
+                // The trace control reports that the trace was not written completely.
+                _traceControlMock!.Setup(tc => tc.DisableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+                using ServiceProfilerProvider target = testServiceProvider.GetRequiredService<ServiceProfilerProvider>();
+                SchedulingPolicy schedulingPolicy = testServiceProvider.GetRequiredService<SchedulingPolicy>();
+
+                await target.StartServiceProfilerAsync(schedulingPolicy, default);
+                while (target.SessionListener == null) await Task.Delay(50);
+                ((TraceSessionListenerStub)target.SessionListener).AddSampleActivity();
+
+                // The stop itself still succeeds; only the upload is skipped.
+                Assert.True(await target.StopServiceProfilerAsync(schedulingPolicy, default));
+                Assert.False(isUploaderCalled);
+            }
+            finally
+            {
+                await testServiceProvider.DisposeAsync();
+            }
+        }
+
         #region Private
         private ServiceProvider CreateServiceProvider(
             TimeSpan duration,
