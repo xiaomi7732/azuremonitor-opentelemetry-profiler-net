@@ -4,6 +4,7 @@ using Microsoft.ApplicationInsights.Profiler.Core.Utilities;
 using Microsoft.ApplicationInsights.Profiler.Shared.Contracts;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Abstractions.IPC;
 using Microsoft.ApplicationInsights.Profiler.Shared.Services.Auth;
+using Microsoft.ApplicationInsights.Profiler.Shared.Services.IPC;
 using Microsoft.ApplicationInsights.Profiler.Uploader.TraceValidators;
 using Microsoft.Extensions.Logging;
 using ServiceProfiler.EventPipe.Upload;
@@ -98,8 +99,7 @@ internal class TraceUploaderByNamedPipe : TraceUploader
             Logger.LogTrace("Sent verified appId.");
 
             Logger.LogTrace("Receiving additional data");
-            uploadContextExtension.AdditionalData = await namedPipeServer.ReadAsync<IPCAdditionalData>(timeout: TimeSpan.FromSeconds(0.5), cancellationToken).ConfigureAwait(false);
-            Logger.LogTrace("Additional data received");
+            uploadContextExtension.AdditionalData = await ReadAdditionalDataAsync(namedPipeServer, cancellationToken).ConfigureAwait(false);
 
             return uploadContextExtension.VerifiedAppId != Guid.Empty && ShouldUploadTrace(UploadContext.UploadMode, samples.Count()) ?
                 uploadContextExtension
@@ -108,6 +108,45 @@ internal class TraceUploaderByNamedPipe : TraceUploader
         finally
         {
             (namedPipeServer as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Reads the <see cref="IPCAdditionalData"/> payload sent by the profiler.
+    /// </summary>
+    /// <remarks>
+    /// This payload is not optional enrichment: it carries the connection string used to emit the
+    /// custom events, and the ServiceProfilerIndex event through which the trace is discovered.
+    /// Without it an uploaded trace is orphaned - storage is consumed and the upload reports
+    /// success, but the trace can never be surfaced. Failing here is therefore the correct outcome,
+    /// and it happens before the trace is zipped and uploaded, so nothing is wasted.
+    /// <para>
+    /// The read uses the default message timeout, like every other message in this handshake. It
+    /// previously used a hard-coded 500ms, which had to cover the profiler waking from its own
+    /// read, deriving the artifact id, building this payload over every sample and serializing it -
+    /// so a loaded machine could exceed it while the profiler was working normally, and the trace
+    /// was discarded. The profiler is allowed minutes to send this message; the reader now allows a
+    /// comparable budget.
+    /// </para>
+    /// </remarks>
+    private async Task<IPCAdditionalData?> ReadAdditionalDataAsync(INamedPipeServerService namedPipeServer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            IPCAdditionalData? additionalData = await namedPipeServer.ReadAsync<IPCAdditionalData>(cancellationToken: cancellationToken).ConfigureAwait(false);
+            Logger.LogTrace("Additional data received");
+            return additionalData;
+        }
+        catch (TimeoutException ex)
+        {
+            // Rethrow with the consequence spelled out. The bare "Can't finish reading message
+            // within given timeout" gives no indication of which message was lost or why that ends
+            // the upload.
+            throw new TimeoutException(
+                "Timed out waiting for the profiler to send the additional data (connection string, " +
+                "index and samples). The trace cannot be indexed without it, so the upload is abandoned. " +
+                "This usually means the profiler process was starved or stopped before it could send.",
+                ex);
         }
     }
 }

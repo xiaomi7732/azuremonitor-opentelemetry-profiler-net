@@ -155,9 +155,17 @@ internal class PostStopProcessor : IPostStopProcessor
                 // Contract with Upload, sending additional data
                 Guid artifactId = ArtifactIdDerivation.DeriveArtifactId(e.SessionId, _serviceProfilerContext.MachineName);
                 IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, artifactId, e.ProfilerSource, e.AverageCPUUsage, e.AverageMemoryUsage);
+
+                _logger.LogTrace("Sending additional data for the uploader to use.");
+                await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMilliseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
+                _logger.LogTrace("Additional data sent.");
+
+                // Diagnostic dump happens after the send, not before it. The uploader is already
+                // waiting on this message at this point, so serializing the whole payload a second
+                // time just to log it would delay the thing being measured - making the failure
+                // mode more likely precisely when tracing is turned on to investigate it.
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogTrace("Sending additional data for the uploader to use.");
                     if (_serializer.TrySerialize(additionalData, out string? serializedObject))
                     {
                         _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
@@ -174,8 +182,6 @@ internal class PostStopProcessor : IPostStopProcessor
                         }
                     }
                 }
-                await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMilliseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
-                _logger.LogTrace("Additional data sent.");
             }
             finally
             {
