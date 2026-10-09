@@ -157,10 +157,11 @@ internal class PostStopProcessor : IPostStopProcessor
                 IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, artifactId, e.ProfilerSource, e.AverageCPUUsage, e.AverageMemoryUsage);
 
                 _logger.LogTrace("Sending additional data for the uploader to use.");
-                // Both ends of this exchange use ExtendedMessageTimeout. The uploader runs in a
-                // separate process that only ever sees the option defaults, so a reader falling
-                // back to DefaultMessageTimeout would give up while this side is still well within
-                // its own budget - which is how issue #192 discarded viable traces.
+                // Pinned to ExtendedMessageTimeout rather than the configurable budget above,
+                // because the uploader reads this message with the same constant and cannot see
+                // user configuration - it runs in a separate process that only ever gets the option
+                // defaults. A longer write budget here could only wait past the point the reader
+                // had already given up.
                 await namedPipeClient.SendAsync(additionalData, NamedPipeOptions.ExtendedMessageTimeout, cancellationToken).ConfigureAwait(false);
                 _logger.LogTrace("Additional data sent.");
 
@@ -168,23 +169,10 @@ internal class PostStopProcessor : IPostStopProcessor
                 // waiting on this message at this point, so serializing the whole payload a second
                 // time just to log it would delay the thing being measured - making the failure
                 // mode more likely precisely when tracing is turned on to investigate it.
-                if (_logger.IsEnabled(LogLevel.Trace))
+                // SendAsync has already serialized successfully by now, so this cannot fail.
+                if (_logger.IsEnabled(LogLevel.Trace) && _serializer.TrySerialize(additionalData, out string? serializedObject))
                 {
-                    if (_serializer.TrySerialize(additionalData, out string? serializedObject))
-                    {
-                        _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
-                    }
-                    else
-                    {
-                        if (e.Samples.Any())
-                        {
-                            _logger.LogWarning("Although there are valid samples, there's no additional data. Why?");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("No additional data");
-                        }
-                    }
+                    _logger.LogTrace("===== {serialized} =====", Environment.NewLine + serializedObject + Environment.NewLine);
                 }
             }
             finally

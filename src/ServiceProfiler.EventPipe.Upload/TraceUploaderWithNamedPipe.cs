@@ -146,14 +146,30 @@ internal class TraceUploaderByNamedPipe : TraceUploader
                 ex);
         }
 
-        // A payload that arrives but deserializes to null is the same outcome as one that never
-        // arrives: the trace could be uploaded but never surfaced. Fail here, before anything is
-        // zipped or uploaded, rather than letting it throw after the blob has been committed.
+        // A payload that arrives but is missing what makes the trace discoverable is the same
+        // outcome as one that never arrives: the blob would upload and commit, and then either the
+        // index event is skipped or the telemetry configuration throws - after the artifact is
+        // already committed. Check here, before anything is zipped or uploaded, so the failure
+        // stays cheap and leaves nothing behind.
         if (additionalData is null)
         {
             throw new InvalidOperationException(
                 "The profiler sent no additional data (connection string, index and samples). " +
                 "The trace cannot be indexed without it, so the upload is abandoned.");
+        }
+
+        if (string.IsNullOrEmpty(additionalData.ConnectionString))
+        {
+            throw new InvalidOperationException(
+                "The additional data from the profiler carries no connection string, so the custom " +
+                "events that make the trace discoverable cannot be sent. The upload is abandoned.");
+        }
+
+        if (additionalData.ServiceProfilerIndex is null)
+        {
+            throw new InvalidOperationException(
+                "The additional data from the profiler carries no index, so the trace could be " +
+                "uploaded but never surfaced. The upload is abandoned.");
         }
 
         Logger.LogTrace("Additional data received");

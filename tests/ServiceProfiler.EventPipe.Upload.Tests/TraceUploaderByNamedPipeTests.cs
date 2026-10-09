@@ -146,6 +146,43 @@ public class TraceUploaderByNamedPipeTests
             "ExtendedMessageTimeout must exceed the ordinary per-message default, otherwise it serves no purpose.");
     }
 
+    [Fact]
+    public async Task UploadingAsync_WhenAdditionalDataHasNoConnectionString_FailsBeforeAnythingIsUploaded()
+    {
+        // Rejecting only null would let an incomplete payload through to the blob upload, where
+        // BuildTelemetryConfiguration then throws after the artifact is already committed.
+        IPCAdditionalData incomplete = CreateAdditionalData() with { ConnectionString = null };
+
+        await AssertRejectedBeforeUploadAsync(incomplete);
+    }
+
+    [Fact]
+    public async Task UploadingAsync_WhenAdditionalDataHasNoIndex_FailsBeforeAnythingIsUploaded()
+    {
+        // Without the index event the trace uploads but can never be surfaced - the orphan this
+        // guard exists to prevent.
+        IPCAdditionalData incomplete = CreateAdditionalData() with { ServiceProfilerIndex = null! };
+
+        await AssertRejectedBeforeUploadAsync(incomplete);
+    }
+
+    private static async Task AssertRejectedBeforeUploadAsync(IPCAdditionalData? additionalData)
+    {
+        Mock<INamedPipeServerService> pipe = CreateConnectedPipe();
+        pipe.Setup(p => p.ReadAsync<IPCAdditionalData>(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(additionalData);
+
+        Mock<IZipUtility> zip = new();
+        Mock<IBlobClientFactory> blobClientFactory = new();
+        TraceUploaderByNamedPipe target = CreateTarget(pipe, zip, blobClientFactory);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => target.UploadAsync(CancellationToken.None));
+
+        zip.Verify(z => z.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
+        blobClientFactory.Verify(f => f.CreateBlobClient(It.IsAny<Uri>()), Times.Never);
+    }
+
     private static Mock<INamedPipeServerService> CreateConnectedPipe()
     {
         Mock<INamedPipeServerService> pipe = new();

@@ -28,6 +28,12 @@ public class NamedPipeOptions
     /// that falls back to <see cref="DefaultMessageTimeout"/> while the sender uses this one will
     /// give up while the sender is still well within its own budget, which is what discarded
     /// otherwise viable traces in issue #192.
+    /// <para>
+    /// Note the two sides are not measuring the same thing even when they use the same value: the
+    /// reader's budget starts when it begins waiting and so covers the peer's preparation as well
+    /// as the transfer, whereas the sender's covers only the transfer. The reader therefore needs
+    /// at least as much as the sender, never less.
+    /// </para>
     /// </remarks>
     internal static readonly TimeSpan ExtendedMessageTimeout = TimeSpan.FromMinutes(10);
 }
