@@ -200,7 +200,18 @@ public class TraceUploaderByNamedPipeTests
     {
         ConnectionString = "InstrumentationKey=00000000-0000-0000-0000-000000000000",
         ArtifactId = Guid.NewGuid(),
-        ServiceProfilerIndex = new ServiceProfilerIndex(),
+        ServiceProfilerIndex = new ServiceProfilerIndex
+        {
+            Timestamp = DateTime.UtcNow,
+            StampId = "test-stamp",
+            DataCube = "00000000-0000-0000-0000-000000000000",
+            EtlFileSessionId = DateTimeOffset.UtcNow.ToString("o"),
+            ArtifactId = Guid.NewGuid(),
+            ArtifactKind = "profile",
+            ProgrammingLanguage = "DotNet",
+            OperatingSystem = "Windows",
+            CloudRoleName = "test-role",
+        },
         ServiceProfilerSamples = [],
         AgentString = "test-agent",
     };
