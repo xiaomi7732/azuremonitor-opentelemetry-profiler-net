@@ -130,6 +130,22 @@ public class TraceUploaderByNamedPipeTests
         zip.Verify(z => z.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
     }
 
+    [Fact]
+    public void ExtendedMessageTimeout_StaysGenerousEnoughForASlowProfiler()
+    {
+        // Both ends of the additional-data exchange are pinned to this one constant, so shrinking
+        // it would recreate #192 on both sides at once while the per-call-site assertions above
+        // still passed. Guard the property that actually matters: it must stay well clear of the
+        // ordinary per-message budget, because it has to cover the profiler building the payload
+        // over every sample on a loaded machine - not just transit.
+        Assert.True(
+            NamedPipeOptions.ExtendedMessageTimeout >= TimeSpan.FromMinutes(5),
+            $"ExtendedMessageTimeout is {NamedPipeOptions.ExtendedMessageTimeout}, too short to cover a slow profiler.");
+        Assert.True(
+            NamedPipeOptions.ExtendedMessageTimeout > new NamedPipeOptions().DefaultMessageTimeout,
+            "ExtendedMessageTimeout must exceed the ordinary per-message default, otherwise it serves no purpose.");
+    }
+
     private static Mock<INamedPipeServerService> CreateConnectedPipe()
     {
         Mock<INamedPipeServerService> pipe = new();
