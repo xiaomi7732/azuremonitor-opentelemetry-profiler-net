@@ -34,12 +34,12 @@ public class TraceUploaderByNamedPipeTests
     private static readonly Guid TestAppId = Guid.Parse("8b0b8b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b");
 
     [Fact]
-    public async Task UploadingAsync_ReadsAdditionalDataWithTheDefaultTimeout()
+    public async Task UploadingAsync_ReadsAdditionalDataWithTheSameBudgetTheSenderUses()
     {
         // The hard-coded 500ms had to cover the profiler waking from its own read, deriving the
-        // artifact id, building the payload over every sample and serializing it. Passing no
-        // timeout defers to NamedPipeOptions.DefaultMessageTimeout, like every other message in
-        // this handshake.
+        // artifact id, building the payload over every sample and serializing it. Both ends now use
+        // ExtendedMessageTimeout, so the reader cannot give up while the sender is still well
+        // within its own budget.
         Mock<INamedPipeServerService> pipe = CreateConnectedPipe();
         TimeSpan? observedTimeout = null;
         pipe.Setup(p => p.ReadAsync<IPCAdditionalData>(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
@@ -50,7 +50,7 @@ public class TraceUploaderByNamedPipeTests
 
         await target.UploadingAsync(CreateUploadContext(), CancellationToken.None);
 
-        Assert.Equal(default(TimeSpan), observedTimeout);
+        Assert.Equal(NamedPipeOptions.ExtendedMessageTimeout, observedTimeout);
     }
 
     [Fact]
@@ -109,6 +109,25 @@ public class TraceUploaderByNamedPipeTests
 
         zip.Verify(z => z.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
         blobClientFactory.Verify(f => f.CreateBlobClient(It.IsAny<Uri>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadingAsync_WhenAdditionalDataIsNull_FailsBeforeAnythingIsUploaded()
+    {
+        // A payload that arrives but deserializes to null is the same outcome as one that never
+        // arrives. Letting it through would upload and commit a blob that is then orphaned when the
+        // custom events cannot be sent.
+        Mock<INamedPipeServerService> pipe = CreateConnectedPipe();
+        pipe.Setup(p => p.ReadAsync<IPCAdditionalData>(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IPCAdditionalData?)null);
+
+        Mock<IZipUtility> zip = new();
+        TraceUploaderByNamedPipe target = CreateTarget(pipe, zip);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => target.UploadAsync(CancellationToken.None));
+
+        zip.Verify(z => z.ZipFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
     }
 
     private static Mock<INamedPipeServerService> CreateConnectedPipe()

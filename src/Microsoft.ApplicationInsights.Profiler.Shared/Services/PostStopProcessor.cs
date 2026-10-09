@@ -128,8 +128,8 @@ internal class PostStopProcessor : IPostStopProcessor
                 // Contract with Uploader: Only valid samples are written back.
                 _logger.LogTrace("Waiting for the uploader to write back valid samples according to the contract.");
                 // The uploader might need a while for sample validation before it returns the result. That is especially true under heavy loaded system.
-                // Give it at least 10 minutes as a reasonable timeout. The user could choose to overwrite it with even longer time span by setting up operation timeout.
-                double longerTimeoutMilliseconds = Math.Max(TimeSpan.FromMinutes(10).TotalMilliseconds, _serviceProfilerOptions.NamedPipe.DefaultMessageTimeout.TotalMilliseconds);
+                // Give it at least the extended budget as a reasonable timeout. The user could choose to overwrite it with even longer time span by setting up operation timeout.
+                double longerTimeoutMilliseconds = Math.Max(NamedPipeOptions.ExtendedMessageTimeout.TotalMilliseconds, _serviceProfilerOptions.NamedPipe.DefaultMessageTimeout.TotalMilliseconds);
                 e.Samples = (await namedPipeClient.ReadAsync<IEnumerable<SampleActivity>>(timeout: TimeSpan.FromMilliseconds(longerTimeoutMilliseconds)).ConfigureAwait(false)) ?? [];
                 _logger.LogTrace("Finished loading valid samples.");
 
@@ -157,7 +157,11 @@ internal class PostStopProcessor : IPostStopProcessor
                 IPCAdditionalData additionalData = CreateAdditionalData(e.Samples.ToImmutableArray(), stampId: "%StampId%", e.SessionId, appId, artifactId, e.ProfilerSource, e.AverageCPUUsage, e.AverageMemoryUsage);
 
                 _logger.LogTrace("Sending additional data for the uploader to use.");
-                await namedPipeClient.SendAsync(additionalData, TimeSpan.FromMilliseconds(longerTimeoutMilliseconds), cancellationToken).ConfigureAwait(false);
+                // Both ends of this exchange use ExtendedMessageTimeout. The uploader runs in a
+                // separate process that only ever sees the option defaults, so a reader falling
+                // back to DefaultMessageTimeout would give up while this side is still well within
+                // its own budget - which is how issue #192 discarded viable traces.
+                await namedPipeClient.SendAsync(additionalData, NamedPipeOptions.ExtendedMessageTimeout, cancellationToken).ConfigureAwait(false);
                 _logger.LogTrace("Additional data sent.");
 
                 // Diagnostic dump happens after the send, not before it. The uploader is already
