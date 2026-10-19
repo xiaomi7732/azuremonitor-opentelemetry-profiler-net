@@ -329,7 +329,7 @@ internal abstract class OrchestratorEventPipe : Orchestrator
             }
             else
             {
-                _logger.LogWarning("Can't acquire the profiler policy-change gate within {timeoutMs}ms to start profiling requested by {newSource}. A policy change is already in progress: {inProgress}.", 500, policy.Source, DescribeInProgressPolicyChange());
+                _logger.LogDebug("Can't acquire the profiler policy-change gate within {timeoutMs}ms to start profiling requested by {newSource}. A policy change is already in progress: {inProgress}.", 500, policy.Source, DescribeInProgressPolicyChange());
             }
 
             _logger.LogTrace("Profiling is running by policy: {source}", _currentProfilingPolicy?.Source);
